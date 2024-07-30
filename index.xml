@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="ReaperScripts" commit="97c469155254af589b609bbd6f894c396ab50a73">
+<index version="1" name="ReaperScripts" commit="20b5cace5a482507916fa6f3354aafd6d72706d4">
   <category name="Example">
     <reapack name="cfillion_Hello world.lua" type="script" desc="Hello world">
       <metadata>
@@ -22,20 +22,20 @@ Markdown
     </reapack>
   </category>
   <category name="Subprojects">
-    <reapack name="SPS Search for and Color Subproject Iterms.lua" type="script" desc="Search for and color subproject items">
+    <reapack name="SPS Color Subproject Items.lua" type="script" desc="Search for and color subproject items">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to find subproject items in your project and color them a specific color.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to find subproject items in your project and color them a specific color. If you want to change the color used, scroll down and edit the RGB values after reaper.ColorToNatives.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
       </metadata>
-      <version name="1.0" author="Stephen Schappler" time="2024-07-30T01:31:23Z">
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T01:33:37Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/97c469155254af589b609bbd6f894c396ab50a73/Subprojects/SPS%20Search%20for%20and%20Color%20Subproject%20Iterms.lua</source>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/20b5cace5a482507916fa6f3354aafd6d72706d4/Subprojects/SPS%20Color%20Subproject%20Items.lua</source>
       </version>
     </reapack>
   </category>
