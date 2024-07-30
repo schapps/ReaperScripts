@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="97c469155254af589b609bbd6f894c396ab50a73">
+<index version="1" name="SPS Scripts" commit="20b5cace5a482507916fa6f3354aafd6d72706d4">
   <category name="Example">
     <reapack name="cfillion_Hello world.lua" type="script" desc="Hello world">
       <metadata>
@@ -45,10 +45,11 @@ Markdown
 \widowctrl\hyphauto
 
 {\pard \ql \f0 \sa180 \li0 \fi0 \b \fs36 Schapps Reaper Scripts\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A collection of random scripts to help with Reaper workflows, mostly geared towards sound design.\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 The URL to import in ReaPack is {\field{\*\fldinst{HYPERLINK "https://github.com/cfillion/reapack-repository-template/raw/master/index.xml"}}{\fldrslt{\ul
 https://github.com/schapps/ReaperScripts/raw/master/index.xml
 }}}
-.\par}
+\par}
 }
 ]]></description>
   </metadata>
