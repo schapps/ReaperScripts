@@ -1,23 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="ReaperScripts" commit="00c0bc07b1fe19593d1ea77fead28a3e6378e49a">
-  <category name="CreateSubproject">
-    <reapack name="SPS Create Subproject.Lua" type="script" desc="Create subproject from tracks or items and open the subproject">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to create subprojects with our Sony Subproject Workflow.\par}
-}
-]]></description>
-        <link rel="website">https://www.stephenschappler.com</link>
-      </metadata>
-      <version name="1.2" author="Stephen Schappler" time="2024-07-30T00:20:56Z">
-        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/3e372e447bf822ba6cfce2ee5e6af393989aec7f/CreateSubproject/SPS%20Create%20Subproject.Lua</source>
-      </version>
-    </reapack>
-  </category>
+<index version="1" name="ReaperScripts" commit="be626e21e6a6a73ba44aac9599856ee19ec95f30">
   <category name="Example">
     <reapack name="cfillion_Hello world.lua" type="script" desc="Hello world">
       <metadata>
@@ -39,7 +21,23 @@ Markdown
       </version>
     </reapack>
   </category>
-  <category name="Subproject_SearchForAndColorSubprojectItems">
+  <category name="Subprojects">
+    <reapack name="SPS Create Subproject.Lua" type="script" desc="Create subproject from tracks or items and open the subproject">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to create subprojects with our Sony Subproject Workflow.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.2" author="Stephen Schappler" time="2024-07-30T00:38:39Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/be626e21e6a6a73ba44aac9599856ee19ec95f30/Subprojects/SPS%20Create%20Subproject.Lua</source>
+      </version>
+    </reapack>
     <reapack name="Subproject_SearchForAndColorSubprojectItems.lua" type="script" desc="Search for and color subproject items">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
@@ -51,9 +49,9 @@ Markdown
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
       </metadata>
-      <version name="1.0" author="Stephen Schappler" time="2024-07-30T00:32:30Z">
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T00:38:39Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/00c0bc07b1fe19593d1ea77fead28a3e6378e49a/Subproject_SearchForAndColorSubprojectItems/Subproject_SearchForAndColorSubprojectItems.lua</source>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/be626e21e6a6a73ba44aac9599856ee19ec95f30/Subprojects/Subproject_SearchForAndColorSubprojectItems.lua</source>
       </version>
     </reapack>
   </category>
