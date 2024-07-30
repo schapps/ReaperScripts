@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="6242490c2767a2cea7ad5b78643060c7ad985a6c">
+<index version="1" name="SPS Scripts" commit="6214eb3e582c35d1de64e838e79d61774e45e844">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -153,6 +153,22 @@
     </reapack>
   </category>
   <category name="Tracks">
+    <reapack name="Create New Tracks with Parent Folder Track.lua" type="script" desc="Create New Tracks with Parent Folder Track">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Converting my custom action to a script for easy sharing.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T17:46:58Z">
+        <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6214eb3e582c35d1de64e838e79d61774e45e844/Tracks/Create%20New%20Tracks%20with%20Parent%20Folder%20Track.lua</source>
+      </version>
+    </reapack>
     <reapack name="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan.lua" type="script" desc="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
@@ -167,6 +183,38 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Tracks/Set%20Selected%20Track%20Channel%20Count%20to%206%20Channels%20and%20Add%20ReaSurroundPan.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Toggle Haptics Tracks FX Slot 1 Bypass.lua" type="script" desc="Toggle Haptics Tracks FX Slot 1 Bypass">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Toggle FX Slot 1 Bypass for Tracks Containing "haptics" in the name.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T17:46:58Z">
+        <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6214eb3e582c35d1de64e838e79d61774e45e844/Tracks/Toggle%20Haptics%20Tracks%20FX%20Slot%201%20Bypass.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Toggle Video Tracks Master Parent Send.lua" type="script" desc="Toggle Video Tracks Master Parent Send">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Toggle Master Parent Send for Tracks Containing "video" in the Name\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T17:46:58Z">
+        <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6214eb3e582c35d1de64e838e79d61774e45e844/Tracks/Toggle%20Video%20Tracks%20Master%20Parent%20Send.lua</source>
       </version>
     </reapack>
   </category>
