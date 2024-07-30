@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="23d32f7daa69f5ffadf30519ae369b1fbd19d049">
+<index version="1" name="SPS Scripts" commit="fa294a327ce0606225d62c67846324c1aabb57d2">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -85,6 +85,22 @@
     </reapack>
   </category>
   <category name="Project">
+    <reapack name="Play at Half Speed and Reset Playrate on Stop.lua" type="script" desc="Play at Half Speed and Reset Playrate on Stop">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Play at Half Speed and Reset Playrate on Stop\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T19:23:52Z">
+        <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/fa294a327ce0606225d62c67846324c1aabb57d2/Project/Play%20at%20Half%20Speed%20and%20Reset%20Playrate%20on%20Stop.lua</source>
+      </version>
+    </reapack>
     <reapack name="Set Project As Quad and Configure Hardware Outputs.lua" type="script" desc="Set Project as Quad and Configure Hardware Outputs">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
