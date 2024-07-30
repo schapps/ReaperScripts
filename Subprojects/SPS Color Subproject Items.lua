@@ -3,6 +3,7 @@
 -- @version 1.0
 -- @about
 --   This is a simple script to find subproject items in your project and color them a specific color.
+--   If you want to change the color used, scroll down and edit the RGB values after reaper.ColorToNatives.
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   7/29/24 Creating the script
