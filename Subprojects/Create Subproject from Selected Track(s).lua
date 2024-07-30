@@ -1,4 +1,4 @@
--- @description SPS Create Subproject from Track
+-- @description Create Subproject from Selected Track(s)
 -- @author Stephen Schappler
 -- @version 1.2
 -- @about
