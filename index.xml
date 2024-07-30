@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="fa294a327ce0606225d62c67846324c1aabb57d2">
+<index version="1" name="SPS Scripts" commit="1f68c97b9e0ef320da1a6e07da92d271e6585050">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -15,6 +15,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Items/Find%20and%20Select%20All%20Items%20Based%20on%20Color.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Insert Marker at Start of Selected Items\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T21:02:57Z">
+        <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/1f68c97b9e0ef320da1a6e07da92d271e6585050/Items/Insert%20Marker%20at%20Start%20of%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Show Sequence Delay Times for Selected Items.lua" type="script" desc="Show Sequence Delay Times for Selected Items">
