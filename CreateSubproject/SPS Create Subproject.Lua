@@ -2,9 +2,10 @@
 -- @author Stephen Schappler
 -- @version 1.2
 -- @about
--- This is a simple script to create subprojects with our Sony Subproject Workflow.
+--   This is a simple script to create subprojects with our Sony Subproject Workflow.
 -- @link https://www.stephenschappler.com
--- @changelog
+-- @changelog 
+--   7/29/24 Creating the script
 
 -- Function to check if a string contains a substring
 function containsString(str, substr)
