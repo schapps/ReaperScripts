@@ -1,4 +1,4 @@
--- @description Search for and color subproject items
+-- @description SPS Color Subproject Items
 -- @author Stephen Schappler
 -- @version 1.0
 -- @about

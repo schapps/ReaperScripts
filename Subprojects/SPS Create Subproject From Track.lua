@@ -1,4 +1,4 @@
--- @description Create subproject from tracks or items and open the subproject
+-- @description SPS Create Subproject from Track
 -- @author Stephen Schappler
 -- @version 1.2
 -- @about
