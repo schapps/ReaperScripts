@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="1ced6171ad18c3d5fe10366233a73364f05c9105">
+<index version="1" name="SPS Scripts" commit="193d0751e92891664deee0c9688d60de4e590e5d">
+  <category name="Items">
+    <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo and Play Selected Item(s)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Solo items selected items\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:08:49Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/193d0751e92891664deee0c9688d60de4e590e5d/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="Project">
     <reapack name="Set Project As Quad and Configure Hardware Outputs.lua" type="script" desc="Set Project as Quad and Configure Hardware Outputs">
       <metadata>
