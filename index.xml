@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="193d0751e92891664deee0c9688d60de4e590e5d">
+<index version="1" name="SPS Scripts" commit="6242490c2767a2cea7ad5b78643060c7ad985a6c">
   <category name="Items">
+    <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Define the color to match (example: green) Colors in Reaper are in BGR format (0xRRGGBB)\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Items/Find%20and%20Select%20All%20Items%20Based%20on%20Color.lua</source>
+      </version>
+    </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo and Play Selected Item(s)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
@@ -15,6 +31,40 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:08:49Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/193d0751e92891664deee0c9688d60de4e590e5d/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Misc">
+    <reapack name="Copy Cursor Position to Clipboard.lua" type="script" desc="Copy Cursor Position to Clipboard">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Copies cursor position to clipboard (follows main timeline format). Helpful for spotting/writing notes.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Misc/Copy%20Cursor%20Position%20to%20Clipboard.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Open Directory in Windows Explorer.lua" type="script" desc="Open Directory in Windows Explorer">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Change the directory_path to whatever directory you want to open\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Misc/Open%20Directory%20in%20Windows%20Explorer.lua</source>
       </version>
     </reapack>
   </category>
@@ -99,6 +149,24 @@
       <version name="1.2" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Tracks">
+    <reapack name="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan.lua" type="script" desc="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Sets the selected tracks channel count to 6 and adds ReaSurroundPan.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
+        <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Tracks/Set%20Selected%20Track%20Channel%20Count%20to%206%20Channels%20and%20Add%20ReaSurroundPan.lua</source>
       </version>
     </reapack>
   </category>
