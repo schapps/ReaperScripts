@@ -1,0 +1,25 @@
+/**
+ * JSFX Name: Stereo Width Adjuster
+ * About: Stereo Width Adjuster made to be put on items
+ * Author: Stephen Schappler
+ * Author URI: http://www.stephenschappler.com
+ * Version: 1.0
+ */
+
+/**
+ * Changelog:
+ * v1.0 Initial Release 07-30-2024
+ */
+
+
+desc:Adjustable Stereo Width
+slider1:100<0,100,1>Stereo Width (%)
+
+@slider
+width = slider1 * 0.01;
+
+@sample
+mid = (spl0 + spl1) * 0.5;
+side = (spl0 - spl1) * 0.5;
+spl0 = mid + side * width;
+spl1 = mid - side * width;

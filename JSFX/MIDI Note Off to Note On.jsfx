@@ -1,0 +1,45 @@
+/**
+ * JSFX Name: MIDI Note Off to Note On
+ * About: Convert MIDI Note Offs to Note Ons
+ * Author: Stephen Schappler
+ * Author URI: http://www.stephenschappler.com
+ * Version: 1.0
+ */
+
+/**
+ * Changelog:
+ * v1.0 Initial Release 07-30-2024
+ */
+
+desc:Convert Note Off and Note On (vel 0) to Note On vel 64
+
+in_pin:none
+out_pin:none
+
+@init
+
+NOTE_OFF = $x80;
+NOTE_ON = $x90;
+
+@block
+
+while(midirecv(mpos, msg1, msg23))
+(
+    status = msg1 & $xF0;
+    chan = msg1 & $x0F;
+    note = msg23 & $xFF; 
+    velocity = (msg23 >> 8) & $xFF;  // Extract velocity value
+
+    ((status == NOTE_OFF) || (status == NOTE_ON && velocity == 0)) ? 
+    (
+        midisend(mpos, NOTE_ON | chan, note | ($x40 << 8));  // Convert to Note On with velocity 64
+    )
+    :
+    (status != NOTE_ON) ? 
+    (
+        midisend(mpos, msg1, msg23); // Send other MIDI messages unchanged
+    )
+    :
+    0; // Mute regular Note On messages
+);
+
