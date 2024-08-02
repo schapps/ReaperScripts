@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b40749fd3cf80506fcb0a55378c188e7f0129947">
+<index version="1" name="SPS Scripts" commit="57465968162d89e8b505e643153367bf7bd68a34">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -49,13 +49,13 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3b33dc54d14e1ac3796c90bfeebda8fca99221e4/Items/Show%20Sequence%20Delay%20Times%20for%20Selected%20Items.lua</source>
       </version>
     </reapack>
-    <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo and Play Selected Item(s)">
+    <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Solo items selected items\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Solo items selected items and plays them. Will respect repeat setting.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -63,6 +63,11 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:08:49Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/193d0751e92891664deee0c9688d60de4e590e5d/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-02T17:33:32Z">
+        <changelog><![CDATA[07/29/24 v1.0 - Creating the script
+08/02/24 v1.1 - Making it smarter]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/57465968162d89e8b505e643153367bf7bd68a34/Items/Solo%20Play%20Selected%20Item(s).lua</source>
       </version>
     </reapack>
   </category>
