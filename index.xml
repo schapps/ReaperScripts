@@ -338,7 +338,7 @@
 
 {\pard \ql \f0 \sa180 \li0 \fi0 \b \fs36 Schapps Reaper Scripts\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 A collection of random scripts to help with Reaper workflows, mostly geared towards sound design.\par}
-{\pard \ql \f0 \sa180 \li0 \fi0 The URL to import in ReaPack is {\field{\*\fldinst{HYPERLINK "https://github.com/cfillion/reapack-repository-template/raw/master/index.xml"}}{\fldrslt{\ul
+{\pard \ql \f0 \sa180 \li0 \fi0 The URL to import in ReaPack is {\field{\*\fldinst{HYPERLINK "https://github.com/schapps/ReaperScripts/raw/master/index.xml"}}{\fldrslt{\ul
 https://github.com/schapps/ReaperScripts/raw/master/index.xml
 }}}
 \par}
