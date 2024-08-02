@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="57465968162d89e8b505e643153367bf7bd68a34">
+<index version="1" name="SPS Scripts" commit="f96a01e07c48a14474eaa080401d7e547503e5da">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -55,7 +55,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Solo items selected items and plays them. Will respect repeat setting.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Solo selected media items, set time selection to their range, play them, and unsolo when playback stops\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -68,6 +68,12 @@
         <changelog><![CDATA[07/29/24 v1.0 - Creating the script
 08/02/24 v1.1 - Making it smarter]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/57465968162d89e8b505e643153367bf7bd68a34/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2024-08-02T18:13:11Z">
+        <changelog><![CDATA[07/29/24 v1.0 - Creating the script
+08/02/24 v1.1 - Making it smarter
+08/02/24 v1.2 - Save and restore cursor and timeline selection and keep selected items selected on stop]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f96a01e07c48a14474eaa080401d7e547503e5da/Items/Solo%20Play%20Selected%20Item(s).lua</source>
       </version>
     </reapack>
   </category>
