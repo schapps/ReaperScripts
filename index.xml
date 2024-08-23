@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="f96a01e07c48a14474eaa080401d7e547503e5da">
+<index version="1" name="SPS Scripts" commit="047b49d2fc5b4bc57a256b19e008e716e0123e55">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -268,6 +268,22 @@
       <version name="1.2" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Save and Render RPP-Prox, Disabling Video Track First.lua" type="script" desc="Save and Rende RPP Prox, Disabling Video Track Send First">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to save subprojects, while ensuring any audio from video tracks are muted first.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-23T17:16:32Z">
+        <changelog><![CDATA[8/23/24 - v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/047b49d2fc5b4bc57a256b19e008e716e0123e55/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
       </version>
     </reapack>
   </category>
