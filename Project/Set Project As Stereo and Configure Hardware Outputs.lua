@@ -1,12 +1,13 @@
 -- @description Set Project as Stereo and Configure Hardware Outputs
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Set the master track to 2 channels and instantiate 1 pairs of hardware outputs
 --   set as 1-2 out 1-2
 -- @link https://www.stephenschappler.com
 -- @changelog 
---   7/29/24 Creating the script
+--   7/29/24 v1.0 - Creating the script
+--   8/24/24 v1.1 - adding confirmation message for user feedback
 
 function SetMasterTrackChannelsAndOutputs()
     -- Set Master Track channels to 4
@@ -25,6 +26,9 @@ function SetMasterTrackChannelsAndOutputs()
     reaper.SetTrackSendInfo_Value(master_track, 1, hw_send_1, 'I_SRCCHAN', 0) -- Source channels 1/2 (channels 0-1, stereo)
 
     reaper.UpdateArrange() -- Update the REAPER interface
+
+    -- Show confirmation message
+    reaper.ShowMessageBox("Project master has been set to stereo configuration", "Configuration Complete", 0)
 end
 
 -- Run the script
