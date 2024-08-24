@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="1c20da8aba3977a250658f718786839894cf9d4b">
+<index version="1" name="SPS Scripts" commit="d6fb4d6f721cbd3b132c81b800d0b55a322ad50a">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -224,6 +224,11 @@
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Quad%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Quad%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
     </reapack>
     <reapack name="Set Project As Stereo and Configure Hardware Outputs.lua" type="script" desc="Set Project as Stereo and Configure Hardware Outputs">
       <metadata>
@@ -240,6 +245,11 @@
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Stereo%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Stereo%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
     </reapack>
     <reapack name="Set Project As Surround and Configure Hardware Outputs.lua" type="script" desc="Set Project as Surround and Configure Hardware Outputs">
       <metadata>
@@ -255,6 +265,11 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Surround%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Surround%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
     </reapack>
     <reapack name="Toggle Master Playrate Half Speed.lua" type="script" desc="Toggle Master Playrate Half Speed">
