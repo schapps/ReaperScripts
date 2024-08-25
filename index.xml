@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d6fb4d6f721cbd3b132c81b800d0b55a322ad50a">
+<index version="1" name="SPS Scripts" commit="0678e6129add525ca66d041772d95df1a38f1c30">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -173,6 +173,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Misc/Copy%20Cursor%20Position%20to%20Clipboard.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Display Last Touched FX Parameter Value.lua" type="script" desc="Open Directory in Windows Explorer">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Display last touched fx parameter info and value in a window\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Edgemeal, modified slightly by Stephen Schappler" time="2024-08-25T22:01:39Z">
+        <changelog><![CDATA[8/25/24 v1.0 - Adding the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/9403beec105d54ce926bcc0ecf0be39fb1000c43/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
       </version>
     </reapack>
     <reapack name="Open Directory in Windows Explorer.lua" type="script" desc="Open Directory in Windows Explorer">
