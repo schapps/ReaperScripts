@@ -1,4 +1,4 @@
--- @description Open Directory in Windows Explorer
+-- @description Display Last Touched FX Parameter Value and Info
 -- @author Edgemeal, modified slightly by Stephen Schappler
 -- @version 1.0
 -- @about
