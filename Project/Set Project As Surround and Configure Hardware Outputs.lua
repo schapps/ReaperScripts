@@ -1,11 +1,12 @@
 -- @description Set Project as Surround and Configure Hardware Outputs
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Set the master track to 6 channels and instantiate 3 pairs of hardware outputs set to 1-6 out 1-6
 -- @link https://www.stephenschappler.com
 -- @changelog 
---   7/29/24 Creating the script
+--   7/29/24 v1.0 - Creating the script
+--   8/24/24 v1.1 - adding confirmation message for user feedback
 
 function SetMasterToSixChannelsAndRouteToHardwareOutputs()
     -- Set Master Track channels to 6
@@ -34,6 +35,9 @@ function SetMasterToSixChannelsAndRouteToHardwareOutputs()
     reaper.SetTrackSendInfo_Value(master_track, 1, hw_send_2, 'I_SRCCHAN', 4) -- Source channels 5/6 (channels 4-5, stereo)
 
     reaper.UpdateArrange() -- Update the REAPER interface
+
+    -- Show confirmation message
+    reaper.ShowMessageBox("Project master has been set to surround configuration", "Configuration Complete", 0)
 end
 
 -- Run the script

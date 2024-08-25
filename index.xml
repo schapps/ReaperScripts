@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="57465968162d89e8b505e643153367bf7bd68a34">
+<index version="1" name="SPS Scripts" commit="d6fb4d6f721cbd3b132c81b800d0b55a322ad50a">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -55,7 +55,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Solo items selected items and plays them. Will respect repeat setting.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Solo selected media items, set time selection to their range, play them, and unsolo when playback stops\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -68,6 +68,49 @@
         <changelog><![CDATA[07/29/24 v1.0 - Creating the script
 08/02/24 v1.1 - Making it smarter]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/57465968162d89e8b505e643153367bf7bd68a34/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2024-08-02T18:13:11Z">
+        <changelog><![CDATA[07/29/24 v1.0 - Creating the script
+08/02/24 v1.1 - Making it smarter
+08/02/24 v1.2 - Save and restore cursor and timeline selection and keep selected items selected on stop]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f96a01e07c48a14474eaa080401d7e547503e5da/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Tab to Next Transient in Item Like Pro Tools.lua" type="script" desc="Tab to Next Transient in Item, Like Pro Tools">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 A script to emulate the tab to transient behavior in Pro Tools\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-24T02:16:47Z">
+        <changelog><![CDATA[08/23/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/29948fe0077df917619ae452ad9f12fda42be942/Items/Tab%20to%20Next%20Transient%20in%20Item%20Like%20Pro%20Tools.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T19:15:01Z">
+        <changelog><![CDATA[08/23/24 v1.0 - Creating the script
+08/24/14 v1.1 - Fixing a bug where the cursor would get stuck if there was no time between two items]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/1c20da8aba3977a250658f718786839894cf9d4b/Items/Tab%20to%20Next%20Transient%20in%20Item%20Like%20Pro%20Tools.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Tab to Previous Transient in Item Like Pro Tools.lua" type="script" desc="Tab to Previous Transient in Item, Like Pro Tools">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 A script to emulate the tab to transient behavior in Pro Tools\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-24T02:29:41Z">
+        <changelog><![CDATA[08/23/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/67a46cc1e75c7912dbc99632837326e8587ef30a/Items/Tab%20to%20Previous%20Transient%20in%20Item%20Like%20Pro%20Tools.lua</source>
       </version>
     </reapack>
   </category>
@@ -181,6 +224,11 @@
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Quad%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Quad%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
     </reapack>
     <reapack name="Set Project As Stereo and Configure Hardware Outputs.lua" type="script" desc="Set Project as Stereo and Configure Hardware Outputs">
       <metadata>
@@ -197,6 +245,11 @@
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Stereo%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Stereo%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
     </reapack>
     <reapack name="Set Project As Surround and Configure Hardware Outputs.lua" type="script" desc="Set Project as Surround and Configure Hardware Outputs">
       <metadata>
@@ -212,6 +265,11 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Project/Set%20Project%20As%20Surround%20and%20Configure%20Hardware%20Outputs.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2024-08-24T22:29:05Z">
+        <changelog><![CDATA[7/29/24 v1.0 - Creating the script
+8/24/24 v1.1 - adding confirmation message for user feedback]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6fb4d6f721cbd3b132c81b800d0b55a322ad50a/Project/Set%20Project%20As%20Surround%20and%20Configure%20Hardware%20Outputs.lua</source>
       </version>
     </reapack>
     <reapack name="Toggle Master Playrate Half Speed.lua" type="script" desc="Toggle Master Playrate Half Speed">
@@ -262,6 +320,38 @@
       <version name="1.2" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to check if the selected item is a subrproject, and if it is, open it.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-23T19:52:23Z">
+        <changelog><![CDATA[8/23/24 - v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5db81ec4b7421b80faa77dcb7751ae8a202b92e5/Subprojects/Open%20Subproject%20Item.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Save and Render RPP-Prox, Disabling Video Track First.lua" type="script" desc="Save and Rende RPP Prox, Disabling Video Track Send First">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to save subprojects, while ensuring any audio from video tracks are muted first.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-23T17:16:32Z">
+        <changelog><![CDATA[8/23/24 - v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/047b49d2fc5b4bc57a256b19e008e716e0123e55/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
       </version>
     </reapack>
   </category>
@@ -328,6 +418,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T17:46:58Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6214eb3e582c35d1de64e838e79d61774e45e844/Tracks/Toggle%20Video%20Tracks%20Master%20Parent%20Send.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Track Visibility, Show Only Selected Tracks and Video Tracks.lua" type="script" desc="Track Visibility, Show Only Selected Tracks and Video Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Will only show selected tracks (plus their children), and video tracks\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-08-24T05:33:50Z">
+        <changelog><![CDATA[8/23/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8c23da9d034e6140c2930f837f5443a2d6449841/Tracks/Track%20Visibility,%20Show%20Only%20Selected%20Tracks%20and%20Video%20Tracks.lua</source>
       </version>
     </reapack>
   </category>
