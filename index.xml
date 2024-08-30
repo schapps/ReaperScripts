@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="514cb978384640f83fae2e426ccffd0536cfc18d">
+<index version="1" name="SPS Scripts" commit="4b62c5ff66bc9c0e5f9b4777a1974e341cbf04c0">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -189,6 +189,11 @@
       <version name="1.0" author="Edgemeal, modified slightly by Stephen Schappler" time="2024-08-25T22:01:39Z">
         <changelog><![CDATA[8/25/24 v1.0 - Adding the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/9403beec105d54ce926bcc0ecf0be39fb1000c43/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
+      </version>
+      <version name="1.1" author="Edgemeal, modified by Stephen Schappler" time="2024-08-27T18:19:28Z">
+        <changelog><![CDATA[8/25/24 v1.0 - Adding the script
+8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/4b62c5ff66bc9c0e5f9b4777a1974e341cbf04c0/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
       </version>
     </reapack>
     <reapack name="Open Directory in Windows Explorer.lua" type="script" desc="Open Directory in Windows Explorer">
