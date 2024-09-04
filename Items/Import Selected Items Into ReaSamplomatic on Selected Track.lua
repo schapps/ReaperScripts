@@ -37,7 +37,7 @@ local miditool_pos = GetMidiToolID(track)
 
   -- Add the MIDI Randomizer JS if it doesn't exist
 if miditool_pos == -1 then
-  miditool_pos = reaper.TrackFX_AddByName(track, 'Randomize MIDI Note Velocity', false, -1)
+  miditool_pos = reaper.TrackFX_AddByName(track, 'MIDI Randomize Note Velocity', false, -1)
 end
 --]]
 
