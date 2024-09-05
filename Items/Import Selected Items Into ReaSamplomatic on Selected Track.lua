@@ -1,6 +1,6 @@
 -- @description Import Selected Items Into ReaSamplomatic on Selected Track
 -- @author Analogmad, MPL, modification by Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- Initial Script by MPL Modified by Analogmad (Chris Kowalski), and further modified by Stephen Schappler
 -- From Analogmad: MPL Helped me with this via the Reaper Forums. I had an issue of putting all samples into one RS5K. Added Arming for Audio Recording. Added Velocity Randomizer
 -- From Stephen Schappler: I changed the MIDI Velcotiy randomizer this script uses (it now uses one I wrote for this purpose), as well as the actions used to render items to a new takes before and after getting loaded into the sampler                   
@@ -9,6 +9,7 @@
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   9/3/24 v1.0 - Adding script to ReaPack
+--   9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
 
 local script_title = 'Import Selected Items into ReaSamplomatic on Selected Track'
 -------------------------------------------------------------------------------    
