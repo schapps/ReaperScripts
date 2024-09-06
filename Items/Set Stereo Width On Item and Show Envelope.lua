@@ -1,11 +1,28 @@
 -- @description Set Stereo Width On Item and Show Envelope
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.2
 -- @about
 --   Set Stereo Width On Item and Show Envelope
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   9/3/24 v1.0 - Creating the script
+--   9/6/24 v1.1 - Fixing the name of the JSFX 
+--   9/6/24 v1.2 - Check if JSFX already exists before adding
+
+function doesFXExist(take, fxName)
+    -- Get the number of FX on the take
+    local numFX = reaper.TakeFX_GetCount(take)
+    
+    -- Loop through all FX and check if the name matches
+    for i = 0, numFX - 1 do
+        local _, fxNameFound = reaper.TakeFX_GetFXName(take, i, "")
+        if fxNameFound:find(fxName) then
+            return true -- FX already exists
+        end
+    end
+    
+    return false -- FX does not exist
+end
 
 function main()
     -- Get the number of selected media items
@@ -21,8 +38,14 @@ function main()
         local take = reaper.GetActiveTake(item)
         if not take or reaper.TakeIsMIDI(take) then goto continue end
 
-        -- Add the JS plugin to the take
-        local fxIndex = reaper.TakeFX_AddByName(take, "Adjustable Stereo Width", -1)
+        -- Check if the JSFX plugin already exists on this take
+        local fxName = "Stereo Width Adjuster"
+        if doesFXExist(take, fxName) then
+            goto continue -- Skip adding if it already exists
+        end
+
+        -- Add the JSFX plugin to the take
+        local fxIndex = reaper.TakeFX_AddByName(take, fxName, -1)
         if fxIndex == -1 then goto continue end
 
         -- Hide the floating FX window by closing all possible FX windows for the take
