@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="e3433ff07ffeaa58c63ea5c1debc2fc4a52ce2ef">
+<index version="1" name="SPS Scripts" commit="69f0fb6107fe55662eb0f054a4c1befe64631f80">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -84,6 +84,12 @@
       <version name="1.0" author="Stephen Schappler" time="2024-09-04T01:06:38Z">
         <changelog><![CDATA[9/3/24 v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/d8f424dfed16e186f25f2c0fa87308ddf3db23f7/Items/Set%20Stereo%20Width%20On%20Item%20and%20Show%20Envelope.lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2024-09-06T16:16:43Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Creating the script
+9/6/24 v1.1 - Fixing the name of the JSFX 
+9/6/24 v1.2 - Check if JSFX already exists before adding]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/69f0fb6107fe55662eb0f054a4c1befe64631f80/Items/Set%20Stereo%20Width%20On%20Item%20and%20Show%20Envelope.lua</source>
       </version>
     </reapack>
     <reapack name="Show Sequence Delay Times for Selected Items.lua" type="script" desc="Show Sequence Delay Times for Selected Items">
