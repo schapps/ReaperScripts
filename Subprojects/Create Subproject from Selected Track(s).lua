@@ -1,11 +1,12 @@
 -- @description Create Subproject from Selected Track(s)
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 1.3
 -- @about
 --   This is a simple script to create subprojects with our Sony Subproject Workflow.
 -- @link https://www.stephenschappler.com
 -- @changelog 
---   7/29/24 Creating the script
+--   7/29/24 - v1.0 Creating the script
+--   9/10/24 - v1.3 Script will automatically set the track's channel count to match rendered subproject item channel count
 
 -- Function to check if a string contains a substring
 function containsString(str, substr)
@@ -17,6 +18,39 @@ function toAbsolutePath(path)
     local res_path = reaper.GetResourcePath()  -- Gets REAPER's resource path
     return reaper.file_exists(path) and path or (res_path .. "\\" .. path)
 end
+
+-- Function to get the channel count of an item
+function getItemChannelCount(item)
+    local take = reaper.GetActiveTake(item)
+    if not take then return 0 end -- No active take
+    local source = reaper.GetMediaItemTake_Source(take)
+    if not source then return 0 end -- No source
+    return reaper.GetMediaSourceNumChannels(source)
+end
+
+-- Function to set the channel count of a track
+function setTrackChannelCount(track, channelCount)
+    reaper.SetMediaTrackInfo_Value(track, "I_NCHAN", channelCount)
+end
+
+
+-- Function to adjust the track's channel count to match the item's
+function adjustTrackChannelCountToMatchItem(item)
+    local track = reaper.GetMediaItem_Track(item)
+    if not track then return end -- No track found
+    local channelCount = getItemChannelCount(item)
+    if channelCount > 0 then
+        setTrackChannelCount(track, channelCount)
+    end
+end
+
+-- Function to get the last created media item
+function getLastRenderedItem()
+    local numItems = reaper.CountMediaItems(0)
+    if numItems == 0 then return nil end
+    return reaper.GetMediaItem(0, numItems - 1) -- The last item created
+end
+
 
 -- Function to execute a command
 function runCommand(commandID)
@@ -124,6 +158,14 @@ if isTimeSelectionPresent() or areItemsSelected() then
 
     -- Activate the parent project by name
     activateProjectByName(parentProjectName)
+    
+    -- Get the last rendered item
+    local lastItem = getLastRenderedItem()
+    
+    if lastItem then
+        -- Adjust the track's channel count to match the rendered item's channel count
+        adjustTrackChannelCountToMatchItem(lastItem)
+    end
 
     -- Reset item length 
     command_id = reaper.NamedCommandLookup("_XENAKIOS_RESETITEMLENMEDOFFS")
