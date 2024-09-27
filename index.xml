@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="69f0fb6107fe55662eb0f054a4c1befe64631f80">
+<index version="1" name="SPS Scripts" commit="c83e5efab27922c2c7abb5a3293dbeeb82e931ae">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -400,6 +400,11 @@
       <version name="1.2" author="Stephen Schappler" time="2024-07-30T04:04:23Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ae4b3b59e1cdfda36a1a594afe6d80ffe301a4fb/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
+      </version>
+      <version name="1.3" author="Stephen Schappler" time="2024-09-10T16:50:00Z">
+        <changelog><![CDATA[7/29/24 - v1.0 Creating the script
+9/10/24 - v1.3 Script will automatically set the track's channel count to match rendered subproject item channel count]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c83e5efab27922c2c7abb5a3293dbeeb82e931ae/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
       </version>
     </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
