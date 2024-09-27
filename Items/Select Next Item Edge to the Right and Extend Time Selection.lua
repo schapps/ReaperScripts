@@ -1,8 +1,8 @@
--- @description Select Next Item Edge to the Right and Extend Time Selection.lua
+-- @description Select Next Item Edge to the Right and Extend Time Selection
 -- @author Stephen Schappler
 -- @version 1.1
 -- @about
---   Select Next Item Edge to the Right and Extend Time Selection.lua
+--   Select Next Item Edge to the Right and Extend Time Selection
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   9/27/24 v1.0 - Creating the script with Kei's help :)
