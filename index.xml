@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="c83e5efab27922c2c7abb5a3293dbeeb82e931ae">
+<index version="1" name="SPS Scripts" commit="d6977f8b3253883d65bfd81410cfbf81fcf5c0cb">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -68,6 +68,38 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-30T22:15:25Z">
         <changelog><![CDATA[8/30/24 v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3f9a5d349d6e1f8454fc148980fe24e58c7aa59c/Items/Rearrange%20Selected%20Item%20Position%20Based%20on%20Color.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Select Next Item Edge to the Left and Extend Time Selection.lua" type="script" desc="Select Next Item Edge to the Right and Extend Time Selection">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Select Next Item Edge to the Right and Extend Time Selection\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-09-27T18:42:50Z">
+        <changelog><![CDATA[9/27/24 v1.0 - Creating the script with Kei's help :)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6977f8b3253883d65bfd81410cfbf81fcf5c0cb/Items/Select%20Next%20Item%20Edge%20to%20the%20Left%20and%20Extend%20Time%20Selection.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Select Next Item Edge to the Right and Extend Time Selection copy.lua" type="script" desc="Select Next Item Edge to the Left and Extend Time Selection.lua">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Select Next Item Edge to the Left and Extend Time Selection.lua\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-09-27T18:42:50Z">
+        <changelog><![CDATA[9/27/24 v1.0 - Creating the script with Kei's help :)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d6977f8b3253883d65bfd81410cfbf81fcf5c0cb/Items/Select%20Next%20Item%20Edge%20to%20the%20Right%20and%20Extend%20Time%20Selection%20copy.lua</source>
       </version>
     </reapack>
     <reapack name="Set Stereo Width On Item and Show Envelope.lua" type="script" desc="Set Stereo Width On Item and Show Envelope">
