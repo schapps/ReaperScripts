@@ -44,7 +44,7 @@ if next_edge_pos ~= math.huge then
     reaper.SetEditCurPos(next_edge_pos, true, false)
     new_cursor_pos = next_edge_pos
 else
-    reaper.ShowMessageBox("No media item edge found to the right.", "Notice", 0)
+    --reaper.ShowMessageBox("No media item edge found to the right.", "Notice", 0)
     return
 end
 
