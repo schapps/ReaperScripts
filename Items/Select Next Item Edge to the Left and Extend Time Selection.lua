@@ -1,18 +1,19 @@
--- @description Select Next Item Edge to the Right and Extend Time Selection
+-- @description Select Next Item Edge to the Left and Extend Time Selection
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
---   Select Next Item Edge to the Right and Extend Time Selection
+--   Select Next Item Edge to the Left and Extend Time Selection
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   9/27/24 v1.0 - Creating the script with Kei's help :)
+--   9/27/24 v1.1 - I am dumn and uploaded the wrong version. Fixed.
 
 -- Get the current edit cursor position
 local current_pos = reaper.GetCursorPosition()
 local old_cursor_pos = current_pos
 
--- Initialize the next edge position to a large number
-local next_edge_pos = math.huge
+-- Initialize the previous edge position to a very small number
+local prev_edge_pos = -math.huge
 
 -- Get the total number of tracks
 local track_count = reaper.CountTracks(0)
@@ -27,23 +28,23 @@ for i = 0, track_count - 1 do
         local item_length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
         local item_end = item_start + item_length
 
-        -- Check for the nearest item start position to the right
-        if item_start > current_pos and item_start < next_edge_pos then
-            next_edge_pos = item_start
+        -- Check for the nearest item end position to the left
+        if item_end < current_pos and item_end > prev_edge_pos then
+            prev_edge_pos = item_end
         end
-        -- Check for the nearest item end position to the right
-        if item_end > current_pos and item_end < next_edge_pos then
-            next_edge_pos = item_end
+        -- Check for the nearest item start position to the left
+        if item_start < current_pos and item_start > prev_edge_pos then
+            prev_edge_pos = item_start
         end
     end
 end
 
 -- Move the edit cursor if a media item edge is found
-if next_edge_pos ~= math.huge then
-    reaper.SetEditCurPos(next_edge_pos, true, false)
-    new_cursor_pos = next_edge_pos
+if prev_edge_pos ~= -math.huge then
+    reaper.SetEditCurPos(prev_edge_pos, true, false)
+    new_cursor_pos = prev_edge_pos
 else
-    reaper.ShowMessageBox("No media item edge found to the right.", "Notice", 0)
+    reaper.ShowMessageBox("No media item edge found to the left.", "Notice", 0)
     return
 end
 
@@ -57,7 +58,7 @@ if start_time_sel == end_time_sel then
     local new_end = math.max(old_cursor_pos, new_cursor_pos)
     reaper.GetSet_LoopTimeRange(true, false, new_start, new_end, false)
 else
-    -- Time selection exists; extend it to the new cursor position
+    -- Time selection exists; extend it to include the new cursor position
     local new_start = math.min(start_time_sel, new_cursor_pos)
     local new_end = math.max(end_time_sel, new_cursor_pos)
     reaper.GetSet_LoopTimeRange(true, false, new_start, new_end, false)
@@ -65,5 +66,3 @@ end
 
 -- Update the arrangement view
 reaper.UpdateArrange()
-
-
