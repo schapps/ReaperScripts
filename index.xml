@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="c5506bb49dfdbd04771e404c4b2ed9beb9c73594">
+<index version="1" name="SPS Scripts" commit="76e31ccc418725c7f0c4e15a761a9ef0c949236d">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -15,6 +15,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Items/Find%20and%20Select%20All%20Items%20Based%20on%20Color.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Find and Select Items by Name on Selected Tracks.lua" type="script" desc="Find and Select Items by Name on Selected Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Find and Select Items by Name on Selected Tracks\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-10-31T16:53:16Z">
+        <changelog><![CDATA[10/31/24 - v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/76e31ccc418725c7f0c4e15a761a9ef0c949236d/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Track">
