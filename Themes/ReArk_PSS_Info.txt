@@ -2,4 +2,4 @@
 @description ReARK_PlayStationStudios_Sound
 @author Stephen Schappler
 @provides
-  [data] Theme/ReARK_PlayStationStudios_Sound.ReaperThemeZip
+  [data] Themes/ReARK_PlayStationStudios_Sound.ReaperThemeZip
