@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="67734d581b5b33b6cd29f1522c598eacca37fcd0">
+<index version="1" name="SPS Scripts" commit="c5506bb49dfdbd04771e404c4b2ed9beb9c73594">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -307,6 +307,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Misc/Open%20Directory%20in%20Windows%20Explorer.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Open Directory of Current Reaper Project.lua" type="script" desc="Open Directory of Current Reaper Project">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Reaper Lua script to open the folder of the currently opened project file\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-10-07T23:18:19Z">
+        <changelog><![CDATA[10/07/24 v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c5506bb49dfdbd04771e404c4b2ed9beb9c73594/Misc/Open%20Directory%20of%20Current%20Reaper%20Project.lua</source>
       </version>
     </reapack>
   </category>
