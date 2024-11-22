@@ -1,23 +1,13 @@
 -- @description Smart Export Selected Items
 -- @version 1.3
 -- @about
---[[
-Smart Render Selected Items Based on Channel Count (Optimized for Group Rendering with Overlapping Items Handling)
-
-This script renders selected media items by grouping them based on their effective channel count and rendering each group together. It also handles overlapping items with the same name by gluing them temporarily for rendering.
-
-Configuration:
-- Map effective channel counts to action IDs (commands) that load the desired render preset.
-
-Usage:
-- Modify the action_map to include your own action IDs for each channel count.
-- Select the media items you want to render.
-- Run this script.
-
---]]
--- @author
---   Original script by Stephen Schappler
---   Modified by OpenAI's ChatGPT
+--   A script to easily export selected items of many different channel counts all at once. 
+--
+--   First use cfillion's Apply Render Preset to create preset actions that will load up render presets with the
+--   correct channel count and other desired settings.
+--
+--   Then, paste those actions in the config area.
+-- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
 --   11/21/24 v1.0 - Creating the script
