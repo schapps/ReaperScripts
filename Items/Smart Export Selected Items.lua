@@ -1,30 +1,43 @@
 -- @description Smart Export Selected Items
--- @version 1.3
+-- @version 1.5
 -- @about
---   A script to easily export selected items of many different channel counts all at once. 
---
---   First use cfillion's Apply Render Preset to create preset actions that will load up render presets with the
---   correct channel count and other desired settings.
---
---   Then, paste those actions in the config area.
+--   A script to easily export selected items of many different channel counts all at once.
+--   cfillion's Apply Render Preset scripts are required to work
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
 --   11/21/24 v1.0 - Creating the script
 --   11/21/24 v1.3 - Added handling of overlapping items with the same name
 --   11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+--   11/21/24 v1.5 - Changing how Config Area works
 
 -- Clear the console at the start
 reaper.ClearConsole()
 
 -- CONFIGURATION AREA
--- Map effective channel counts to action command IDs (as strings, with '_RS' prefix if custom script)
-local action_map = {
-  [1] = "_RS3154aeded5c31a0a90efc4be8d02d8ad70e2daa2", -- Action ID to load desired Mono render preset
-  [2] = "_RSc31d9877f7d3502eac942c63df7e057a163dd74e", -- Action ID to load desired Stereo render preset
-  [4] = "_RSb8bd74b8ebb0ae6acdee310785d2c8bc143e137d", -- Action ID to load desired Quad render preset
-  [6] = "_RS1829513b44371fd5d962ebf7a717d96b569689cb"  -- Action ID to load desired Surround render preset
+-- Map effective channel counts to render preset names
+local preset_map = {
+  [1] = "Marathon - Mono",   -- Preset name for Mono
+  [2] = "Marathon - Stereo", -- Preset name for Stereo
+  [4] = "Marathon - Quad",   -- Preset name for Quad
+  [6] = "Marathon - 6ch" -- Preset name for Surround
 }
+
+-- Path to cfillion's Apply render preset script
+local apply_preset_script_path = ("%s/Scripts/ReaTeam Scripts/Rendering/cfillion_Apply render preset.lua"):format(reaper.GetResourcePath())
+
+-- Ensure the Apply Render Preset script is available
+local function ApplyRenderPresetByName(preset_name)
+  if not reaper.file_exists(apply_preset_script_path) then
+    reaper.ShowMessageBox("Apply render preset script not found.\n" .. apply_preset_script_path, "Error", 0)
+    return false
+  end
+
+  -- Load the script dynamically with the preset name set
+  ApplyPresetByName = preset_name
+  dofile(apply_preset_script_path)
+  return true
+end
 
 -- END OF CONFIGURATION
 
@@ -51,40 +64,6 @@ local function GetEffectiveChannelCount(take, source_num_channels)
   end
 
   return effective_channels
-end
-
--- Function to run an action by command ID
-local function RunActionByID(cmdID)
-  if not cmdID then
-    reaper.ShowMessageBox('No action ID provided.', 'Error', 0)
-    return
-  end
-
-  local original_cmdID = cmdID  -- Save for debugging
-
-  if type(cmdID) == 'string' then
-    if cmdID:sub(1, 1) == '_' then
-      local new_cmdID = reaper.NamedCommandLookup(cmdID)
-      if new_cmdID == 0 then
-        reaper.ShowMessageBox('Named command not found: ' .. cmdID, 'Error', 0)
-        return
-      else
-        cmdID = new_cmdID
-      end
-    else
-      cmdID = tonumber(cmdID)
-      if not cmdID then
-        reaper.ShowMessageBox('Invalid action ID string: ' .. original_cmdID, 'Error', 0)
-        return
-      end
-    end
-  end
-
-  if cmdID and cmdID > 0 then
-    reaper.Main_OnCommand(cmdID, 0)
-  else
-    reaper.ShowMessageBox('Invalid action ID after lookup: ' .. tostring(cmdID), 'Error', 0)
-  end
 end
 
 -- Save current project render settings
@@ -189,8 +168,6 @@ end
 
 -- Process glued items
 for _, group in ipairs(overlapping_groups) do
-  -- Begin undo block for glue and render
-  reaper.Undo_BeginBlock()
   -- Select the items in the group
   reaper.Main_OnCommand(40289, 0) -- Unselect all items
   for _, info in ipairs(group) do
@@ -207,37 +184,30 @@ for _, group in ipairs(overlapping_groups) do
     local source = reaper.GetMediaItemTake_Source(glued_take)
     local source_num_channels = reaper.GetMediaSourceNumChannels(source)
     local effective_channels = GetEffectiveChannelCount(glued_take, source_num_channels)
-    local action_id = action_map[effective_channels]
-    if action_id then
-      -- Run the action to load the render preset
-      RunActionByID(action_id)
+    local preset_name = preset_map[effective_channels]
+    if preset_name then
+      if ApplyRenderPresetByName(preset_name) then
+        -- Set render bounds to selected media items
+        reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
 
-      -- Set render bounds to selected media items
-      reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
+        -- Render the item
+        reaper.Main_OnCommand(41824, 0) -- File: Render project, using the most recent render settings, auto-close render dialog
 
-      -- Ensure only the glued item is selected
-      reaper.Main_OnCommand(40289, 0) -- Unselect all items
-      reaper.SetMediaItemSelected(glued_item, true)
-
-      -- Render the item
-      reaper.Main_OnCommand(41824, 0) -- File: Render project, using the most recent render settings, auto-close render dialog
-
-      -- Undo the glue action
-      reaper.Undo_EndBlock("Glue and Render", -1)
-      reaper.Undo_DoUndo2(0)
+        -- Undo the glue action to restore original items
+        reaper.Undo_DoUndo2(0) -- Undo last glue action
+      else
+        reaper.ShowMessageBox("Failed to apply render preset: " .. preset_name, "Error", 0)
+      end
     else
-      reaper.ShowMessageBox('No action defined for effective channel count: ' .. effective_channels, 'Error', 0)
-      reaper.Undo_EndBlock("Glue and Render", -1)
+      reaper.ShowMessageBox('No preset defined for effective channel count: ' .. effective_channels, 'Error', 0)
     end
   else
-    reaper.ShowMessageBox('Failed to glue items for ' .. group_name, 'Error', 0)
-    reaper.Undo_EndBlock("Glue and Render", -1)
+    reaper.ShowMessageBox('Failed to glue items for ' .. group[1].name, 'Error', 0)
   end
 end
 
--- Build items_by_channel_count for non-glued items
+-- Process non-overlapping items by channel count
 local items_by_channel_count = {}
-
 for _, info in ipairs(non_overlapping_items) do
   local effective_channels = info.effective_channels
   if not items_by_channel_count[effective_channels] then
@@ -246,26 +216,27 @@ for _, info in ipairs(non_overlapping_items) do
   table.insert(items_by_channel_count[effective_channels], info.item)
 end
 
--- Now, for each channel count, process the items
+-- Render non-overlapping items
 for effective_channels, items in pairs(items_by_channel_count) do
-  local action_id = action_map[effective_channels]
-  if action_id then
-    -- Run the action to load the render preset
-    RunActionByID(action_id)
+  local preset_name = preset_map[effective_channels]
+  if preset_name then
+    if ApplyRenderPresetByName(preset_name) then
+      -- Set render bounds to selected media items
+      reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
 
-    -- Set render bounds to selected media items
-    reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
+      -- Temporarily select only these items
+      reaper.Main_OnCommand(40289, 0) -- Unselect all items
+      for _, item in ipairs(items) do
+        reaper.SetMediaItemSelected(item, true)
+      end
 
-    -- Temporarily select only these items
-    reaper.Main_OnCommand(40289, 0) -- Unselect all items
-    for _, item in ipairs(items) do
-      reaper.SetMediaItemSelected(item, true)
+      -- Render the items
+      reaper.Main_OnCommand(41824, 0) -- File: Render project, using the most recent render settings, auto-close render dialog
+    else
+      reaper.ShowMessageBox("Failed to apply render preset: " .. preset_name, "Error", 0)
     end
-
-    -- Render the items
-    reaper.Main_OnCommand(41824, 0) -- File: Render project, using the most recent render settings, auto-close render dialog
   else
-    reaper.ShowMessageBox('No action defined for effective channel count: ' .. effective_channels, 'Error', 0)
+    reaper.ShowMessageBox('No preset defined for effective channel count: ' .. effective_channels, 'Error', 0)
   end
 end
 
