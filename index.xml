@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="beb71931710ad5bae35f02b338dd54601cddd83c">
+<index version="1" name="SPS Scripts" commit="7f2e00482b32d7d43d1079cb791329e72e5db03f">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -160,6 +160,26 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T18:24:59Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3b33dc54d14e1ac3796c90bfeebda8fca99221e4/Items/Show%20Sequence%20Delay%20Times%20for%20Selected%20Items.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 First use cfillion's Apply Render Preset to create preset actions that will load up render presets with the correct channel count and other desired settings.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Then, paste those actions in the config area.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.3" author="Stephen Schappler" time="2024-11-22T01:06:35Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/7f2e00482b32d7d43d1079cb791329e72e5db03f/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
