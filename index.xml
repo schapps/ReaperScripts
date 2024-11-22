@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="7f2e00482b32d7d43d1079cb791329e72e5db03f">
+<index version="1" name="SPS Scripts" commit="6e054523d3e665c6a712de728d6ab5f661fe7b5b">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -168,9 +168,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once.\par}
-{\pard \ql \f0 \sa180 \li0 \fi0 First use cfillion's Apply Render Preset to create preset actions that will load up render presets with the correct channel count and other desired settings.\par}
-{\pard \ql \f0 \sa180 \li0 \fi0 Then, paste those actions in the config area.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once. cfillion's Apply Render Preset scripts are required to work\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -180,6 +178,13 @@
 11/21/24 v1.3 - Added handling of overlapping items with the same name
 11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/7f2e00482b32d7d43d1079cb791329e72e5db03f/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="1.5" author="Stephen Schappler" time="2024-11-22T04:09:42Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/6e054523d3e665c6a712de728d6ab5f661fe7b5b/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
