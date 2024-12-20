@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="9b55e0c9b7c6e76d13a728ea60404203f4c096a1">
+<index version="1" name="SPS Scripts" commit="f2b544e8a17237535481195f05471e1ee9cb2570">
   <category name="Items">
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
@@ -164,7 +164,7 @@
     </reapack>
     <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
@@ -185,6 +185,14 @@
 11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
 11/21/24 v1.5 - Changing how Config Area works]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6e054523d3e665c6a712de728d6ab5f661fe7b5b/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="1.6" author="Stephen Schappler" time="2024-12-20T19:59:09Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f2b544e8a17237535481195f05471e1ee9cb2570/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
