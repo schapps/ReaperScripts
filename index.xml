@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="f2b544e8a17237535481195f05471e1ee9cb2570">
+<index version="1" name="SPS Scripts" commit="1a1f94b60055bfdb7071cd1f80bd847546eefd13">
   <category name="Items">
+    <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Copies the file name of the selected item to the clipboard. Santizes the name if there is a long number string at the end. You can comment out that feature below if you want.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2024-12-23T18:20:50Z">
+        <changelog><![CDATA[12/23/24 - v 1.0 - adding the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/1a1f94b60055bfdb7071cd1f80bd847546eefd13/Items/Copy%20Filename%20of%20Selected%20Item.lua</source>
+      </version>
+    </reapack>
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
