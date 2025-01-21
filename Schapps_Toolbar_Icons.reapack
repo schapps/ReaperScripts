@@ -1,0 +1,10 @@
+-- @description Schapps Toolbar Icons
+-- @author Stephen Schappler
+-- @version 1.0
+-- @changelog
+--    Initial release
+-- @provides
+--    [data] Data/toolbar_icons/*.png
+-- @about
+--    # Custom Toolbar Icons
+--    These are custom toolbar icons for use in REAPER.
