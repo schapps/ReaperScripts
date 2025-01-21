@@ -4,7 +4,7 @@
 -- @changelog
 --    Initial release
 -- @provides
---    [data] Data/toolbar_icons/*.png
+--    [data] toolbar_icons/*.png
 -- @about
 --    # Custom Toolbar Icons
 --    These are custom toolbar icons for use in REAPER.
