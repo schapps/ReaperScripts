@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @changelog
---    Updating to include the 150 and 20 folders as well
+--    Fixing the 150 icons
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
