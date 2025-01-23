@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- @changelog
---    Fixing the 150 icons again
+--    Updating sampler and last renamer 150 sizes to match
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
