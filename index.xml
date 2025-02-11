@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b46f03a1877b0be6b25916728a9e1287a2c2e8dd">
+<index version="1" name="SPS Scripts" commit="ce5e225e93f9c637981d281181a26b2cf454d76f">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1260,6 +1260,22 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/c83e5efab27922c2c7abb5a3293dbeeb82e931ae/Subprojects/Create%20Subproject%20from%20Selected%20Track(s).lua</source>
       </version>
     </reapack>
+    <reapack name="Duplicate Subproject Items to New Take, Copying RPP to New Version.lua" type="script" desc="Duplicate Subproject Items to New Take, Copying RPP to New Version">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Duplicate Subproject Items as New Takes with Versioning (Multiple Items) and Open Each New Subproject in a New Tab\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2025-02-11T22:59:30Z">
+        <changelog><![CDATA[02/11/25 - v1.0 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ce5e225e93f9c637981d281181a26b2cf454d76f/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
+      </version>
+    </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
@@ -1276,9 +1292,9 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/5db81ec4b7421b80faa77dcb7751ae8a202b92e5/Subprojects/Open%20Subproject%20Item.lua</source>
       </version>
     </reapack>
-    <reapack name="Save and Render RPP-Prox, Disabling Video Track First.lua" type="script" desc="Save and Rende RPP Prox, Disabling Video Track Send First">
+    <reapack name="Save and Render RPP-Prox, Disabling Video Track First.lua" type="script" desc="Save and Render RPP Prox, Disabling Video Track Send First">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
