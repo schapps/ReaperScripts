@@ -1,4 +1,4 @@
--- @description Save and Rende RPP Prox, Disabling Video Track Send First
+-- @description Save and Render RPP Prox, Disabling Video Track Send First
 -- @author Stephen Schappler
 -- @version 1.0
 -- @about
@@ -6,6 +6,7 @@
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   8/23/24 - v1.0 - Creating the script
+--   2/11/25 - v1.01 - Fixing the description typo
 
 -- Function to perform a case-insensitive search for a keyword in a string
 local function string_contains(str, keyword)

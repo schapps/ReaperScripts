@@ -2,7 +2,7 @@
 -- @author Stephen Schappler
 -- @version 1.0
 -- @about
--- Duplicate Subproject Items as New Takes with Versioning (Multiple Items) and Open Each New Subproject in a New Tab
+--   Duplicate Subproject Items as New Takes with Versioning (Multiple Items) and Open Each New Subproject in a New Tab
 -- @link https://www.stephenschappler.com
 -- @changelog 
 --   02/11/25 - v1.0 Creating the script
