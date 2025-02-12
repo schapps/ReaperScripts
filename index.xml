@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="106c03dea41bacbc05a76c205f1e788e0cc530d3">
+<index version="1" name="SPS Scripts" commit="4e276191e6f0a337f5ec29e1e8f539e5d04067a2">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1614,6 +1614,11 @@
       <version name="1.0" author="Stephen Schappler" time="2025-02-11T22:59:30Z">
         <changelog><![CDATA[02/11/25 - v1.0 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ce5e225e93f9c637981d281181a26b2cf454d76f/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2025-02-12T17:50:55Z">
+        <changelog><![CDATA[02/11/25 - v1.0 Creating the script.
+02/12/25 - v1.1 Modifying the script so that it takes the user back to the parent project at the end.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/4e276191e6f0a337f5ec29e1e8f539e5d04067a2/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
       </version>
     </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
