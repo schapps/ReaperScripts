@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="02e8c27fa2a2a7d14045602750f43e69f423fb06">
+<index version="1" name="SPS Scripts" commit="cd0ac0a8d8c4fa77aa10a2d3ab982b6dcb4b4c0b">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1673,6 +1673,12 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-23T17:16:32Z">
         <changelog><![CDATA[8/23/24 - v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/047b49d2fc5b4bc57a256b19e008e716e0123e55/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
+      </version>
+      <version name="1.02" author="Stephen Schappler" time="2025-04-16T20:31:57Z">
+        <changelog><![CDATA[8/23/24 - v1.0 - Creating the script
+2/11/25 - v1.01 - Fixing the description typo
+4/16/25 - v1.02 - Making it so that the subproject's parent project is activated after saving.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/cd0ac0a8d8c4fa77aa10a2d3ab982b6dcb4b4c0b/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
       </version>
     </reapack>
   </category>
