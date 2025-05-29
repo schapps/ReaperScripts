@@ -1,0 +1,83 @@
+/**
+ * JSFX Name: 64 Channel Simple Volume Slider
+ * About: Simple volume slider
+ * Author: Lewis Barn
+ * Version: 1.0
+ */
+
+/**
+ * Changelog:
+ * v1.0 Initial Release 05/29/25
+ */
+
+desc: Simple Volume Slider - 64 Channel - LB
+
+slider1:0<-60,60,0.5>adjustment (dB)
+@slider
+  scale = log(10.0)*0.05; 
+  adj1 = exp(slider1*scale);
+@sample
+spl0 *= adj1;
+spl1 *= adj1;
+spl2 *= adj1;
+spl3 *= adj1;
+spl4 *= adj1;
+spl5 *= adj1;
+spl6 *= adj1;
+spl7 *= adj1;
+spl8 *= adj1;
+spl9 *= adj1;
+spl10 *= adj1;
+spl11 *= adj1;
+spl12 *= adj1;
+spl13 *= adj1;
+spl14 *= adj1;
+spl15 *= adj1;
+spl16 *= adj1;
+spl17 *= adj1;
+spl18 *= adj1;
+spl19 *= adj1;
+spl20 *= adj1;
+spl21 *= adj1;
+spl22 *= adj1;
+spl23 *= adj1;
+spl24 *= adj1;
+spl25 *= adj1;
+spl26 *= adj1;
+spl27 *= adj1;
+spl28 *= adj1;
+spl29 *= adj1;
+spl30 *= adj1;
+spl31 *= adj1;
+spl32 *= adj1;
+spl33 *= adj1;
+spl34 *= adj1;
+spl35 *= adj1;
+spl36 *= adj1;
+spl37 *= adj1;
+spl38 *= adj1;
+spl39 *= adj1;
+spl40 *= adj1;
+spl41 *= adj1;
+spl42 *= adj1;
+spl43 *= adj1;
+spl44 *= adj1;
+spl45 *= adj1;
+spl46 *= adj1;
+spl47 *= adj1;
+spl48 *= adj1;
+spl49 *= adj1;
+spl50 *= adj1;
+spl51 *= adj1;
+spl52 *= adj1;
+spl53 *= adj1;
+spl54 *= adj1;
+spl55 *= adj1;
+spl56 *= adj1;
+spl57 *= adj1;
+spl58 *= adj1;
+spl59 *= adj1;
+spl60 *= adj1;
+spl61 *= adj1;
+spl62 *= adj1;
+spl63 *= adj1;
