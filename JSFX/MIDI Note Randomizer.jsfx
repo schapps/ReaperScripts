@@ -1,0 +1,98 @@
+/**
+ * JSFX Name: MIDI Randomizer
+ * About: Randomize MIDI Note and Velocity
+ * Author: Stephen Schappler
+ * Author URI: http://www.stephenschappler.com
+ * Version: 1.0
+ */
+
+/**
+ * Changelog:
+ * v1.0 Initial Release 06-06-2025
+ */
+
+desc:MIDI Note Randomizer
+desc:Randomizes incoming MIDI notes to random pitches and velocities
+
+slider1:0<0,127,1>Min Note (MIDI)
+slider2:127<0,127,1>Max Note (MIDI)
+slider3:1<1,127,1>Min Velocity
+slider4:127<1,127,1>Max Velocity
+slider5:0<0,1,1{Off,On}>Pass Through Original
+
+@init
+// MIDI message types
+NOTE_OFF = 0x80;
+NOTE_ON = 0x90;
+
+// Note tracking arrays
+// Store which random note is playing for each original note on each channel
+// Format: note_map[channel][original_note] = random_note
+memset(note_map, -1, 16 * 128); // 16 channels * 128 notes, -1 means not playing
+
+@slider
+// Ensure min/max values are correct
+slider1 = min(slider1, slider2);
+slider2 = max(slider1, slider2);
+slider3 = min(slider3, slider4);
+slider4 = max(slider3, slider4);
+
+@block
+while (
+  midirecv(offset, msg1, msg2, msg3) ? (
+    // Get message type and channel
+    status = msg1 & 0xF0;
+    channel = msg1 & 0x0F;
+    
+    // Check if it's a Note On or Note Off message
+    (status == NOTE_ON || status == NOTE_OFF) ? (
+      
+      // Note On with velocity > 0
+      (status == NOTE_ON && msg3 > 0) ? (
+        // First, check if this note is already playing and stop it
+        map_index = channel * 128 + msg2;
+        note_map[map_index] >= 0 ? (
+          // Send Note Off for the previous random note
+          midisend(offset, NOTE_OFF | channel, note_map[map_index], 0);
+        );
+        
+        // Generate random note within range
+        random_note = floor(rand() * (slider2 - slider1 + 1)) + slider1;
+        
+        // Generate random velocity within range
+        random_velocity = floor(rand() * (slider4 - slider3 + 1)) + slider3;
+        
+        // Store the mapping
+        note_map[map_index] = random_note;
+        
+        // Send the randomized note
+        midisend(offset, NOTE_ON | channel, random_note, random_velocity);
+        
+        // Optionally pass through the original note
+        slider5 ? midisend(offset, msg1, msg2, msg3);
+        
+      ) : (
+        // Note Off or Note On with velocity 0
+        map_index = channel * 128 + msg2;
+        
+        // Check if we have a random note playing for this original note
+        note_map[map_index] >= 0 ? (
+          // Send Note Off for the random note
+          midisend(offset, NOTE_OFF | channel, note_map[map_index], msg3);
+          
+          // Clear the mapping
+          note_map[map_index] = -1;
+        );
+        
+        // If pass through is on, also send the original Note Off
+        slider5 ? midisend(offset, msg1, msg2, msg3);
+      );
+      
+    ) : (
+      // Pass through non-note messages (CC, pitch bend, etc.)
+      midisend(offset, msg1, msg2, msg3);
+    );
+    
+    1; // Continue processing
+  ) : 0; // No more MIDI messages
+);
