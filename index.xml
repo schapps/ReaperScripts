@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="371e9452016f8d1cac883733183ffe46c2642463">
+<index version="1" name="SPS Scripts" commit="024a1900195592ece4ece2a940ec2d7d648c0854">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -303,6 +303,20 @@
       </metadata>
       <version name="1.0" author="Stephen Schappler" time="2024-07-31T03:46:40Z">
         <source>https://github.com/schapps/ReaperScripts/raw/b40749fd3cf80506fcb0a55378c188e7f0129947/JSFX/MIDI%20Note%20Off%20to%20Note%20On.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="MIDI Note Randomizer.jsfx" type="effect" desc="MIDI Randomizer">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Randomize MIDI Note and Velocity\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2025-06-06T22:28:59Z">
+        <source>https://github.com/schapps/ReaperScripts/raw/024a1900195592ece4ece2a940ec2d7d648c0854/JSFX/MIDI%20Note%20Randomizer.jsfx</source>
       </version>
     </reapack>
     <reapack name="MIDI Randomize Note Velocity.jsfx" type="effect" desc="MIDI Randomize Note Velocity">
