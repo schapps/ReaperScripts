@@ -1,12 +1,12 @@
 -- @description Schapps Toolbars
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 2.1
 -- @changelog
---    Trying this out
+--    Trying this out, with quotes
 -- @provides
---    [data] reaper-menu.ini > ../reaper-menu.ini
+--    [data] reaper-menu.ini > "../reaper-menu.ini"
 
 
 -- @about
---    # Custom Toolbar Icons
+--    # Custom Toolbars
 --    This is the reaper-menu.ini that includes all toolbar settings.
