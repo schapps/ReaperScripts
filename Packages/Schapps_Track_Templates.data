@@ -4,7 +4,7 @@
 -- @changelog
 --    Adding first track template
 -- @provides
---    [data] TrackTemplates/*.RTrackTemplate
+--    [tracktpl] TrackTemplates/*.RTrackTemplate
 
 -- @about
 --    # Track Templates
