@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="7d7f220ce1306795d60d12317b2fcb3ae532f8e7">
+<index version="1" name="SPS Scripts" commit="b87d10e1e8e5f52e4cb30deb7fa51ebc585a059d">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1515,12 +1515,6 @@
         <source type="data" file="toolbar_icons/200/toolbar_square_visibility_selection.png">https://github.com/schapps/ReaperScripts/raw/106c03dea41bacbc05a76c205f1e788e0cc530d3/Packages/toolbar_icons/200/toolbar_square_visibility_selection.png</source>
       </version>
     </reapack>
-    <reapack name="Schapps_Track_Templates.data" type="data" desc="Schapps Track Templates">
-      <version name="0.1" author="Stephen Schappler" time="2025-07-10T02:12:23Z">
-        <changelog><![CDATA[Adding first track template]]></changelog>
-        <source type="data" file="TrackTemplates/Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/7d7f220ce1306795d60d12317b2fcb3ae532f8e7/Packages/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
-      </version>
-    </reapack>
   </category>
   <category name="Project">
     <reapack name="Play at Half Speed and Reset Playrate on Stop.lua" type="script" desc="Play at Half Speed and Reset Playrate on Stop">
@@ -1826,6 +1820,14 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-24T05:33:50Z">
         <changelog><![CDATA[8/23/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/8c23da9d034e6140c2930f837f5443a2d6449841/Tracks/Track%20Visibility,%20Show%20Only%20Selected%20Tracks%20and%20Video%20Tracks.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="TrackTemplates">
+    <reapack name="Schapps_Track_Templates.data" type="data" desc="Schapps Track Templates">
+      <version name="0.1" author="Stephen Schappler" time="2025-07-10T02:23:00Z">
+        <changelog><![CDATA[Adding first track template]]></changelog>
+        <source type="tracktpl" file="Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/b87d10e1e8e5f52e4cb30deb7fa51ebc585a059d/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
       </version>
     </reapack>
   </category>
