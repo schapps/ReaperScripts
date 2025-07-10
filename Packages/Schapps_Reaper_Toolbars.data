@@ -1,0 +1,12 @@
+-- @description Schapps Toolbar Icons
+-- @author Stephen Schappler
+-- @version 1.10
+-- @changelog
+--    Updating sampler and last renamer 150 sizes to match
+-- @provides
+--    [data] reaper-menu.ini
+
+
+-- @about
+--    # Custom Toolbar Icons
+--    These are custom toolbar icons for use in REAPER.
