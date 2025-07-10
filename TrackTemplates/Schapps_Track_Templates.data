@@ -1,11 +1,12 @@
 -- @description Schapps Track Templates
 -- @author Stephen Schappler
--- @version 0.1
+-- @version 0.2
 -- @changelog
 --    Adding first track template
 -- @provides
 --    [rtracktemplate] *.RTrackTemplate
+--    [rtracktemplate] SchappsTemplates/*.RTrackTemplate
 
 -- @about
 --    # Track Templates
---    These are custom track tempaltes to use in Reaper.
+--    These are custom track templates to use in Reaper.
