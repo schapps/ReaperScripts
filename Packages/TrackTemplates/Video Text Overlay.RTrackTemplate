@@ -1,0 +1,135 @@
+<TRACK
+  NAME "VIDEO - Text Overlay"
+  PEAKCOL 16810239
+  BEAT -1
+  AUTOMODE 0
+  VOLPAN 1 0 -1 -1 1
+  MUTESOLO 0 0 0
+  IPHASE 0
+  PLAYOFFS 0 1
+  ISBUS 0 0
+  BUSCOMP 0 0 0 0 0
+  SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0
+  REC 0 -1 0 1 0 0 0 0
+  VU 2
+  TRACKHEIGHT 0 0 0 0 0 0 0
+  INQ 0 0 0 0.5 100 0 0 100
+  NCHAN 2
+  TRACKIMGFN "filmstrip.png"
+  FX 1
+  TRACKID {884D8305-5FE8-D741-9592-E3871C482E71}
+  PERF 0
+  UNDO_HAS_TRACKENV
+  MIDIOUT -1
+  MAINSEND 1 0
+  <FXCHAIN
+    SHOW 0
+    LASTSEL 0
+    DOCKED 0
+    BYPASS 0 0 0
+    <VIDEO_EFFECT "Video processor" ""
+      <CODE
+        |// Item fades affect video
+        |input_track(0) > 0 ? (
+        |  input_info(0,project_w,project_h,0,ta=0);
+        |  ta < 1 ? (
+        |    gfx_blit(input_next_item(0),1);
+        |    (gfx_a=ta)>0 ? gfx_blit(0,1);
+        |  );
+        |);
+      >
+      CODEPARM 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    >
+    PRESETNAME "Basic helpers: Item fades affect video"
+    FLOATPOS 1228 573 486 336
+    FXID {7C19B592-EED6-4043-948C-329EB33785F4}
+    WAK 0 0
+  >
+  <ITEM {19C147B7-9FFF-49EA-AD9E-418022E62D15}
+    POSITION 5.35751449260979 10.71502898521958
+    SNAPOFFS 0 0
+    LENGTH 14.59248192015876 29.18496384031752
+    LOOP 0
+    ALLTAKES 0
+    FADEIN 1 0 0 1 0 0 0
+    FADEOUT 1 0 0 1 0 0 0
+    MUTE 0 0
+    SEL 1
+    IGUID {19C147B7-9FFF-49EA-AD9E-418022E62D15}
+    IID 2
+    NAME "VIDEO - Text Overlay untitled MIDI item"
+    VOLPAN 1 0 1 -1
+    SOFFS 0 0
+    PLAYRATE 1 0 0 -1 0 0.0025
+    CHANMODE 0
+    GUID {3F37266A-AD66-4AB1-8929-1BBB6B9AE13A}
+    <SOURCE MIDI
+      HASDATA 1 960 QN
+      CCINTERP 32
+      POOLEDEVTS {17002357-4B7C-47C2-A5A0-B9F9413159EB}
+      E 28018 b0 7b 00
+      CCINTERP 32
+      CHASE_CC_TAKEOFFS 1
+      GUID {A893B7EF-2C85-489C-949E-6777A6F8C1A1}
+      IGNTEMPO 0 120 4 4
+      SRCCOLOR 1
+      EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
+    >
+    <TAKEFX
+      SHOW 0
+      LASTSEL 0
+      DOCKED 0
+      BYPASS 0 0 0
+      <VIDEO_EFFECT "Video processor" ""
+        <CODE
+          |// Text/timecode overlay
+          |#text=""; // set to string to override
+          |font="Arial";
+          |
+          |//@param1:size 'text height' 0.05 0.01 0.2 0.1 0.001
+          |//@param2:ypos 'y position' 0.95 0 1 0.5 0.01
+          |//@param3:xpos 'x position' 0.5 0 1 0.5 0.01
+          |//@param4:border 'bg pad' 0.1 0 1 0.5 0.01
+          |//@param5:fgc 'text bright' 1.0 0 1 0.5 0.01
+          |//@param6:fga 'text alpha' 1.0 0 1 0.5 0.01
+          |//@param7:bgc 'bg bright' 0.75 0 1 0.5 0.01
+          |//@param8:bga 'bg alpha' 0.5 0 1 0.5 0.01
+          |//@param9:bgfit 'fit bg to text' 0 0 1 0.5 1
+          |//@param10:ignoreinput 'ignore input' 0 0 1 0.5 1
+          |
+          |//@param12:tc 'show timecode' 0 0 1 0.5 1
+          |//@param13:tcdf 'dropframe timecode' 0 0 1 0.5 1
+          |
+          |input = ignoreinput ? -2:0;
+          |project_wh_valid===0 ? input_info(input,project_w,project_h);
+          |gfx_a2=0;
+          |gfx_blit(input,1);
+          |gfx_setfont(size*project_h,font);
+          |tc>0.5 ? (
+          |  t = floor((project_time + project_timeoffs) * framerate + 0.0000001);
+          |  f = ceil(framerate);
+          |  tcdf > 0.5 && f != framerate ? (
+          |    period = floor(framerate * 600);
+          |    ds = floor(framerate * 60);
+          |    ds > 0 ? t += 18 * ((t / period)|0) + ((((t%period)-2)/ds)|0)*2;
+          |  );
+          |  sprintf(#text,"%02d:%02d:%02d:%02d",(t/(f*3600))|0,(t/(f*60))%60,(t/f)%60,t%f);
+          |) : strcmp(#text,"")==0 ? input_get_name(-1,#text);
+          |gfx_str_measure(#text,txtw,txth);
+          |b = (border*txth)|0;
+          |yt = ((project_h - txth - b*2)*ypos)|0;
+          |xp = (xpos * (project_w-txtw))|0;
+          |gfx_set(bgc,bgc,bgc,bga);
+          |bga>0?gfx_fillrect(bgfit?xp-b:0, yt, bgfit?txtw+b*2:project_w, txth+b*2);
+          |gfx_set(fgc,fgc,fgc,fga);
+          |gfx_str_draw(#text,xp,yt+b);
+        >
+        CODEPARM 0.05 0.95 0.5 0.1 1 1 0.75 0.5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+      >
+      PRESETNAME "Overlay: Text/Timecode"
+      FLOATPOS 1770 750 666 519
+      FXID {08D8908B-EBCB-4BED-9452-365838B1B739}
+      WAK 0 0
+    >
+  >
+>
