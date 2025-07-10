@@ -1,0 +1,46 @@
+<TRACK
+  NAME "MIDI Trigger Fire"
+  PEAKCOL 33489151
+  BEAT -1
+  AUTOMODE 0
+  VOLPAN 1 0 -1 -1 1
+  MUTESOLO 0 0 0
+  IPHASE 0
+  PLAYOFFS 0 1
+  ISBUS 0 0
+  BUSCOMP 0 0 0 0 0
+  SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0
+  REC 1 5088 1 1 0 0 0 0
+  VU 2
+  TRACKHEIGHT 111 0 0 0 0 0 0
+  INQ 0 0 0 0.5 100 0 0 100
+  NCHAN 2
+  TRACKIMGFN "midi.png"
+  FX 1
+  TRACKID {E80ABB45-1818-4728-A20A-A5AF63AA7710}
+  PERF 0
+  UNDO_HAS_TRACKENV
+  MIDIOUT -1
+  MAINSEND 1 0
+  <FXCHAIN
+    SHOW 0
+    LASTSEL 0
+    DOCKED 0
+    BYPASS 0 0 0
+    <JS midi/midi_arp ""
+      1 1 1 0 0 0 0 64 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "SPS Default"
+    >
+    PRESETNAME "SPS Default"
+    FLOATPOS 849 372 505 259
+    FXID {0474D715-283A-4DE3-872B-262DF66496C7}
+    WAK 0 0
+    BYPASS 0 0 0
+    <JS "IX/MIDI_Tool II" ""
+      0 0 127 1 126 0 100 100 1 126 0 0 1 0 0 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "SPS - Random Velocity 100%"
+    >
+    PRESETNAME "SPS - Random Velocity 100%"
+    FLOATPOS 1113 1119 505 415
+    FXID {FF0A41CB-ED1C-4290-9830-48F06AD69CF6}
+    WAK 0 0
+  >
+>
