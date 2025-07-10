@@ -4,7 +4,7 @@
 -- @changelog
 --    Trying this out, with quotes
 -- @provides
---    [data] reaper-menu.ini > "../reaper-menu.ini"
+--    [data] reaper-menu.ini > /../reaper-menu.ini
 
 
 -- @about
