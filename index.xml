@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b87d10e1e8e5f52e4cb30deb7fa51ebc585a059d">
+<index version="1" name="SPS Scripts" commit="8081bdd2121d092095855cce7c0051dd91c3a9cf">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1828,6 +1828,11 @@
       <version name="0.1" author="Stephen Schappler" time="2025-07-10T02:23:00Z">
         <changelog><![CDATA[Adding first track template]]></changelog>
         <source type="tracktpl" file="Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/b87d10e1e8e5f52e4cb30deb7fa51ebc585a059d/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
+      </version>
+      <version name="0.2" author="Stephen Schappler" time="2025-07-10T03:03:25Z">
+        <changelog><![CDATA[Adding first track template]]></changelog>
+        <source type="tracktpl" file="Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/8081bdd2121d092095855cce7c0051dd91c3a9cf/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
+        <source type="tracktpl" file="SchappsTemplates/MIDI Trigger Fire.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/8081bdd2121d092095855cce7c0051dd91c3a9cf/TrackTemplates/SchappsTemplates/MIDI%20Trigger%20Fire.RTrackTemplate</source>
       </version>
     </reapack>
   </category>
