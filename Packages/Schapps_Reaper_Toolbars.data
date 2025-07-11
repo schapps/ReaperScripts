@@ -1,10 +1,10 @@
 -- @description Schapps Toolbars
 -- @author Stephen Schappler
--- @version 2.2
+-- @version 2.3
 -- @changelog
 --    Forgot to update version number
 -- @provides
---    [data] reaper-menu.ini > /../reaper-menu.ini
+--    [data] reaper-menu.ini > Schapps_Toolbar/reaper-menu.ini
 
 
 -- @about
