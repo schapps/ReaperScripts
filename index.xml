@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="c8349a11131fc661c078d00926048e22d781234e">
+<index version="1" name="SPS Scripts" commit="b03d616d320aceb49b3082bee049e1ea5729858f">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -455,6 +455,10 @@
       <version name="2.1" author="Stephen Schappler" time="2025-07-10T22:53:55Z">
         <changelog><![CDATA[Trying this out, with quotes]]></changelog>
         <source type="data" file="&quot;../reaper-menu.ini&quot;">https://github.com/schapps/ReaperScripts/raw/c8349a11131fc661c078d00926048e22d781234e/Packages/reaper-menu.ini</source>
+      </version>
+      <version name="2.2" author="Stephen Schappler" time="2025-07-10T23:05:04Z">
+        <changelog><![CDATA[Forgot to update version number]]></changelog>
+        <source type="data" file="/../reaper-menu.ini">https://github.com/schapps/ReaperScripts/raw/b03d616d320aceb49b3082bee049e1ea5729858f/Packages/reaper-menu.ini</source>
       </version>
     </reapack>
     <reapack name="Schapps_Toolbar_Icons.data" type="data" desc="Schapps Toolbar Icons">
