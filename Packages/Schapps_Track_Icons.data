@@ -1,0 +1,11 @@
+-- @description Schapps Track Icons
+-- @author Stephen Schappler
+-- @version 1.0
+-- @changelog
+--    Adding random track icons
+-- @provides
+--    [data] track_icons/*.png
+
+-- @about
+--    # Custom Track Icons
+--    These are custom track icons for use in REAPER.
