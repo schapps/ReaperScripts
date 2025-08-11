@@ -1,0 +1,11 @@
+-- @description Schapps AutoHotkey Scripts
+-- @author Stephen Schappler
+-- @version 1.0
+-- @changelog
+--    Adding ahk scripts
+-- @provides
+--    [data] ahk_scripts/*.ahk
+
+-- @about
+--    # Custom AutoHotkey Scripts for Reaper Workflows
+--    These are custom AutoHotkey for use in REAPER.
