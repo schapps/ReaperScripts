@@ -1,8 +1,8 @@
 -- @description Schapps Track Icons
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- @changelog
---    Adding random track icons
+--    Adding kontakt icon
 -- @provides
 --    [data] track_icons/*.png
 

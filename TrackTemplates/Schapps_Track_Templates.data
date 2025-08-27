@@ -1,8 +1,8 @@
 -- @description Schapps Track Templates
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @changelog
---    Adding first track template
+--    Removing folder icon from Radium template
 -- @provides
 --    [rtracktemplate] *.RTrackTemplate
 --    [rtracktemplate] SchappsTemplates/*.RTrackTemplate
