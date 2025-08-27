@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="69ec541c3d3519279ddf4bc34e1d5e5bf9b03255">
+<index version="1" name="SPS Scripts" commit="7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -1736,6 +1736,47 @@
         <source type="data" file="track_icons/sub_project_larger.png">https://github.com/schapps/ReaperScripts/raw/63c19d4936588818d872ffdfa6c77dfd281716a1/Packages/track_icons/sub_project_larger.png</source>
         <source type="data" file="track_icons/vital.png">https://github.com/schapps/ReaperScripts/raw/63c19d4936588818d872ffdfa6c77dfd281716a1/Packages/track_icons/vital.png</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2025-08-15T23:45:13Z">
+        <changelog><![CDATA[Adding random track icons]]></changelog>
+        <source type="data" file="track_icons/Funnel_DX.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/Funnel_DX.png</source>
+        <source type="data" file="track_icons/Funnel_MX.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/Funnel_MX.png</source>
+        <source type="data" file="track_icons/Funnel_SFX.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/Funnel_SFX.png</source>
+        <source type="data" file="track_icons/box.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/box.png</source>
+        <source type="data" file="track_icons/file.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/file.png</source>
+        <source type="data" file="track_icons/flavor_town.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/flavor_town.png</source>
+        <source type="data" file="track_icons/folder.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder.png</source>
+        <source type="data" file="track_icons/folder_down.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_down.png</source>
+        <source type="data" file="track_icons/folder_dx.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_dx.png</source>
+        <source type="data" file="track_icons/folder_left.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_left.png</source>
+        <source type="data" file="track_icons/folder_mande.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_mande.png</source>
+        <source type="data" file="track_icons/folder_mfx.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_mfx.png</source>
+        <source type="data" file="track_icons/folder_mx.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_mx.png</source>
+        <source type="data" file="track_icons/folder_quad.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_quad.png</source>
+        <source type="data" file="track_icons/folder_right.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_right.png</source>
+        <source type="data" file="track_icons/folder_sfx.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_sfx.png</source>
+        <source type="data" file="track_icons/folder_stereo.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_stereo.png</source>
+        <source type="data" file="track_icons/folder_surround.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_surround.png</source>
+        <source type="data" file="track_icons/folder_up.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/folder_up.png</source>
+        <source type="data" file="track_icons/icons8-downloading-updates-64.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/icons8-downloading-updates-64.png</source>
+        <source type="data" file="track_icons/icons8-empty-box-64.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/icons8-empty-box-64.png</source>
+        <source type="data" file="track_icons/icons8-feed-in-64.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/icons8-feed-in-64.png</source>
+        <source type="data" file="track_icons/icons8-feed-in-64_allgrey.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/icons8-feed-in-64_allgrey.png</source>
+        <source type="data" file="track_icons/note.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/note.png</source>
+        <source type="data" file="track_icons/note_outline.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/note_outline.png</source>
+        <source type="data" file="track_icons/phaseplant_light2.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/phaseplant_light2.png</source>
+        <source type="data" file="track_icons/radium.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/radium.png</source>
+        <source type="data" file="track_icons/radium_brown.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/radium_brown.png</source>
+        <source type="data" file="track_icons/radiumsymbol.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/radiumsymbol.png</source>
+        <source type="data" file="track_icons/serum.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/serum.png</source>
+        <source type="data" file="track_icons/soundminer.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/soundminer.png</source>
+        <source type="data" file="track_icons/soundminer2.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/soundminer2.png</source>
+        <source type="data" file="track_icons/sub_project_large.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/sub_project_large.png</source>
+        <source type="data" file="track_icons/sub_project_larger.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/sub_project_larger.png</source>
+        <source type="data" file="track_icons/subproject.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/subproject.png</source>
+        <source type="data" file="track_icons/video_flat.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/video_flat.png</source>
+        <source type="data" file="track_icons/video_flat2.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/video_flat2.png</source>
+        <source type="data" file="track_icons/vital.png">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/Packages/track_icons/vital.png</source>
+      </version>
     </reapack>
   </category>
   <category name="Project">
@@ -2055,6 +2096,13 @@
         <changelog><![CDATA[Adding first track template]]></changelog>
         <source type="tracktpl" file="Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/8081bdd2121d092095855cce7c0051dd91c3a9cf/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
         <source type="tracktpl" file="SchappsTemplates/MIDI Trigger Fire.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/8081bdd2121d092095855cce7c0051dd91c3a9cf/TrackTemplates/SchappsTemplates/MIDI%20Trigger%20Fire.RTrackTemplate</source>
+      </version>
+      <version name="1.0" author="Stephen Schappler" time="2025-08-15T23:45:13Z">
+        <changelog><![CDATA[Adding first track template]]></changelog>
+        <source type="tracktpl" file="Video Text Overlay.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/TrackTemplates/Video%20Text%20Overlay.RTrackTemplate</source>
+        <source type="tracktpl" file="SchappsTemplates/MIDI Trigger Fire.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/TrackTemplates/SchappsTemplates/MIDI%20Trigger%20Fire.RTrackTemplate</source>
+        <source type="tracktpl" file="SchappsTemplates/TEMPLATE MultiPass.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/TrackTemplates/SchappsTemplates/TEMPLATE%20MultiPass.RTrackTemplate</source>
+        <source type="tracktpl" file="SchappsTemplates/TEMPLATE Radium Multichannel.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/7cd25b5e0c14c82013ee6d6f09fb891f8eaf944d/TrackTemplates/SchappsTemplates/TEMPLATE%20Radium%20Multichannel.RTrackTemplate</source>
       </version>
     </reapack>
   </category>
