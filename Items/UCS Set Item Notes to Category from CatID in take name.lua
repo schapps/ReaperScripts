@@ -10,7 +10,7 @@
 --   1.1 - Fixing ucs csv path
 --   1.0 - Initial release
 -- @provides
---   Packages/UCS.csv > Data/Schapps/UCS.csv
+--   ../Packages/UCS.csv > Data/Schapps/UCS.csv
 
 -- ===========================
 -- ========== SETUP ==========
