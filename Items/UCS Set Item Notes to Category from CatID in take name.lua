@@ -1,6 +1,6 @@
 -- @description UCS: Set Item Notes to Category from CatID in take name
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @about
 --   Reads the CatID from each selected item's name or source filename,
 --   looks up the UCS Category from a CSV (CatID,Category),
@@ -10,7 +10,7 @@
 --   1.1 - Fixing ucs csv path
 --   1.0 - Initial release
 -- @provides
---   ../Packages/UCS.csv > ../../../Data/Schapps/UCS.csv
+--   ../Packages/UCS.csv > UCS.csv
 
 -- ===========================
 -- ========== SETUP ==========
