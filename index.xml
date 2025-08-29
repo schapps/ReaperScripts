@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="01c2c0e3b2d48df833d5beb8a3b3de7be51c988a">
+<index version="1" name="SPS Scripts" commit="c3c826a0bf4528a49b63b2959d92ed21d4e84f52">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -280,6 +280,24 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-24T02:29:41Z">
         <changelog><![CDATA[08/23/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/67a46cc1e75c7912dbc99632837326e8587ef30a/Items/Tab%20to%20Previous%20Transient%20in%20Item%20Like%20Pro%20Tools.lua</source>
+      </version>
+    </reapack>
+    <reapack name="UCS Set Item Notes to Category from CatID in take name.lua" type="script" desc="UCS: Set Item Notes to Category from CatID in take name">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Reads the CatID from each selected item's name or source filename, looks up the UCS Category from a CSV (CatID,Category), and writes it to the item's Notes field for $itemnotes.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.1" author="Stephen Schappler" time="2025-08-29T16:09:45Z">
+        <changelog><![CDATA[1.1 - Fixing ucs csv path
+1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c3c826a0bf4528a49b63b2959d92ed21d4e84f52/Items/UCS%20Set%20Item%20Notes%20to%20Category%20from%20CatID%20in%20take%20name.lua</source>
+        <source file="Data/Schapps/UCS.csv">https://github.com/schapps/ReaperScripts/raw/c3c826a0bf4528a49b63b2959d92ed21d4e84f52/Packages/UCS.csv</source>
       </version>
     </reapack>
   </category>
