@@ -1,17 +1,16 @@
 -- @description UCS: Set Item Notes to Category from CatID in take name
 -- @author Stephen Schappler
--- @provides
---   Packages/UCS.csv > Data/Schapps/UCS.csv
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Reads the CatID from each selected item's name or source filename,
---   looks up the UCS Category from a CSV (CatID,Category), 
+--   looks up the UCS Category from a CSV (CatID,Category),
 --   and writes it to the item's Notes field for $itemnotes.
 -- @link https://www.stephenschappler.com
--- @changelog 
---   8/28/2025 - Creating the script
-
-
+-- @changelog
+--   1.1 - Fixing ucs csv path
+--   1.0 - Initial release
+-- @provides
+--   Packages/UCS.csv > Data/Schapps/UCS.csv
 
 -- ===========================
 -- ========== SETUP ==========
@@ -20,16 +19,23 @@
 -- Put UCS.csv next to this script, OR in Data/Schapps/UCS.csv
 local CSV_FILENAME = "UCS.csv"
 
+local function fileExists(p)
+  local f = p and io.open(p, "rb")
+  if f then f:close(); return true end
+  return false
+end
+
 local info = debug.getinfo(1, 'S')
 local script_dir = info.source:match("@(.+[\\/])")
 local candidate_paths = {
   script_dir and (script_dir .. CSV_FILENAME) or nil,
-  (reaper.GetResourcePath():gsub("\\","/")) .. "/Data/Stephen Schappler/" .. CSV_FILENAME
+  (reaper.GetResourcePath():gsub("\\","/")) .. "/Data/Schapps/" .. CSV_FILENAME
 }
 
-local function fileExists(p) local f= p and io.open(p,"rb"); if f then f:close(); return true end return false end
 local CSV_PATH
-for _,p in ipairs(candidate_paths) do if fileExists(p) then CSV_PATH = p break end end
+for _, p in ipairs(candidate_paths) do
+  if fileExists(p) then CSV_PATH = p; break end
+end
 
 -- ===========================
 -- ======== UTILITIES ========
