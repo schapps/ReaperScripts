@@ -1,12 +1,13 @@
 -- @description UCS: Set Item Notes to Category from CatID in take name
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   Reads the CatID from each selected item's name or source filename,
 --   looks up the UCS Category from a CSV (CatID,Category),
 --   and writes it to the item's Notes field for $itemnotes.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   1.5 - Only print console summary when errors occurred (missing/malformed)
 --   1.1 - Fixing ucs csv path
 --   1.0 - Initial release
 -- @provides
@@ -51,12 +52,6 @@ local function cleanField(s)
   s = s:gsub("%s+$", "")        -- trim trailing spaces
   s = s:gsub(",$", "")          -- strip a trailing comma, if any
   return s
-end
-
-local function fileExists(path)
-  local f = io.open(path, "r")
-  if f then f:close(); return true end
-  return false
 end
 
 -- CSV line parser (supports quotes, commas inside quotes, and escaped quotes "")
@@ -225,14 +220,19 @@ local function main()
   reaper.UpdateArrange()
   reaper.Undo_EndBlock("UCS: Set Item Notes to Category from CatID (CSV)", -1)
 
-  -- Console summary
-  reaper.ShowConsoleMsg("")
-  reaper.ClearConsole()
-  reaper.ShowConsoleMsg(("UCS Set Item Notes — Done.\nUpdated: %d  | Missing CatIDs: %d  | Malformed: %d\n")
-    :format(updated, missing, malformed))
-  if #report > 0 then
-    reaper.ShowConsoleMsg("\nDetails:\n" .. table.concat(report, "\n") .. "\n")
+  ----------------------------------------------------------------
+  -- Console summary: only show if there were errors or warnings.
+  -- (i.e., missing CatIDs or malformed items)
+  ----------------------------------------------------------------
+  if (missing > 0) or (malformed > 0) then
+    reaper.ClearConsole()
+    reaper.ShowConsoleMsg(("UCS Set Item Notes — Done.\nUpdated: %d  | Missing CatIDs: %d  | Malformed: %d\n")
+      :format(updated, missing, malformed))
+    if #report > 0 then
+      reaper.ShowConsoleMsg("\nDetails:\n" .. table.concat(report, "\n") .. "\n")
+    end
   end
+  -- Otherwise: no console output on clean runs.
 end
 
 -- Run
