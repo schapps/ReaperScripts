@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b5c967c783cfa58c08e8b02f3284f64e7ee08ae5">
+<index version="1" name="SPS Scripts" commit="be99fb5cd3711af6e69e3b22dd52d65aa5d7dfc8">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -427,6 +427,38 @@
         <changelog><![CDATA[8/25/24 v1.0 - Adding the script
 8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/4b62c5ff66bc9c0e5f9b4777a1974e341cbf04c0/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Move Cursor Left to Nearest Item Edge on Selected Track(s).lua" type="script" desc="Move cursor to nearest left item edge on selected track(s)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Navigation Script (opposite of "nearest right edge")\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2025-09-11T00:00:42Z">
+        <changelog><![CDATA[9/10/2025 - Created by flipping the right-edge script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0325226749b0555bc27d0b4d7f856a890bf30932/Misc/Move%20Cursor%20Left%20to%20Nearest%20Item%20Edge%20on%20Selected%20Track(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Move cursor right to nearest item edge on selected track(s).lua" type="script" desc="Move cursor to nearest right item edge on selected track(s)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Navigation Script\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2025-09-11T00:00:42Z">
+        <changelog><![CDATA[8/28/2025 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0325226749b0555bc27d0b4d7f856a890bf30932/Misc/Move%20cursor%20right%20to%20nearest%20item%20edge%20on%20selected%20track(s).lua</source>
       </version>
     </reapack>
     <reapack name="Open Directory in Windows Explorer.lua" type="script" desc="Open Directory in Windows Explorer">
