@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="df94acc01570befafd3053f2d2fd9f3bb28eb37a">
+<index version="1" name="SPS Scripts" commit="8bc8bb00afc403ba5ef90fea2fc627a87a82acd8">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -316,6 +316,13 @@
 1.0 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/b5c967c783cfa58c08e8b02f3284f64e7ee08ae5/Items/UCS%20Set%20Item%20Notes%20to%20Category%20from%20CatID%20in%20take%20name.lua</source>
         <source file="UCS.csv">https://github.com/schapps/ReaperScripts/raw/b5c967c783cfa58c08e8b02f3284f64e7ee08ae5/Packages/UCS.csv</source>
+      </version>
+      <version name="1.5" author="Stephen Schappler" time="2025-09-11T00:16:30Z">
+        <changelog><![CDATA[1.5 - Only print console summary when errors occurred (missing/malformed)
+1.1 - Fixing ucs csv path
+1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8bc8bb00afc403ba5ef90fea2fc627a87a82acd8/Items/UCS%20Set%20Item%20Notes%20to%20Category%20from%20CatID%20in%20take%20name.lua</source>
+        <source file="UCS.csv">https://github.com/schapps/ReaperScripts/raw/8bc8bb00afc403ba5ef90fea2fc627a87a82acd8/Packages/UCS.csv</source>
       </version>
     </reapack>
   </category>
