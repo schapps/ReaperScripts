@@ -1,6 +1,6 @@
 -- @description Move cursor to nearest right item edge on selected track(s)
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Navigation Script
 -- @link https://www.stephenschappler.com
@@ -49,7 +49,7 @@ function main()
   if nearest_edge then
     reaper.SetEditCurPos(nearest_edge, true, false) -- moveview, seekplay
   else
-    reaper.ShowMessageBox("No item edge to the right on selected tracks.", "Info", 0)
+    -- reaper.ShowMessageBox("No item edge to the right on selected tracks.", "Info", 0)
   end
 end
 
