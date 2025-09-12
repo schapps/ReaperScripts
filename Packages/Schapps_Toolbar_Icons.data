@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.10
+-- @version 1.11
 -- @changelog
---    Updating sampler and last renamer 150 sizes to match
+--    Adding toolbar icons for xy pad
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
