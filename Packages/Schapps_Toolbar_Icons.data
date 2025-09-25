@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.11
+-- @version 1.12
 -- @changelog
---    Adding toolbar icons for xy pad
+--    Adding toolbar icons new empty toolbar at bottom of tcp
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
