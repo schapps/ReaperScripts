@@ -1,6 +1,6 @@
 --[[
 Description: ReARK PlayStation Studios Sound
-Version: 1.0
+Version: 1.1
 Author: Stephen Schappler
 Provides:
     [theme] ReARK_PlayStationStudios_Sound.ReaperThemeZip
