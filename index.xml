@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0314078c4030e1adfadeffbd111e662f448da592">
+<index version="1" name="SPS Scripts" commit="234f7b1e20149f44b263120aea23e87232fed922">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -417,7 +417,7 @@
     </reapack>
     <reapack name="Display Last Touched FX Parameter Value.lua" type="script" desc="Display Last Touched FX Parameter Value and Info">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
@@ -434,6 +434,13 @@
         <changelog><![CDATA[8/25/24 v1.0 - Adding the script
 8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/4b62c5ff66bc9c0e5f9b4777a1974e341cbf04c0/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
+      </version>
+      <version name="1.3" author="Edgemeal, modified by Stephen Schappler" time="2025-10-01T19:35:27Z">
+        <changelog><![CDATA[10/1/25 v1.3 - Another attempt at scaling based on monitor resolution
+8/29/24 v1.2 - Scale UI elements based on monitor resolution
+8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope
+8/25/24 v1.0 - Adding the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/234f7b1e20149f44b263120aea23e87232fed922/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
       </version>
     </reapack>
     <reapack name="Move Cursor Left to Nearest Item Edge on Selected Track(s).lua" type="script" desc="Move cursor to nearest left item edge on selected track(s)">
