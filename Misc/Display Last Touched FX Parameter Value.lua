@@ -1,12 +1,14 @@
 -- @description Display Last Touched FX Parameter Value and Info
 -- @author Edgemeal, modified by Stephen Schappler
--- @version 1.1
+-- @version 1.3
 -- @about
 --   Display last touched fx parameter info and value in a window
 -- @link https://www.stephenschappler.com
 -- @changelog 
---   8/25/24 v1.0 - Adding the script
+--   10/1/25 v1.3 - Another attempt at scaling based on monitor resolution
+--   8/29/24 v1.2 - Scale UI elements based on monitor resolution
 --   8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope
+--   8/25/24 v1.0 - Adding the script
 
 -- Function to save the dock state
 function SaveDockState()
@@ -24,6 +26,55 @@ end
 
 -- Variables to keep track of mouse state
 local last_mouse_state = 0
+
+local BASE_SCREEN_W, BASE_SCREEN_H = 3840, 2160
+local MIN_SCALE, MAX_SCALE = 0.4, 1.5
+local BASE_FONT_INFO = 30
+local BASE_FONT_VALUE = 100
+local BASE_FONT_BUTTON = 20
+local BASE_MARGIN_X = 30
+local BASE_MARGIN_TOP = 10
+local BASE_MARGIN_BOTTOM = 20
+local BASE_BTN_W = 100
+local BASE_BTN_H = 40
+local BASE_BTN_MARGIN_BOTTOM = 10
+local BASE_BTN_MARGIN_RIGHT = 10
+local BASE_BTN_SPACING = 10
+
+local function ClampScale(scale)
+  if scale < MIN_SCALE then return MIN_SCALE end
+  if scale > MAX_SCALE then return MAX_SCALE end
+  return scale
+end
+
+-- Determine a scale factor for UI elements based on the monitor resolution
+local function GetMonitorScale()
+  local win_l, win_t = gfx.clienttoscreen(0, 0)
+  local win_r, win_b = gfx.clienttoscreen(gfx.w, gfx.h)
+
+  local viewport_l, viewport_t, viewport_r, viewport_b
+  if win_l and win_t and win_r and win_b then
+    viewport_l, viewport_t, viewport_r, viewport_b = reaper.my_getViewport(0, 0, 0, 0, win_l, win_t, win_r, win_b, true)
+  else
+    viewport_l, viewport_t, viewport_r, viewport_b = reaper.my_getViewport(0, 0, 0, 0, 0, 0, 0, 0, true)
+  end
+
+  local screen_w = (viewport_r or 0) - (viewport_l or 0)
+  local screen_h = (viewport_b or 0) - (viewport_t or 0)
+
+  if screen_w <= 0 or screen_h <= 0 then
+    screen_w = BASE_SCREEN_W
+    screen_h = BASE_SCREEN_H
+  end
+
+  local scale = math.min(screen_w / BASE_SCREEN_W, screen_h / BASE_SCREEN_H)
+  if scale <= 0 then
+    scale = 1
+  end
+
+  return ClampScale(scale)
+end
+
 
 -- Function to check if the button is clicked
 function IsButtonClicked(x, y, w, h)
@@ -45,6 +96,19 @@ function IsButtonClicked(x, y, w, h)
 end
 
 function Loop()
+  local scale = GetMonitorScale()
+  local font_info = math.max(14, math.floor(BASE_FONT_INFO * scale + 0.5))
+  local font_value = math.max(28, math.floor(BASE_FONT_VALUE * scale + 0.5))
+  local font_button = math.max(10, math.floor(BASE_FONT_BUTTON * scale + 0.5))
+  local margin_x = math.max(10, math.floor(BASE_MARGIN_X * scale + 0.5))
+  local margin_top = math.max(5, math.floor(BASE_MARGIN_TOP * scale + 0.5))
+  local margin_bottom = math.max(10, math.floor(BASE_MARGIN_BOTTOM * scale + 0.5))
+  local btn_w = math.max(60, math.floor(BASE_BTN_W * scale + 0.5))
+  local btn_h = math.max(24, math.floor(BASE_BTN_H * scale + 0.5))
+  local btn_margin_bottom = math.max(6, math.floor(BASE_BTN_MARGIN_BOTTOM * scale + 0.5))
+  local btn_margin_right = math.max(6, math.floor(BASE_BTN_MARGIN_RIGHT * scale + 0.5))
+  local btn_spacing = math.max(6, math.floor(BASE_BTN_SPACING * scale + 0.5))
+
   -- Set the background color to RGB(40, 40, 40)
   gfx.set(40/255, 40/255, 40/255)
   gfx.rect(0, 0, gfx.w, gfx.h, 1)  -- Fill the entire window with the background color
@@ -81,30 +145,31 @@ function Loop()
 
   -- Draw txt1 (white color)
   gfx.set(1, 1, 1)
-  gfx.setfont(1,"SST", 30)
-  local str_w, str_h = gfx.measurestr(txt1)
-  gfx.x = 30
-  gfx.y = 10
+  gfx.setfont(1,"SST", font_info)
+  gfx.x = margin_x
+  gfx.y = margin_top
   gfx.drawstr(txt1)
   
   -- Draw txt2 (blue color)
   gfx.set(142/255, 188/255, 247/255)
-  gfx.setfont(1,"SST", 100)
-  local str_w2, str_h2 = gfx.measurestr(txt2)
-  gfx.x = 30
-  gfx.y = gfx.h - str_h2 - 20
+  gfx.setfont(1,"SST", font_value)
+  local _, str_h2 = gfx.measurestr(txt2)
+  gfx.x = margin_x
+  gfx.y = gfx.h - str_h2 - margin_bottom
   gfx.drawstr(txt2)
 
-
   -- Draw "MOD" button (white text, dark grey background)
-  local btn_w, btn_h = 100, 40
-  local btn_x_mod, btn_y = gfx.w - btn_w - 120, gfx.h - btn_h - 10 -- Anchored to the right
-  gfx.set(0.2, 0.2, 0.2) --background color of button
+  local btn_y = gfx.h - btn_h - btn_margin_bottom
+  local btn_x_env = gfx.w - btn_w - btn_margin_right
+  local btn_x_mod = btn_x_env - btn_w - btn_spacing
+
+  gfx.set(0.2, 0.2, 0.2)
   gfx.rect(btn_x_mod, btn_y, btn_w, btn_h, 1)
-  gfx.set(.9, .9, .9) --text color
-  gfx.setfont(1, "SST", 20)
-  gfx.x = btn_x_mod + (btn_w - gfx.measurestr("MOD")) / 2
-  gfx.y = btn_y + (btn_h - 20) / 2
+  gfx.set(.9, .9, .9)
+  gfx.setfont(1, "SST", font_button)
+  local mod_label_w = gfx.measurestr("MOD")
+  gfx.x = btn_x_mod + (btn_w - mod_label_w) / 2
+  gfx.y = btn_y + (btn_h - font_button) / 2
   gfx.drawstr("MOD")
 
   -- Check if the "MOD" button is clicked
@@ -113,13 +178,13 @@ function Loop()
   end
 
   -- Draw "ENV" button (white text, dark grey background)
-  local btn_x_env = gfx.w - btn_w - 10 -- Positioned to the right of the "MOD" button
-  gfx.set(0.2, 0.2, 0.2) --background color of button
+  gfx.set(0.2, 0.2, 0.2)
   gfx.rect(btn_x_env, btn_y, btn_w, btn_h, 1)
-  gfx.set(.9, .9, .9) --text color
-  gfx.setfont(1, "SST", 20)
-  gfx.x = btn_x_env + (btn_w - gfx.measurestr("ENV")) / 2
-  gfx.y = btn_y + (btn_h - 20) / 2
+  gfx.set(.9, .9, .9)
+  gfx.setfont(1, "SST", font_button)
+  local env_label_w = gfx.measurestr("ENV")
+  gfx.x = btn_x_env + (btn_w - env_label_w) / 2
+  gfx.y = btn_y + (btn_h - font_button) / 2
   gfx.drawstr("ENV")
 
   -- Check if the "ENV" button is clicked
@@ -143,3 +208,7 @@ gfx.init(title, wnd_w, wnd_h, 0, 100, 100)
 LoadDockState() -- Load the saved dock state
 
 Loop()
+
+
+
+
