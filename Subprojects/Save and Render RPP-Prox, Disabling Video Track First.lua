@@ -1,6 +1,6 @@
 -- @description Save and Render RPP Prox, Disabling Video Track Send First
 -- @author Stephen Schappler
--- @version 1.02
+-- @version 1.03
 -- @about
 --   This is a simple script to save subprojects, while ensuring any audio from video tracks are muted first.
 -- @link https://www.stephenschappler.com
@@ -8,6 +8,7 @@
 --   8/23/24 - v1.0 - Creating the script
 --   2/11/25 - v1.01 - Fixing the description typo
 --   4/16/25 - v1.02 - Making it so that the subproject's parent project is activated after saving.
+--   10/3/25 - v1.03 - Disabling the return to parent project function until I can debug it better, as it will fail often.
 
 local function string_contains(str, keyword)
   return string.lower(str):find(string.lower(keyword), 1, true) ~= nil
@@ -95,6 +96,6 @@ reaper.Main_OnCommand(reaper.NamedCommandLookup("42332"), 0) -- Save and render 
 reenable_master_parent_send(track_states)
 
 -- Return to parent
-return_to_parent_project()
+-- return_to_parent_project()
 
 reaper.Undo_EndBlock("Save and Render RPP Prox with Parent Return", -1)
