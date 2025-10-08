@@ -1,0 +1,2 @@
+local pattern = '<source rpp_project.-file%s-"[^"]-' .. escaped_filename .. '"'
+        if contents:find(pattern) then
