@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="bfb1c770dd18fdba7a57416a4d414b914e367d1b">
+<index version="1" name="SPS Scripts" commit="034f697435bea5f9d8d825903bddcdbb0a082507">
   <category name="Items">
     <reapack name="Copy Filename of Selected Item.lua" type="script" desc="Copy File Name of Selected Item to Clipboard">
       <metadata>
@@ -2543,6 +2543,22 @@
       <version name="1.0" author="Stephen Schappler and Chris Kokkinos" time="2024-12-10T21:15:44Z">
         <changelog><![CDATA[12/10/2024 v 1.0 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/9b55e0c9b7c6e76d13a728ea60404203f4c096a1/Tracks/Indent%20selected%20folder%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Insert New Track Respect Folders (No Color Match).lua" type="script" desc="Insert New Track Respect Folders (No Color Match)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Insert New Track Respect Folders (no color match)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Modification: removed color copying from selected track.\par}
+}
+]]></description>
+        <link rel="website">https://aaroncendan.me</link>
+      </metadata>
+      <version name="1.4.1" author="Aaron Cendan (modified by Stephen Schappler)" time="2025-10-08T00:01:56Z">
+        <source main="main" file="acendan_Insert new track respect folders (no color match).lua">https://github.com/schapps/ReaperScripts/raw/034f697435bea5f9d8d825903bddcdbb0a082507/Tracks/Insert%20New%20Track%20Respect%20Folders%20(No%20Color%20Match).lua</source>
       </version>
     </reapack>
     <reapack name="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan.lua" type="script" desc="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan">
