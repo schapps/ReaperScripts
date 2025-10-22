@@ -1,6 +1,6 @@
 -- @description Schapps Toolbars
 -- @author Stephen Schappler
--- @version 2.6
+-- @version 2.7
 -- @changelog
 --    Updating Toolbar to latest to include the new empty toolbar area at bottom of TCP
 -- @provides
