@@ -74,7 +74,7 @@ local function FocusMediaExplorerSearch(query)
             end
         end
 
-        reaper.JS_Window_OnCommand(explorer_hwnd, 1013) -- Browser: Browse for file (trigger search)
+        reaper.JS_Window_OnCommand(explorer_hwnd, 40018) -- Browser: Refresh
     end
 
     finish()
