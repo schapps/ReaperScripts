@@ -1,8 +1,8 @@
 -- @description Schapps Track Icons
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @changelog
---    Adding Glitchmachines icon
+--    Adding lots of additional icons
 -- @provides
 --    [data] track_icons/*.png
 
