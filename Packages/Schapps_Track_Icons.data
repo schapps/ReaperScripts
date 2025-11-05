@@ -1,8 +1,8 @@
 -- @description Schapps Track Icons
 -- @author Stephen Schappler
--- @version 1.5
+-- @version 1.6
 -- @changelog
---    Adding even more additional icons
+--    Adding additional icons, deleting old small resolution ones
 -- @provides
 --    [data] track_icons/*.png
 
