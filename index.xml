@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="270781aeb441b5aa358b2ea175db00abc6ab7767">
+<index version="1" name="SPS Scripts" commit="de6cfaf1760347faab28056c96807f67bc982c58">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -623,6 +623,10 @@
       <version name="2.7" author="Stephen Schappler" time="2025-10-22T22:06:34Z">
         <changelog><![CDATA[Updating Toolbar to latest to include the new empty toolbar area at bottom of TCP]]></changelog>
         <source type="data" file="CA_Toolbar/reaper-menu.ini">https://github.com/schapps/ReaperScripts/raw/3f03377852b2e673ef6d20a5bf67a26f81e262a9/Packages/reaper-menu.ini</source>
+      </version>
+      <version name="2.8" author="Stephen Schappler" time="2025-11-14T00:23:52Z">
+        <changelog><![CDATA[Updating the toolbar]]></changelog>
+        <source type="data" file="CA_Toolbar/reaper-menu.ini">https://github.com/schapps/ReaperScripts/raw/520141ec21103c23b4e62784cc73f91b82dc2e1b/Packages/reaper-menu.ini</source>
       </version>
     </reapack>
     <reapack name="Schapps_Toolbar_Icons.data" type="data" desc="Schapps Toolbar Icons">
