@@ -1,8 +1,8 @@
 -- @description Schapps Toolbars
 -- @author Stephen Schappler
--- @version 2.7
+-- @version 2.8
 -- @changelog
---    Updating Toolbar to latest to include the new empty toolbar area at bottom of TCP
+--    Updating the toolbar
 -- @provides
 --    [data] reaper-menu.ini > CA_Toolbar/reaper-menu.ini
 
