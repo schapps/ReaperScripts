@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="de6cfaf1760347faab28056c96807f67bc982c58">
+<index version="1" name="SPS Scripts" commit="5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -3499,6 +3499,272 @@
         <source type="data" file="track_icons/video_flat.png">https://github.com/schapps/ReaperScripts/raw/270781aeb441b5aa358b2ea175db00abc6ab7767/Packages/track_icons/video_flat.png</source>
         <source type="data" file="track_icons/video_flat2.png">https://github.com/schapps/ReaperScripts/raw/270781aeb441b5aa358b2ea175db00abc6ab7767/Packages/track_icons/video_flat2.png</source>
         <source type="data" file="track_icons/vital.png">https://github.com/schapps/ReaperScripts/raw/270781aeb441b5aa358b2ea175db00abc6ab7767/Packages/track_icons/vital.png</source>
+      </version>
+      <version name="1.9" author="Stephen Schappler" time="2025-12-01T20:29:32Z">
+        <changelog><![CDATA[Adding old subproject icon back in.]]></changelog>
+        <source type="data" file="track_icons/0.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/0.png</source>
+        <source type="data" file="track_icons/1.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/1.png</source>
+        <source type="data" file="track_icons/2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/2.png</source>
+        <source type="data" file="track_icons/3.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/3.png</source>
+        <source type="data" file="track_icons/4.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/4.png</source>
+        <source type="data" file="track_icons/5.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/5.png</source>
+        <source type="data" file="track_icons/6.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/6.png</source>
+        <source type="data" file="track_icons/7.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/7.png</source>
+        <source type="data" file="track_icons/8.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/8.png</source>
+        <source type="data" file="track_icons/9.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/9.png</source>
+        <source type="data" file="track_icons/AI Generated Sound.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/AI%20Generated%20Sound.png</source>
+        <source type="data" file="track_icons/AV Receiver.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/AV%20Receiver.png</source>
+        <source type="data" file="track_icons/Airplane 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Airplane%202.png</source>
+        <source type="data" file="track_icons/Airplane.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Airplane.png</source>
+        <source type="data" file="track_icons/Alarm Clock.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Alarm%20Clock.png</source>
+        <source type="data" file="track_icons/Alien.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Alien.png</source>
+        <source type="data" file="track_icons/Anchor.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Anchor.png</source>
+        <source type="data" file="track_icons/Archive Outline.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Archive%20Outline.png</source>
+        <source type="data" file="track_icons/Archive.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Archive.png</source>
+        <source type="data" file="track_icons/Armored Boot.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Armored%20Boot.png</source>
+        <source type="data" file="track_icons/Army Star.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Army%20Star.png</source>
+        <source type="data" file="track_icons/Arrow Down.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Arrow%20Down.png</source>
+        <source type="data" file="track_icons/Arrow Left.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Arrow%20Left.png</source>
+        <source type="data" file="track_icons/Arrow Right.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Arrow%20Right.png</source>
+        <source type="data" file="track_icons/Arrow Up.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Arrow%20Up.png</source>
+        <source type="data" file="track_icons/Asterisk.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Asterisk.png</source>
+        <source type="data" file="track_icons/Audio Description.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Audio%20Description.png</source>
+        <source type="data" file="track_icons/Audio Faders Outline.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Audio%20Faders%20Outline.png</source>
+        <source type="data" file="track_icons/Audio Faders.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Audio%20Faders.png</source>
+        <source type="data" file="track_icons/Audio File.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Audio%20File.png</source>
+        <source type="data" file="track_icons/Automatic Rifle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Automatic%20Rifle.png</source>
+        <source type="data" file="track_icons/Award.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Award.png</source>
+        <source type="data" file="track_icons/Backpack.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Backpack.png</source>
+        <source type="data" file="track_icons/Balloon.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Balloon.png</source>
+        <source type="data" file="track_icons/Bam.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bam.png</source>
+        <source type="data" file="track_icons/Band Aid.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Band%20Aid.png</source>
+        <source type="data" file="track_icons/BiDirectional.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/BiDirectional.png</source>
+        <source type="data" file="track_icons/Bicycle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bicycle.png</source>
+        <source type="data" file="track_icons/Bird.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bird.png</source>
+        <source type="data" file="track_icons/Blaster 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Blaster%202.png</source>
+        <source type="data" file="track_icons/Blaster.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Blaster.png</source>
+        <source type="data" file="track_icons/Body Armor.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Body%20Armor.png</source>
+        <source type="data" file="track_icons/Body.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Body.png</source>
+        <source type="data" file="track_icons/Bomb.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bomb.png</source>
+        <source type="data" file="track_icons/Book.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Book.png</source>
+        <source type="data" file="track_icons/Bookmark.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bookmark.png</source>
+        <source type="data" file="track_icons/Boom Microphone Tilted.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Boom%20Microphone%20Tilted.png</source>
+        <source type="data" file="track_icons/Boom Microphone.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Boom%20Microphone.png</source>
+        <source type="data" file="track_icons/Boom.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Boom.png</source>
+        <source type="data" file="track_icons/Boot.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Boot.png</source>
+        <source type="data" file="track_icons/Bounce.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bounce.png</source>
+        <source type="data" file="track_icons/Box Add.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Box%20Add.png</source>
+        <source type="data" file="track_icons/Bus Text.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bus%20Text.png</source>
+        <source type="data" file="track_icons/Bus.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Bus.png</source>
+        <source type="data" file="track_icons/Camera.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Camera.png</source>
+        <source type="data" file="track_icons/Cancel.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Cancel.png</source>
+        <source type="data" file="track_icons/Car.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Car.png</source>
+        <source type="data" file="track_icons/Cat.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Cat.png</source>
+        <source type="data" file="track_icons/Cell Network.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Cell%20Network.png</source>
+        <source type="data" file="track_icons/Check.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Check.png</source>
+        <source type="data" file="track_icons/Circle Half Contrast.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Circle%20Half%20Contrast.png</source>
+        <source type="data" file="track_icons/Clock.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Clock.png</source>
+        <source type="data" file="track_icons/Cloud.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Cloud.png</source>
+        <source type="data" file="track_icons/Coil Spring.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Coil%20Spring.png</source>
+        <source type="data" file="track_icons/Comet.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Comet.png</source>
+        <source type="data" file="track_icons/Community.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Community.png</source>
+        <source type="data" file="track_icons/Conga.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Conga.png</source>
+        <source type="data" file="track_icons/Copy.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Copy.png</source>
+        <source type="data" file="track_icons/Crosshair.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Crosshair.png</source>
+        <source type="data" file="track_icons/Crystal Ball.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Crystal%20Ball.png</source>
+        <source type="data" file="track_icons/Demon.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Demon.png</source>
+        <source type="data" file="track_icons/Dog.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Dog.png</source>
+        <source type="data" file="track_icons/Drums.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Drums.png</source>
+        <source type="data" file="track_icons/Dynamite 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Dynamite%202.png</source>
+        <source type="data" file="track_icons/Dynamite.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Dynamite.png</source>
+        <source type="data" file="track_icons/EQ Meter.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/EQ%20Meter.png</source>
+        <source type="data" file="track_icons/Ear.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Ear.png</source>
+        <source type="data" file="track_icons/Earache.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Earache.png</source>
+        <source type="data" file="track_icons/Earth.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Earth.png</source>
+        <source type="data" file="track_icons/Easel.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Easel.png</source>
+        <source type="data" file="track_icons/Electricity.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Electricity.png</source>
+        <source type="data" file="track_icons/Engine.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Engine.png</source>
+        <source type="data" file="track_icons/Exclamation 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Exclamation%202.png</source>
+        <source type="data" file="track_icons/Exclamation.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Exclamation.png</source>
+        <source type="data" file="track_icons/Explosion.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Explosion.png</source>
+        <source type="data" file="track_icons/Eye Closed.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Eye%20Closed.png</source>
+        <source type="data" file="track_icons/Eye.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Eye.png</source>
+        <source type="data" file="track_icons/FX 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/FX%202.png</source>
+        <source type="data" file="track_icons/FX TExt.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/FX%20TExt.png</source>
+        <source type="data" file="track_icons/FX.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/FX.png</source>
+        <source type="data" file="track_icons/Film.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Film.png</source>
+        <source type="data" file="track_icons/Fire 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Fire%202.png</source>
+        <source type="data" file="track_icons/Fire Ring.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Fire%20Ring.png</source>
+        <source type="data" file="track_icons/Fire.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Fire.png</source>
+        <source type="data" file="track_icons/Fish.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Fish.png</source>
+        <source type="data" file="track_icons/Flying Star.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Flying%20Star.png</source>
+        <source type="data" file="track_icons/Folder Dialog.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Folder%20Dialog.png</source>
+        <source type="data" file="track_icons/Folder Music.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Folder%20Music.png</source>
+        <source type="data" file="track_icons/Folder Open.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Folder%20Open.png</source>
+        <source type="data" file="track_icons/Folder SFX.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Folder%20SFX.png</source>
+        <source type="data" file="track_icons/Folder Sub.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Folder%20Sub.png</source>
+        <source type="data" file="track_icons/Foot.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Foot.png</source>
+        <source type="data" file="track_icons/Gauntlet Glove.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Gauntlet%20Glove.png</source>
+        <source type="data" file="track_icons/Gears.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Gears.png</source>
+        <source type="data" file="track_icons/Ghost.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Ghost.png</source>
+        <source type="data" file="track_icons/Glitchmachines.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Glitchmachines.png</source>
+        <source type="data" file="track_icons/Grass.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Grass.png</source>
+        <source type="data" file="track_icons/Guitar.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Guitar.png</source>
+        <source type="data" file="track_icons/Handgun.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Handgun.png</source>
+        <source type="data" file="track_icons/Headphones.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Headphones.png</source>
+        <source type="data" file="track_icons/Headset.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Headset.png</source>
+        <source type="data" file="track_icons/Heart.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Heart.png</source>
+        <source type="data" file="track_icons/Hi Hat Cymbal.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Hi%20Hat%20Cymbal.png</source>
+        <source type="data" file="track_icons/High Heel Shoe.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/High%20Heel%20Shoe.png</source>
+        <source type="data" file="track_icons/Horse.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Horse.png</source>
+        <source type="data" file="track_icons/Ice.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Ice.png</source>
+        <source type="data" file="track_icons/Idea.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Idea.png</source>
+        <source type="data" file="track_icons/Infinity.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Infinity.png</source>
+        <source type="data" file="track_icons/Jacket.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Jacket.png</source>
+        <source type="data" file="track_icons/Jetpack.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Jetpack.png</source>
+        <source type="data" file="track_icons/Key.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Key.png</source>
+        <source type="data" file="track_icons/Kick.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Kick.png</source>
+        <source type="data" file="track_icons/Knob.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Knob.png</source>
+        <source type="data" file="track_icons/Leaf.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Leaf.png</source>
+        <source type="data" file="track_icons/Letter A.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20A.png</source>
+        <source type="data" file="track_icons/Letter B.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20B.png</source>
+        <source type="data" file="track_icons/Letter C.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20C.png</source>
+        <source type="data" file="track_icons/Letter D.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20D.png</source>
+        <source type="data" file="track_icons/Letter E.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20E.png</source>
+        <source type="data" file="track_icons/Letter F.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20F.png</source>
+        <source type="data" file="track_icons/Letter G.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20G.png</source>
+        <source type="data" file="track_icons/Letter X.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Letter%20X.png</source>
+        <source type="data" file="track_icons/Lightning Bolt.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Lightning%20Bolt.png</source>
+        <source type="data" file="track_icons/Lower Third.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Lower%20Third.png</source>
+        <source type="data" file="track_icons/MIDI 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/MIDI%202.png</source>
+        <source type="data" file="track_icons/MIDI Keyboard.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/MIDI%20Keyboard.png</source>
+        <source type="data" file="track_icons/MIDI Simple.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/MIDI%20Simple.png</source>
+        <source type="data" file="track_icons/MIDI.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/MIDI.png</source>
+        <source type="data" file="track_icons/Magic.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Magic.png</source>
+        <source type="data" file="track_icons/Marimba.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Marimba.png</source>
+        <source type="data" file="track_icons/Metal.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Metal.png</source>
+        <source type="data" file="track_icons/Microphone 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Microphone%202.png</source>
+        <source type="data" file="track_icons/Microphone.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Microphone.png</source>
+        <source type="data" file="track_icons/Mix Text.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Mix%20Text.png</source>
+        <source type="data" file="track_icons/Mixer Simple 2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Mixer%20Simple%202.png</source>
+        <source type="data" file="track_icons/Mixer Simple Filled.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Mixer%20Simple%20Filled.png</source>
+        <source type="data" file="track_icons/Mixer Simple.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Mixer%20Simple.png</source>
+        <source type="data" file="track_icons/Monster.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Monster.png</source>
+        <source type="data" file="track_icons/Moon.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Moon.png</source>
+        <source type="data" file="track_icons/Motorcycle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Motorcycle.png</source>
+        <source type="data" file="track_icons/Mushroom Cloud.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Mushroom%20Cloud.png</source>
+        <source type="data" file="track_icons/Music Note.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Music%20Note.png</source>
+        <source type="data" file="track_icons/Nebula.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Nebula.png</source>
+        <source type="data" file="track_icons/Note Outline.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Note%20Outline.png</source>
+        <source type="data" file="track_icons/Orc.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Orc.png</source>
+        <source type="data" file="track_icons/PS Controller.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/PS%20Controller.png</source>
+        <source type="data" file="track_icons/PS5.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/PS5.png</source>
+        <source type="data" file="track_icons/Paintbrush.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Paintbrush.png</source>
+        <source type="data" file="track_icons/Pants.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Pants.png</source>
+        <source type="data" file="track_icons/Peace.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Peace.png</source>
+        <source type="data" file="track_icons/Person.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Person.png</source>
+        <source type="data" file="track_icons/Piano Keyboard.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Piano%20Keyboard.png</source>
+        <source type="data" file="track_icons/Picture.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Picture.png</source>
+        <source type="data" file="track_icons/Planet.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Planet.png</source>
+        <source type="data" file="track_icons/PlayStation Color.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/PlayStation%20Color.png</source>
+        <source type="data" file="track_icons/PlayStation.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/PlayStation.png</source>
+        <source type="data" file="track_icons/Plugin.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Plugin.png</source>
+        <source type="data" file="track_icons/Poo.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Poo.png</source>
+        <source type="data" file="track_icons/Pow.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Pow.png</source>
+        <source type="data" file="track_icons/Printer.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Printer.png</source>
+        <source type="data" file="track_icons/Prize.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Prize.png</source>
+        <source type="data" file="track_icons/Punch.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Punch.png</source>
+        <source type="data" file="track_icons/Radio.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Radio.png</source>
+        <source type="data" file="track_icons/Rain.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Rain.png</source>
+        <source type="data" file="track_icons/Rating.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Rating.png</source>
+        <source type="data" file="track_icons/Receive.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Receive.png</source>
+        <source type="data" file="track_icons/Record Text.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Record%20Text.png</source>
+        <source type="data" file="track_icons/Recycle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Recycle.png</source>
+        <source type="data" file="track_icons/Reset.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Reset.png</source>
+        <source type="data" file="track_icons/Robot Cute.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Robot%20Cute.png</source>
+        <source type="data" file="track_icons/Robot.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Robot.png</source>
+        <source type="data" file="track_icons/Rocks.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Rocks.png</source>
+        <source type="data" file="track_icons/Room.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Room.png</source>
+        <source type="data" file="track_icons/Search Magnifying Glass.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Search%20Magnifying%20Glass.png</source>
+        <source type="data" file="track_icons/Send Vertical.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Send%20Vertical.png</source>
+        <source type="data" file="track_icons/Send.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Send.png</source>
+        <source type="data" file="track_icons/Shield.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shield.png</source>
+        <source type="data" file="track_icons/Shirt.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shirt.png</source>
+        <source type="data" file="track_icons/Shooting Star.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shooting%20Star.png</source>
+        <source type="data" file="track_icons/Shotgun.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shotgun.png</source>
+        <source type="data" file="track_icons/Shrug.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shrug.png</source>
+        <source type="data" file="track_icons/Shuffle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Shuffle.png</source>
+        <source type="data" file="track_icons/Skull.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Skull.png</source>
+        <source type="data" file="track_icons/Smiling.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Smiling.png</source>
+        <source type="data" file="track_icons/Snare Drum.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Snare%20Drum.png</source>
+        <source type="data" file="track_icons/Sneaker.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sneaker.png</source>
+        <source type="data" file="track_icons/Sniper Rifle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sniper%20Rifle.png</source>
+        <source type="data" file="track_icons/Snowflake.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Snowflake.png</source>
+        <source type="data" file="track_icons/Sound Library.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sound%20Library.png</source>
+        <source type="data" file="track_icons/Sound.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sound.png</source>
+        <source type="data" file="track_icons/Sparkle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sparkle.png</source>
+        <source type="data" file="track_icons/Speaker.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Speaker.png</source>
+        <source type="data" file="track_icons/Speech.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Speech.png</source>
+        <source type="data" file="track_icons/Square.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Square.png</source>
+        <source type="data" file="track_icons/Star 3.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Star%203.png</source>
+        <source type="data" file="track_icons/Star 4.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Star%204.png</source>
+        <source type="data" file="track_icons/Star 5.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Star%205.png</source>
+        <source type="data" file="track_icons/Star.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Star.png</source>
+        <source type="data" file="track_icons/Storm.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Storm.png</source>
+        <source type="data" file="track_icons/Submachine Gun.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Submachine%20Gun.png</source>
+        <source type="data" file="track_icons/Sun.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sun.png</source>
+        <source type="data" file="track_icons/Surround Channels.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Surround%20Channels.png</source>
+        <source type="data" file="track_icons/Surround.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Surround.png</source>
+        <source type="data" file="track_icons/Sword.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sword.png</source>
+        <source type="data" file="track_icons/Sync.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Sync.png</source>
+        <source type="data" file="track_icons/Synth.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Synth.png</source>
+        <source type="data" file="track_icons/Text.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Text.png</source>
+        <source type="data" file="track_icons/Thumbs Down.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Thumbs%20Down.png</source>
+        <source type="data" file="track_icons/Thumbs Up.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Thumbs%20Up.png</source>
+        <source type="data" file="track_icons/Thunder Cloud.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Thunder%20Cloud.png</source>
+        <source type="data" file="track_icons/Timpani.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Timpani.png</source>
+        <source type="data" file="track_icons/Tire.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Tire.png</source>
+        <source type="data" file="track_icons/Tornado.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Tornado.png</source>
+        <source type="data" file="track_icons/Trash.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Trash.png</source>
+        <source type="data" file="track_icons/Tree.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Tree.png</source>
+        <source type="data" file="track_icons/Triangle.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Triangle.png</source>
+        <source type="data" file="track_icons/Truck.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Truck.png</source>
+        <source type="data" file="track_icons/Tuning Fork.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Tuning%20Fork.png</source>
+        <source type="data" file="track_icons/Typing.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Typing.png</source>
+        <source type="data" file="track_icons/UFO.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/UFO.png</source>
+        <source type="data" file="track_icons/Unavailable.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Unavailable.png</source>
+        <source type="data" file="track_icons/VCA Text.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/VCA%20Text.png</source>
+        <source type="data" file="track_icons/Video.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Video.png</source>
+        <source type="data" file="track_icons/Voice.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Voice.png</source>
+        <source type="data" file="track_icons/Walkie Talkie.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Walkie%20Talkie.png</source>
+        <source type="data" file="track_icons/Warning.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Warning.png</source>
+        <source type="data" file="track_icons/Water.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Water.png</source>
+        <source type="data" file="track_icons/Waveform.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Waveform.png</source>
+        <source type="data" file="track_icons/Wheel.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Wheel.png</source>
+        <source type="data" file="track_icons/Whoosh.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Whoosh.png</source>
+        <source type="data" file="track_icons/Wind.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Wind.png</source>
+        <source type="data" file="track_icons/Wizard.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Wizard.png</source>
+        <source type="data" file="track_icons/Xylophone.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/Xylophone.png</source>
+        <source type="data" file="track_icons/box.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/box.png</source>
+        <source type="data" file="track_icons/file.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/file.png</source>
+        <source type="data" file="track_icons/flavor_town.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/flavor_town.png</source>
+        <source type="data" file="track_icons/folder.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/folder.png</source>
+        <source type="data" file="track_icons/kontakt.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/kontakt.png</source>
+        <source type="data" file="track_icons/mixer.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/mixer.png</source>
+        <source type="data" file="track_icons/note.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/note.png</source>
+        <source type="data" file="track_icons/phaseplant_light2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/phaseplant_light2.png</source>
+        <source type="data" file="track_icons/radium.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/radium.png</source>
+        <source type="data" file="track_icons/radium_brown.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/radium_brown.png</source>
+        <source type="data" file="track_icons/radiumsymbol.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/radiumsymbol.png</source>
+        <source type="data" file="track_icons/serum.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/serum.png</source>
+        <source type="data" file="track_icons/soundminer.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/soundminer.png</source>
+        <source type="data" file="track_icons/soundminer2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/soundminer2.png</source>
+        <source type="data" file="track_icons/sub_project.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/sub_project.png</source>
+        <source type="data" file="track_icons/sub_project_larger.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/sub_project_larger.png</source>
+        <source type="data" file="track_icons/subproject.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/subproject.png</source>
+        <source type="data" file="track_icons/video_flat.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/video_flat.png</source>
+        <source type="data" file="track_icons/video_flat2.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/video_flat2.png</source>
+        <source type="data" file="track_icons/vital.png">https://github.com/schapps/ReaperScripts/raw/5d69e4ed0bca1f40ffb7fe3e7a9a05476d9dea82/Packages/track_icons/vital.png</source>
       </version>
     </reapack>
   </category>
