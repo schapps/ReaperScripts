@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.13
+-- @version 1.14
 -- @changelog
---    Adding toolbar icons for item markers
+--    Adding toolbar icons for toolbar under tracks
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
