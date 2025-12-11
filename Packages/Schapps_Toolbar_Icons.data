@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.12
+-- @version 1.13
 -- @changelog
---    Adding toolbar icons new empty toolbar at bottom of tcp
+--    Adding toolbar icons for item markers
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
