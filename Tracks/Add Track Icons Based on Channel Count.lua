@@ -1,9 +1,6 @@
 -- @description Add track icons based on channel count
 -- @author Stephen Schappler
 -- @version 1.1
--- @provides
---   [data] Packages/track_icons/Quad Channels.png > track_icons/Quad Channels.png
---   [data] Packages/track_icons/Surround Channels.png > track_icons/Surround Channels.png
 -- @about
 --   Sets track icons for tracks with 4 or 6 channels using icons in
 --   REAPER's Data/track_icons folder.
