@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="32782f388b4fad39a6730bb3a01bebf06d0abb7e">
+<index version="1" name="SPS Scripts" commit="831fb742f75a23bee9d49db2303d48584aace481">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -4843,6 +4843,17 @@
         <source type="tracktpl" file="SchappsTemplates/MIDI Trigger Fire.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/01c2c0e3b2d48df833d5beb8a3b3de7be51c988a/TrackTemplates/SchappsTemplates/MIDI%20Trigger%20Fire.RTrackTemplate</source>
         <source type="tracktpl" file="SchappsTemplates/TEMPLATE MultiPass.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/01c2c0e3b2d48df833d5beb8a3b3de7be51c988a/TrackTemplates/SchappsTemplates/TEMPLATE%20MultiPass.RTrackTemplate</source>
         <source type="tracktpl" file="SchappsTemplates/TEMPLATE Radium Multichannel.RTrackTemplate">https://github.com/schapps/ReaperScripts/raw/01c2c0e3b2d48df833d5beb8a3b3de7be51c988a/TrackTemplates/SchappsTemplates/TEMPLATE%20Radium%20Multichannel.RTrackTemplate</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Video">
+    <reapack name="Create Video Labels From Selected Items Using Regions.lua" type="script" desc="Create Video Labels From Selected Items Using Regions">
+      <metadata>
+        <link rel="website">https://aaroncendan.me</link>
+      </metadata>
+      <version name="1.3" author="Aaron Cendan, modified by Stephen Schappler" time="2026-01-17T22:16:30Z">
+        <changelog><![CDATA[Create regions from selected items and build video labels from regions, adding options for overlapping items with automatic vertical text offsets]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/053557ceb2fcb29c4dc9567e37e5c578680c54c8/Video/Create%20Video%20Labels%20From%20Selected%20Items%20Using%20Regions.lua</source>
       </version>
     </reapack>
   </category>
