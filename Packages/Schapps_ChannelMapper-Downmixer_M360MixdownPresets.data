@@ -1,0 +1,12 @@
+-- @description Schapps Channel Mapper-Downmixer M360 Presets
+-- @author Stephen Schappler
+-- @version 1.0
+-- @changelog
+--    Adding the presets
+-- @provides
+--    [data] plugin_presets/ChannelMapper-Downmixer_M360MixdownPresets.RPL > schapps_plugin_presets/ChannelMapper-Downmixer_M360MixdownPresets.RPL
+
+
+-- @about
+--    # Channel Mapper-Downmixer Presets
+--    Contains presets similar to the M360 Mixdown manager. Import the RPL file in Data/schapps_plugin_preset_libraries/
