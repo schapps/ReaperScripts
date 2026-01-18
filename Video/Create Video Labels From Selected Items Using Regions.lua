@@ -1,9 +1,10 @@
 -- @description Create Video Labels From Selected Items Using Regions
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @link https://aaroncendan.me
 -- @provides
 --   [main] . > Create Video Labels From Selected Items Using Regions.lua
+--   [main] acendan_Text Overlay Preset.txt > acendan_Text Overlay Preset.txt
 -- @changelog
 --   Create regions from selected items and build video labels from regions, adding options for overlapping items with automatic vertical text offsets
 
