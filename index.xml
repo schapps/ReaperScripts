@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="831fb742f75a23bee9d49db2303d48584aace481">
+<index version="1" name="SPS Scripts" commit="04bc796e6da49bb2bf52d562dfe3b28e98f16207">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -4854,6 +4854,11 @@
       <version name="1.3" author="Aaron Cendan, modified by Stephen Schappler" time="2026-01-17T22:16:30Z">
         <changelog><![CDATA[Create regions from selected items and build video labels from regions, adding options for overlapping items with automatic vertical text offsets]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/053557ceb2fcb29c4dc9567e37e5c578680c54c8/Video/Create%20Video%20Labels%20From%20Selected%20Items%20Using%20Regions.lua</source>
+      </version>
+      <version name="1.4" author="Aaron Cendan, modified by Stephen Schappler" time="2026-01-18T20:10:10Z">
+        <changelog><![CDATA[Create regions from selected items and build video labels from regions, adding options for overlapping items with automatic vertical text offsets]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/04bc796e6da49bb2bf52d562dfe3b28e98f16207/Video/Create%20Video%20Labels%20From%20Selected%20Items%20Using%20Regions.lua</source>
+        <source main="main" file="acendan_Text Overlay Preset.txt">https://github.com/schapps/ReaperScripts/raw/04bc796e6da49bb2bf52d562dfe3b28e98f16207/Video/acendan_Text%20Overlay%20Preset.txt</source>
       </version>
     </reapack>
   </category>
