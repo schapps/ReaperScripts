@@ -2,6 +2,8 @@
 -- @author Aaron Cendan, modified by Stephen Schappler
 -- @version 1.3
 -- @link https://aaroncendan.me
+-- @provides
+--   [main] . > Create Video Labels From Selected Items Using Regions.lua
 -- @changelog
 --   Create regions from selected items and build video labels from regions, adding options for overlapping items with automatic vertical text offsets
 
