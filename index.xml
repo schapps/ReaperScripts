@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="04bc796e6da49bb2bf52d562dfe3b28e98f16207">
+<index version="1" name="SPS Scripts" commit="ef9dedfb6fd83ac9350e4412f71b10a4e7cbaf8e">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -51,7 +51,7 @@
     </reapack>
     <reapack name="Find and Select Items by Name on Selected Tracks.lua" type="script" desc="Find and Select Items by Name on Selected Tracks">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
@@ -63,6 +63,10 @@
       <version name="1.0" author="Stephen Schappler" time="2024-10-31T16:53:16Z">
         <changelog><![CDATA[10/31/24 - v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/76e31ccc418725c7f0c4e15a761a9ef0c949236d/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-01-19T03:45:53Z">
+        <changelog><![CDATA[10/31/24 - v1.0 - Updatng the script to use ReaImGUI]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ef9dedfb6fd83ac9350e4412f71b10a4e7cbaf8e/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Track">
