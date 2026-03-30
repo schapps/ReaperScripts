@@ -6,7 +6,7 @@ function theme.Push(ctx)
   local colors = {
     {ImGui.Col_Text, 0xE6E6E6FF},
     {ImGui.Col_TextDisabled, 0xA0A0A0FF},
-    {ImGui.Col_WindowBg, 0x1B1D1FFF},
+    {ImGui.Col_WindowBg, 0x28282828FF},
     {ImGui.Col_ChildBg, 0x1B1D1FFF},
     {ImGui.Col_PopupBg, 0x202225FF},
     {ImGui.Col_Border, 0x3A3F45FF},
