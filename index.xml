@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="4ba19840d197900d260dcb72dbe85bfb06cad32b">
+<index version="1" name="SPS Scripts" commit="d5c6be9401e611a6218941b4f7440679adbedd57">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
@@ -4567,6 +4567,34 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T19:19:38Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/23d32f7daa69f5ffadf30519ae369b1fbd19d049/Project/Toggle%20Master%20Playrate%20Half%20Speed.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaTemplates">
+    <reapack name="ReaTemplates.lua" type="script" desc="ReaTemplates">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI-based REAPER script for saving, tagging, browsing, and sharing track templates via a private GitHub repository. Features: rich metadata, tag filtering, plugin detection, background sync.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="0.1" author="Stephen Schappler" time="2026-03-30T05:21:18Z">
+        <changelog><![CDATA[0.1 - Just experimenting. Not ready for use.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/ReaTemplates.lua</source>
+        <source file="modules/json.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/json.lua</source>
+        <source file="modules/base64.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/base64.lua</source>
+        <source file="modules/http.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/http.lua</source>
+        <source file="modules/config.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/config.lua</source>
+        <source file="modules/metadata.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/metadata.lua</source>
+        <source file="modules/github.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/github.lua</source>
+        <source file="modules/sync.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/sync.lua</source>
+        <source file="modules/plugin_detect.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/plugin_detect.lua</source>
+        <source file="modules/toast.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/toast.lua</source>
+        <source file="modules/ui.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/ui.lua</source>
       </version>
     </reapack>
   </category>
