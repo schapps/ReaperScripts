@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d5c6be9401e611a6218941b4f7440679adbedd57">
+<index version="1" name="SPS Scripts" commit="c09443c899bd02bfc80182c82930d735ac5f988a">
+  <category name="Common">
+    <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI Theme file for my scripts\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-03-31T02:52:23Z">
+        <changelog><![CDATA[3/28/25 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c09443c899bd02bfc80182c82930d735ac5f988a/Common/ReaImGuiTheme.lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
