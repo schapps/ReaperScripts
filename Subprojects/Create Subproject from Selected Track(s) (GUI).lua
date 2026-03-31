@@ -47,6 +47,7 @@ local channels_auto  = true    -- true = Auto; false = manual
 local channels_buf   = "2"     -- used when channels_auto is false
 local tail_buf       = "0.000" -- seconds
 local copy_video     = reaper.GetExtState("CreateSubproject", "CopyVideoTracks") == "true"
+local close_after    = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local open           = true    -- window open/close flag
 
 -- ============================================================
@@ -227,6 +228,8 @@ local function createSubproject()
     runCommand(40031)  -- View: Zoom Time Selection
     runCommand(42332)  -- Save project and render RPP-Prox
 
+    if close_after then runCommand(40860) end  -- Close current project tab
+
     activateProjectByName(parentName)
 
     local lastItem = getLastRenderedItem()
@@ -254,6 +257,11 @@ local function createSubproject()
     if #video_chunks > 0 then
       local subproj = reaper.EnumProjects(-1, "")
       pasteVideoTracksAtTop(video_chunks, subproj)
+    end
+
+    if close_after then
+      runCommand(40026)  -- Save project
+      runCommand(40860)  -- Close current project tab
     end
 
     reaper.Undo_EndBlock("Create subproject (basic path)", -1)
@@ -325,6 +333,14 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Copy Video")
 
+      -- Row 5: Close After Creation
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_close_after = ImGui.Checkbox(ctx, "##close_after", close_after)
+      close_after = new_close_after
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Close After")
+
       ImGui.EndTable(ctx)
     end
 
@@ -362,6 +378,7 @@ local function loop()
     if ImGui.Button(ctx, "Ok", btn_w, 0) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       createSubproject()
     end
     ImGui.PopStyleColor(ctx, 3)
@@ -371,6 +388,7 @@ local function loop()
     if not no_tracks and (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       createSubproject()
     end
 
