@@ -1,6 +1,6 @@
 -- @description ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com

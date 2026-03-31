@@ -1,13 +1,15 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.2
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
 --   before running the Subproject Workflow.
 -- @link https://www.stephenschappler.com
 -- @changelog
---   3/28/25 - v1.0 Initial release with ReaImGUI dialog
+--   3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+--   3/31/26 - v1.1 Added in option to auto close subproject after creation
+--   3/28/26 - v1.0 Initial release with ReaImGUI dialog
 
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
@@ -46,8 +48,9 @@ local name_buf       = ""      -- empty = REAPER default naming
 local channels_auto  = true    -- true = Auto; false = manual
 local channels_buf   = "2"     -- used when channels_auto is false
 local tail_buf       = "0.000" -- seconds
-local copy_video     = reaper.GetExtState("CreateSubproject", "CopyVideoTracks") == "true"
-local close_after    = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
+local copy_video          = reaper.GetExtState("CreateSubproject", "CopyVideoTracks") == "true"
+local close_after         = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
+local run_dynamic_split   = reaper.GetExtState("CreateSubproject", "RunDynamicSplit") == "true"
 local open           = true    -- window open/close flag
 
 -- ============================================================
@@ -245,6 +248,8 @@ local function createSubproject()
     local cmd_id = reaper.NamedCommandLookup("_XENAKIOS_RESETITEMLENMEDOFFS")
     reaper.Main_OnCommand(cmd_id, 0)
 
+    if run_dynamic_split then runCommand(42951) end  -- Dynamic split items using most recent settings
+
     runCommand(40635)  -- Clear time selection
 
     reaper.Undo_EndBlock("Create subproject from selected track(s)", -1)
@@ -325,21 +330,34 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Tail  (sec)")
 
-      -- Row 4: Copy Video Tracks
-      ImGui.TableNextRow(ctx)
-      ImGui.TableSetColumnIndex(ctx, 0)
-      local _, new_copy_video = ImGui.Checkbox(ctx, "##copy_video", copy_video)
-      copy_video = new_copy_video
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Copy Video")
+      ImGui.EndTable(ctx)
+    end
 
-      -- Row 5: Close After Creation
+    -- ---- 2-column options grid ----
+    ImGui.Spacing(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+    ImGui.Text(ctx, "Options")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Separator(ctx)
+    ImGui.Spacing(ctx)
+
+    if ImGui.BeginTable(ctx, "##options", 1) then
+      ImGui.TableSetupColumn(ctx, "##opt0", ImGui.TableColumnFlags_WidthStretch)
+
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
-      local _, new_close_after = ImGui.Checkbox(ctx, "##close_after", close_after)
+      local _, new_copy_video = ImGui.Checkbox(ctx, "Copy Video Track(s)", copy_video)
+      copy_video = new_copy_video
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_run_dynamic_split = ImGui.Checkbox(ctx, "Run Dynamic Split", run_dynamic_split)
+      run_dynamic_split = new_run_dynamic_split
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_close_after = ImGui.Checkbox(ctx, "Close Subproject After Creation", close_after)
       close_after = new_close_after
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Close After")
 
       ImGui.EndTable(ctx)
     end
@@ -379,6 +397,7 @@ local function loop()
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
       createSubproject()
     end
     ImGui.PopStyleColor(ctx, 3)
@@ -389,6 +408,7 @@ local function loop()
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
       createSubproject()
     end
 
