@@ -1,3 +1,12 @@
+-- @description ReaImGUI Theme
+-- @author Stephen Schappler
+-- @version 1.0
+-- @about
+--   ReaImGUI Theme file for my scripts
+-- @link https://www.stephenschappler.com
+-- @changelog
+--   3/28/25 - v1.0 Initial release
+
 local ImGui = require "imgui" "0.10"
 
 local theme = {}
