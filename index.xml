@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="7b129fd470db9ff6c4487c8ec49b790d0512920a">
+<index version="1" name="SPS Scripts" commit="d0db059c9cb9afd029ad031c26adbfa6687b113d">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -4617,6 +4617,29 @@
         <source file="modules/plugin_detect.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/plugin_detect.lua</source>
         <source file="modules/toast.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/toast.lua</source>
         <source file="modules/ui.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/ui.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Renamer">
+    <reapack name="schapps_The Last Renamer.lua" type="script" desc="Schapps Renamer - a fork of The Last Renamer">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 The Last Renamer (schapps fork)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Based on acendan_The Last Renamer v2.32 by Aaron Cendan Self-contained: no external utility library dependency.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="Aaron Cendan, modified by Stephen Schappler" time="2026-04-11T07:56:38Z">
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/d0db059c9cb9afd029ad031c26adbfa6687b113d/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
