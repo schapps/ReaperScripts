@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="e9c0789e58973dbf437fe75961e5c17f374989df">
+<index version="1" name="SPS Scripts" commit="2de1412389370354d3b0018e8b858b89c2dde194">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -158,6 +158,11 @@
       <version name="1.0" author="Stephen Schappler" time="2026-04-21T15:56:00Z">
         <changelog><![CDATA[4/21/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/e9c0789e58973dbf437fe75961e5c17f374989df/Items/Reposition%20Items.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-04-21T16:24:11Z">
+        <changelog><![CDATA[4/21/26 - v1.1 adding option to shift automation with items 
+4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2de1412389370354d3b0018e8b858b89c2dde194/Items/Reposition%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
