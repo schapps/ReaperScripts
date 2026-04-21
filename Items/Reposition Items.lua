@@ -38,9 +38,23 @@ local auto_close   = reaper.GetExtState("RepositionItems", "AutoClose") == "true
 local close_window = false
 local unit_idx   = tonumber(reaper.GetExtState("RepositionItems", "UnitIdx"))  or 1
 local ref_idx    = tonumber(reaper.GetExtState("RepositionItems", "RefIdx"))   or 2
-local unit_items = {"Seconds", "Frames", "Beats"}
-local ref_items  = {"Start", "End"}
-local status_msg = ""
+local unit_items      = {"Seconds", "Frames", "Beats"}
+local ref_items       = {"Start", "End"}
+local status_msg      = ""
+local move_automation = reaper.GetExtState("RepositionItems", "MoveAutomation") == "true"
+
+local function shift_envelopes(track, range_start, range_end, delta)
+  for e = 0, reaper.CountTrackEnvelopes(track) - 1 do
+    local env = reaper.GetTrackEnvelope(track, e)
+    for p = 0, reaper.CountEnvelopePoints(env) - 1 do
+      local ok, t, val, shape, tension, sel = reaper.GetEnvelopePoint(env, p)
+      if ok and t >= range_start and t <= range_end then
+        reaper.SetEnvelopePoint(env, p, t + delta, val, shape, tension, sel, true)
+      end
+    end
+    reaper.Envelope_SortPoints(env)
+  end
+end
 
 local function gap_to_seconds(amount, unit, anchor_pos)
   if unit == 1 then
@@ -88,6 +102,11 @@ local function reposition_items()
     local anchor   = (ref_idx == 1) and prev.pos or (prev.pos + prev.len)
     local gap      = gap_to_seconds(amount, unit_idx, anchor)
     local new_pos  = anchor + gap
+    local old_pos  = items[i].pos
+    if move_automation then
+      local track = reaper.GetMediaItem_Track(items[i].item)
+      shift_envelopes(track, old_pos, old_pos + items[i].len, new_pos - old_pos)
+    end
     reaper.SetMediaItemPosition(items[i].item, new_pos, false)
     items[i].pos = new_pos  -- update so next item uses the moved position
   end
@@ -145,6 +164,12 @@ local function loop()
     end
 
     ImGui.Spacing(ctx)
+
+    local _, new_move_auto = ImGui.Checkbox(ctx, "Move automation with item", move_automation)
+    if new_move_auto ~= move_automation then
+      move_automation = new_move_auto
+      reaper.SetExtState("RepositionItems", "MoveAutomation", tostring(move_automation), true)
+    end
 
     local _, new_auto_close = ImGui.Checkbox(ctx, "Auto close after reposition", auto_close)
     if new_auto_close ~= auto_close then
