@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="79fca02daf2d676f1a7162192473a205e7eb8d2c">
+<index version="1" name="SPS Scripts" commit="e9c0789e58973dbf437fe75961e5c17f374989df">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -142,6 +142,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-30T22:15:25Z">
         <changelog><![CDATA[8/30/24 v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3f9a5d349d6e1f8454fc148980fe24e58c7aa59c/Items/Rearrange%20Selected%20Item%20Position%20Based%20on%20Color.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Reposition Items.lua" type="script" desc="Reposition Items">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Spaces selected items relative to each other. The first item stays in place. "End" mode: gap between each item's end and the next item's start. "Start" mode: gap between each item's start and the next item's start. Supports seconds, frames, and beats as the gap unit.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-04-21T15:56:00Z">
+        <changelog><![CDATA[4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e9c0789e58973dbf437fe75961e5c17f374989df/Items/Reposition%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
