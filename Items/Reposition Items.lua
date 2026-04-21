@@ -1,6 +1,6 @@
 -- @description Reposition Items
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Spaces selected items relative to each other. The first item stays in place.
 --   "End" mode: gap between each item's end and the next item's start.
@@ -8,6 +8,7 @@
 --   Supports seconds, frames, and beats as the gap unit.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   4/21/26 - v1.1 adding option to shift automation with items 
 --   4/21/26 - v1.0 Initial release
 
 if not reaper.ImGui_GetBuiltinPath then
