@@ -7,6 +7,8 @@
 --   "Start" mode: gap between each item's start and the next item's start.
 --   Supports seconds, frames, and beats as the gap unit.
 -- @link https://www.stephenschappler.com
+-- @provides
+--   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
 --   4/21/26 - v1.1 adding option to shift automation with items 
 --   4/21/26 - v1.0 Initial release

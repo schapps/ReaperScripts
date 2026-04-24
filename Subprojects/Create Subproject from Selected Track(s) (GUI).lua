@@ -6,10 +6,14 @@
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
 --   before running the Subproject Workflow.
 -- @link https://www.stephenschappler.com
+-- @provides
+--   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
 --   3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
 --   3/31/26 - v1.1 Added in option to auto close subproject after creation
 --   3/28/26 - v1.0 Initial release with ReaImGUI dialog
+
+
 
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
