@@ -1,6 +1,6 @@
 -- @description Set Selected Tracks Channel Count
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Sets all selected tracks' channel count to a chosen value.
 --   Channel count is selected from a dropdown (even values 2–128).
@@ -8,6 +8,7 @@
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
+--   4/27/26 - v1.1 Adding provides for ReaImGui Theme
 --   4/24/26 - v1.0 Initial release
 
 if not reaper.ImGui_GetBuiltinPath then

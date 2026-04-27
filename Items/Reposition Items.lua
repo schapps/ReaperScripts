@@ -1,6 +1,6 @@
 -- @description Reposition Items
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- @about
 --   Spaces selected items relative to each other. The first item stays in place.
 --   "End" mode: gap between each item's end and the next item's start.
@@ -10,6 +10,7 @@
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
+--   4/27/26 - v1.2 Adding provides for ReaImGui Theme
 --   4/21/26 - v1.1 adding option to shift automation with items 
 --   4/21/26 - v1.0 Initial release
 
