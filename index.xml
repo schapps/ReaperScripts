@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="ce5ee0492c887fe9ee0af45e36c62de4e5dd5583">
+<index version="1" name="SPS Scripts" commit="e88f0be2b58dc6744f213fbda27a8227886f40e8">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -163,6 +163,13 @@
         <changelog><![CDATA[4/21/26 - v1.1 adding option to shift automation with items 
 4/21/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/2de1412389370354d3b0018e8b858b89c2dde194/Items/Reposition%20Items.lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2026-04-27T21:26:47Z">
+        <changelog><![CDATA[4/27/26 - v1.2 Adding provides for ReaImGui Theme
+4/21/26 - v1.1 adding option to shift automation with items 
+4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Items/Reposition%20Items.lua</source>
+        <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Common/ReaImGuiTheme.lua</source>
       </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
@@ -4911,6 +4918,14 @@
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/7b129fd470db9ff6c4487c8ec49b790d0512920a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
+      <version name="1.3" author="Stephen Schappler" time="2026-04-27T21:26:47Z">
+        <changelog><![CDATA[4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+        <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Common/ReaImGuiTheme.lua</source>
+      </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
       <metadata>
@@ -5130,6 +5145,12 @@
         <changelog><![CDATA[4/24/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ce5ee0492c887fe9ee0af45e36c62de4e5dd5583/Tracks/Set%20Selected%20Tracks%20Channel%20Count.lua</source>
         <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/ce5ee0492c887fe9ee0af45e36c62de4e5dd5583/Common/ReaImGuiTheme.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-04-27T21:26:47Z">
+        <changelog><![CDATA[4/27/26 - v1.1 Adding provides for ReaImGui Theme
+4/24/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Tracks/Set%20Selected%20Tracks%20Channel%20Count.lua</source>
+        <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/e88f0be2b58dc6744f213fbda27a8227886f40e8/Common/ReaImGuiTheme.lua</source>
       </version>
     </reapack>
     <reapack name="Toggle Haptics Tracks FX Slot 1 Bypass.lua" type="script" desc="Toggle Haptics Tracks FX Slot 1 Bypass">
