@@ -39,6 +39,7 @@ local tail_buf       = "0.000"
 local copy_video        = reaper.GetExtState("CreateSubproject", "CopyVideoTracks")    == "true"
 local close_after       = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local run_dynamic_split = reaper.GetExtState("CreateSubproject", "RunDynamicSplit")    == "true"
+local last_clicked_idx  = nil  -- anchor row for shift-click range selection
 
 -- ============================================================
 -- Utilities
@@ -475,11 +476,13 @@ local function loop()
       ImGui.Text(ctx, "No subproject items in project")
       ImGui.PopStyleColor(ctx)
     else
-      local SEL_SPAN  = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
-                      | (rawget(ImGui, "SelectableFlags_AllowOverlap")
-                         or rawget(ImGui, "SelectableFlags_AllowItemOverlap") or 0)
-      local KEY_LCTRL = rawget(ImGui, "Key_LeftCtrl")
-      local KEY_RCTRL = rawget(ImGui, "Key_RightCtrl")
+      local SEL_SPAN   = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
+                       | (rawget(ImGui, "SelectableFlags_AllowOverlap")
+                          or rawget(ImGui, "SelectableFlags_AllowItemOverlap") or 0)
+      local KEY_LCTRL  = rawget(ImGui, "Key_LeftCtrl")
+      local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
+      local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
+      local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
       if ImGui.BeginTable(ctx, "##ptable", 4,
           ImGui.TableFlags_BordersInnerV | ImGui.TableFlags_RowBg) then
         ImGui.TableSetupColumn(ctx, "Take Name", ImGui.TableColumnFlags_WidthStretch)
@@ -492,13 +495,24 @@ local function loop()
           ImGui.TableSetColumnIndex(ctx, 0)
           local is_sel = reaper_sel[r.item] == true
           if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) then
-            local ctrl = (KEY_LCTRL and ImGui.IsKeyDown(ctx, KEY_LCTRL))
-                      or (KEY_RCTRL and ImGui.IsKeyDown(ctx, KEY_RCTRL))
-            if ctrl then
+            local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+                       or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+            local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
+                       or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
+            if shift and last_clicked_idx then
+              -- Range select: additively select all rows between anchor and here
+              local lo = math.min(last_clicked_idx, i)
+              local hi = math.max(last_clicked_idx, i)
+              for ri = lo, hi do
+                if rows[ri] then reaper.SetMediaItemSelected(rows[ri].item, true) end
+              end
+            elseif ctrl then
               reaper.SetMediaItemSelected(r.item, not reaper_sel[r.item])
+              last_clicked_idx = i
             else
               reaper.Main_OnCommand(40289, 0)
               reaper.SetMediaItemSelected(r.item, true)
+              last_clicked_idx = i
             end
             reaper.UpdateArrange()
           end
