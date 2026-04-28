@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="e88f0be2b58dc6744f213fbda27a8227886f40e8">
+<index version="1" name="SPS Scripts" commit="b52b72b1b02f542ede5f2d7bed2577d7fdf8f2b7">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -5018,6 +5018,22 @@
 4/16/25 - v1.02 - Making it so that the subproject's parent project is activated after saving.
 10/3/25 - v1.03 - Disabling the return to parent project function until I can debug it better, as it will fail often.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/bfb1c770dd18fdba7a57416a4d414b914e367d1b/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Subproject Manager.lua" type="script" desc="Subproject Manager">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Unified subproject management window: preview selected subprojects, open them, duplicate to new versioned takes, color all subproject items, and create new subprojects from selected tracks \u8212- all in one ReaImGUI panel.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="0.1" author="Stephen Schappler" time="2026-04-28T02:58:18Z">
+        <changelog><![CDATA[04/27/26 - v1.0 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/54937389a601c5cd92dda1d703f6201dedf7ffba/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
