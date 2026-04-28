@@ -30,10 +30,7 @@ local theme = dofile(theme_path)
 -- ============================================================
 local TITLE     = "SUBPROJECT MANAGER"
 local ctx       = ImGui.CreateContext(TITLE)
-local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar
-                | ImGui.WindowFlags_NoCollapse
-                | ImGui.WindowFlags_AlwaysAutoResize
-                | ImGui.WindowFlags_NoScrollWithMouse
+local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
 
 local name_buf       = ""
 local channels_auto  = true
@@ -158,9 +155,10 @@ local function getAllSubprojectItems()
             local _, tname    = reaper.GetTrackName(track, "")
             local basename    = fn:match("([^\\/]+)%.rpp$") or fn
             local tc          = reaper.CountTakes(item)
+            local cur_idx     = math.floor(reaper.GetMediaItemInfo_Value(item, "I_CURTAKE") + 0.5)
             local _, takeName = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
             if not takeName or takeName == "" then takeName = basename end
-            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take = takeName }
+            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName }
           end
         end
       end
@@ -441,7 +439,7 @@ end
 local function loop()
   local cc, vc = theme.Push(ctx)
 
-  ImGui.SetNextWindowSize(ctx, 800, 0, ImGui.Cond_FirstUseEver)
+  ImGui.SetNextWindowSize(ctx, 800, 700, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, TITLE, true, WIN_FLAGS)
 
   if visible then
@@ -469,19 +467,23 @@ local function loop()
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
-    ImGui.BeginChild(ctx, "##preview", 0, 160, rawget(ImGui, "ChildFlags_Border") or 1)
+    local row_h   = ImGui.GetTextLineHeightWithSpacing(ctx)
+    local child_h = math.min(600, math.max(row_h * 3, row_h * (#rows + 1) + 4))
+    ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
     if #rows == 0 then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x555555FF)
       ImGui.Text(ctx, "No subproject items in project")
       ImGui.PopStyleColor(ctx)
     else
-      local SEL_SPAN  = rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0
+      local SEL_SPAN  = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
+                      | (rawget(ImGui, "SelectableFlags_AllowOverlap")
+                         or rawget(ImGui, "SelectableFlags_AllowItemOverlap") or 0)
       local KEY_LCTRL = rawget(ImGui, "Key_LeftCtrl")
       local KEY_RCTRL = rawget(ImGui, "Key_RightCtrl")
       if ImGui.BeginTable(ctx, "##ptable", 4,
           ImGui.TableFlags_BordersInnerV | ImGui.TableFlags_RowBg) then
         ImGui.TableSetupColumn(ctx, "Take Name", ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "Take #",    ImGui.TableColumnFlags_WidthFixed, 52)
+        ImGui.TableSetupColumn(ctx, "Take Version",    ImGui.TableColumnFlags_WidthFixed, 130)
         ImGui.TableSetupColumn(ctx, "Track",     ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "File",      ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableHeadersRow(ctx)
@@ -507,7 +509,23 @@ local function loop()
           end
           ImGui.SameLine(ctx)
           ImGui.Text(ctx, r.take)
-          ImGui.TableSetColumnIndex(ctx, 1) ImGui.Text(ctx, tostring(r.takes))
+          ImGui.TableSetColumnIndex(ctx, 1)
+          local ci, tot = r.take_idx, r.takes
+          if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
+          if ImGui.SmallButton(ctx, "<##p"..i) then
+            reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci - 1)
+            reaper.UpdateArrange()
+          end
+          if ci <= 0 then ImGui.EndDisabled(ctx) end
+          ImGui.SameLine(ctx)
+          ImGui.Text(ctx, string.format("%d of %d", ci + 1, tot))
+          ImGui.SameLine(ctx)
+          if ci >= tot - 1 then ImGui.BeginDisabled(ctx, true) end
+          if ImGui.SmallButton(ctx, ">##n"..i) then
+            reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci + 1)
+            reaper.UpdateArrange()
+          end
+          if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
           ImGui.TableSetColumnIndex(ctx, 2) ImGui.Text(ctx, r.track)
           ImGui.TableSetColumnIndex(ctx, 3) ImGui.Text(ctx, r.file)
         end
@@ -519,16 +537,21 @@ local function loop()
     ImGui.Spacing(ctx)
 
     -- ── Quick action buttons ─────────────────────────────────────
+    local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
+    local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
+    local btn_w      = (avail_w - sp_x * 2) / 3
+
     if not has_selection then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Open Selected", -1, 0) then
+    if ImGui.Button(ctx, "Open Selected", btn_w, 0) then
       openSelectedSubprojects(valid_selected)
     end
-    if ImGui.Button(ctx, "Duplicate to New Version", -1, 0) then
+    ImGui.SameLine(ctx)
+    if ImGui.Button(ctx, "Duplicate to New Version", btn_w, 0) then
       duplicateToNewVersion(valid_selected)
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
-
-    if ImGui.Button(ctx, "Color All Subproject Items", -1, 0) then
+    ImGui.SameLine(ctx)
+    if ImGui.Button(ctx, "Color All Subproject Items", btn_w, 0) then
       colorAllSubprojectItems()
     end
 
