@@ -1,13 +1,14 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.1
+-- @version 0.2
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, color all subproject items, and create new
 --   subprojects from selected tracks — all in one ReaImGUI panel.
 -- @link https://www.stephenschappler.com
 -- @changelog
---   04/27/26 - v1.0 Initial alpha release
+--   04/28/26 - v0.2 Adding color picker, bug fixes
+--   04/27/26 - v0.1 Initial alpha release
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
@@ -31,6 +32,7 @@ local theme = dofile(theme_path)
 local TITLE     = "SUBPROJECT MANAGER"
 local ctx       = ImGui.CreateContext(TITLE)
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
+                | (rawget(ImGui, "WindowFlags_NoDocking") or 0)
 
 local name_buf       = ""
 local channels_auto  = true
@@ -40,6 +42,24 @@ local copy_video        = reaper.GetExtState("CreateSubproject", "CopyVideoTrack
 local close_after       = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local run_dynamic_split = reaper.GetExtState("CreateSubproject", "RunDynamicSplit")    == "true"
 local last_clicked_idx  = nil  -- anchor row for shift-click range selection
+
+-- Color picker state
+local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
+local color_r, color_g, color_b = _cs:match("(%d+),(%d+),(%d+)")
+if color_r then
+  color_r, color_g, color_b = tonumber(color_r), tonumber(color_g), tonumber(color_b)
+else
+  color_r, color_g, color_b = 161, 145, 227
+end
+
+
+local function rgbToImGui(r, g, b)
+  return (r << 24) | (g << 16) | (b << 8) | 0xFF
+end
+
+local function imGuiToRgb(col)
+  return (col >> 24) & 0xFF, (col >> 16) & 0xFF, (col >> 8) & 0xFF
+end
 
 -- ============================================================
 -- Utilities
@@ -195,7 +215,7 @@ local function colorAllSubprojectItems()
       local fn   = reaper.GetMediaSourceFileName(src, "")
       if containsString(fn, ".rpp") then
         reaper.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR",
-          reaper.ColorToNative(161, 145, 227) | 0x01000000)
+          reaper.ColorToNative(color_r, color_g, color_b) | 0x01000000)
         break
       end
     end
@@ -470,7 +490,8 @@ local function loop()
 
     local row_h   = ImGui.GetTextLineHeightWithSpacing(ctx)
     local child_h = math.min(600, math.max(row_h * 3, row_h * (#rows + 1) + 4))
-    ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
+    local child_visible = ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
+    if child_visible then
     if #rows == 0 then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x555555FF)
       ImGui.Text(ctx, "No subproject items in project")
@@ -488,7 +509,7 @@ local function loop()
         ImGui.TableSetupColumn(ctx, "Take Name", ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version",    ImGui.TableColumnFlags_WidthFixed, 130)
         ImGui.TableSetupColumn(ctx, "Track",     ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "File",      ImGui.TableColumnFlags_WidthStretch)
+        ImGui.TableSetupColumn(ctx, "RPP File",      ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableHeadersRow(ctx)
         for i, r in ipairs(rows) do
           ImGui.TableNextRow(ctx)
@@ -547,6 +568,7 @@ local function loop()
       end
     end
     ImGui.EndChild(ctx)
+    end -- child_visible
 
     ImGui.Spacing(ctx)
 
@@ -565,8 +587,27 @@ local function loop()
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Color All Subproject Items", btn_w, 0) then
+    local swatch_w = 18
+    if ImGui.Button(ctx, "Color All Subproject Items", btn_w - sp_x - swatch_w, 0) then
       colorAllSubprojectItems()
+    end
+    ImGui.SameLine(ctx)
+    local cur_col = rgbToImGui(color_r, color_g, color_b)
+    ImGui.ColorButton(ctx, "##color_swatch", cur_col, ImGui.ColorEditFlags_NoTooltip, swatch_w, 0)
+    if ImGui.IsItemClicked(ctx, ImGui.MouseButton_Right) then
+      ImGui.OpenPopup(ctx, "##color_picker_popup")
+    end
+    if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Right-click to change color") end
+
+    if ImGui.BeginPopup(ctx, "##color_picker_popup") then
+      local changed, new_col = ImGui.ColorPicker3(ctx, "##picker", cur_col,
+        ImGui.ColorEditFlags_PickerHueWheel | ImGui.ColorEditFlags_NoSidePreview)
+      if changed then
+        color_r, color_g, color_b = imGuiToRgb(new_col)
+        reaper.SetExtState("SubprojectManager", "SubprojectColor",
+          color_r .. "," .. color_g .. "," .. color_b, true)
+      end
+      ImGui.EndPopup(ctx)
     end
 
     ImGui.Spacing(ctx)
