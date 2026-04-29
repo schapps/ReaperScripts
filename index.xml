@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b52b72b1b02f542ede5f2d7bed2577d7fdf8f2b7">
+<index version="1" name="SPS Scripts" commit="12fd805e48664781e6ebb81f29a3169ba7b2e62d">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -5034,6 +5034,11 @@
       <version name="0.1" author="Stephen Schappler" time="2026-04-28T02:58:18Z">
         <changelog><![CDATA[04/27/26 - v1.0 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/54937389a601c5cd92dda1d703f6201dedf7ffba/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="0.2" author="Stephen Schappler" time="2026-04-29T04:39:19Z">
+        <changelog><![CDATA[04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/12fd805e48664781e6ebb81f29a3169ba7b2e62d/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
