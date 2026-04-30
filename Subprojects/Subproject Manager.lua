@@ -696,16 +696,29 @@ local function loop()
       local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
       local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
       local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
+      local hdr_c   = ImGui.GetStyleColor(ctx, ImGui.Col_Header)
+      local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       if ImGui.BeginTable(ctx, "##ptable", 5,
-          ImGui.TableFlags_BordersInnerV | ImGui.TableFlags_RowBg) then
+          ImGui.TableFlags_BordersInnerV) then
         ImGui.TableSetupColumn(ctx, "##playcol",    ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
         ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableHeadersRow(ctx)
+        local last_rpp_file = nil
+        local rpp_alt       = false
+        local row_bg0       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBg)
+        local row_bg1       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBgAlt)
+        local tgt_row_bg    = rawget(ImGui, "TableBgTarget_RowBg0") or 1
         for i, r in ipairs(rows) do
           ImGui.TableNextRow(ctx)
+          if r.file ~= last_rpp_file then
+            rpp_alt = not rpp_alt
+            last_rpp_file = r.file
+          end
+          ImGui.TableSetBgColor(ctx, tgt_row_bg, rpp_alt and row_bg1 or row_bg0)
           ImGui.TableSetColumnIndex(ctx, 1)
           local is_sel = reaper_sel[r.item] == true
           if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) then
@@ -773,6 +786,7 @@ local function loop()
         end
         ImGui.EndTable(ctx)
       end
+      ImGui.PopStyleColor(ctx)
     end
     ImGui.EndChild(ctx)
     end -- child_visible
