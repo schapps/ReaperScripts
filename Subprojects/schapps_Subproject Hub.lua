@@ -1,9 +1,10 @@
 -- @description Subproject Hub
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 0.1
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
+-- @link https://www.stephenschappler.com
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
