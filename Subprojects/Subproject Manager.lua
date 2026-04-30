@@ -36,10 +36,13 @@ local ctx       = ImGui.CreateContext(TITLE)
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
                 | (rawget(ImGui, "WindowFlags_NoDocking") or 0)
 
-local name_buf       = ""
-local channels_auto  = true
-local channels_buf   = "2"
-local tail_buf       = "0.000"
+local name_buf      = ""
+local _ca           = reaper.GetExtState("CreateSubproject", "ChannelsAuto")
+local channels_auto = (_ca == "") and true or (_ca == "true")
+local channels_buf  = reaper.GetExtState("CreateSubproject", "ChannelCount")
+if channels_buf == "" then channels_buf = "2" end
+local tail_buf      = reaper.GetExtState("CreateSubproject", "TailSeconds")
+if tail_buf == "" then tail_buf = "0.000" end
 local copy_video        = reaper.GetExtState("CreateSubproject", "CopyVideoTracks")    == "true"
 local close_after       = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local run_dynamic_split = reaper.GetExtState("CreateSubproject", "RunDynamicSplit")    == "true"
@@ -577,13 +580,19 @@ local function loop()
           ImGui.EndDisabled(ctx)
         else
           ImGui.SetNextItemWidth(ctx, 110)
-          local _, nc = ImGui.InputText(ctx, "##ch_val", channels_buf,
+          local ch_c, nc = ImGui.InputText(ctx, "##ch_val", channels_buf,
             ImGui.InputTextFlags_CharsDecimal)
-          channels_buf = nc
+          if ch_c then
+            channels_buf = nc
+            reaper.SetExtState("CreateSubproject", "ChannelCount", channels_buf, true)
+          end
         end
         ImGui.SameLine(ctx)
-        local _, na = ImGui.Checkbox(ctx, "Auto##ch_auto", channels_auto)
-        channels_auto = na
+        local ch_a, na = ImGui.Checkbox(ctx, "Auto##ch_auto", channels_auto)
+        if ch_a then
+          channels_auto = na
+          reaper.SetExtState("CreateSubproject", "ChannelsAuto", channels_auto and "true" or "false", true)
+        end
         ImGui.TableSetColumnIndex(ctx, 1)
         ImGui.Text(ctx, "Channels")
 
@@ -591,9 +600,12 @@ local function loop()
         ImGui.TableNextRow(ctx)
         ImGui.TableSetColumnIndex(ctx, 0)
         ImGui.SetNextItemWidth(ctx, -1)
-        local _, nt = ImGui.InputText(ctx, "##tail", tail_buf,
+        local ch_t, nt = ImGui.InputText(ctx, "##tail", tail_buf,
           ImGui.InputTextFlags_CharsDecimal)
-        tail_buf = nt
+        if ch_t then
+          tail_buf = nt
+          reaper.SetExtState("CreateSubproject", "TailSeconds", tail_buf, true)
+        end
         ImGui.TableSetColumnIndex(ctx, 1)
         ImGui.Text(ctx, "Tail  (sec)")
 
@@ -603,17 +615,23 @@ local function loop()
       -- Right column: Options checkboxes
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-      ImGui.Text(ctx, "Options")
       ImGui.PopStyleColor(ctx)
-      ImGui.Separator(ctx)
-      ImGui.Spacing(ctx)
 
-      local _, ncv = ImGui.Checkbox(ctx, "Copy Video Track(s)", copy_video)
-      copy_video = ncv
-      local _, nds = ImGui.Checkbox(ctx, "Run Dynamic Split", run_dynamic_split)
-      run_dynamic_split = nds
-      local _, nca = ImGui.Checkbox(ctx, "Close Subproject After Creation", close_after)
-      close_after = nca
+      local ch_v, ncv = ImGui.Checkbox(ctx, "Copy Video Track(s)", copy_video)
+      if ch_v then
+        copy_video = ncv
+        reaper.SetExtState("CreateSubproject", "CopyVideoTracks", ncv and "true" or "false", true)
+      end
+      local ch_d, nds = ImGui.Checkbox(ctx, "Run Dynamic Split", run_dynamic_split)
+      if ch_d then
+        run_dynamic_split = nds
+        reaper.SetExtState("CreateSubproject", "RunDynamicSplit", nds and "true" or "false", true)
+      end
+      local ch_ca, nca = ImGui.Checkbox(ctx, "Close Subproject After Creation", close_after)
+      if ch_ca then
+        close_after = nca
+        reaper.SetExtState("CreateSubproject", "CloseAfterCreation", nca and "true" or "false", true)
+      end
 
       ImGui.EndTable(ctx)
     end
