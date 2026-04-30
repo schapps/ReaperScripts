@@ -1264,26 +1264,14 @@ function TabNaming()
   local preview_name = SanitizeName(wgt.name, wgt.enumeration, {}, true)
   ValidateFields(preview_name)
   reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + 20)
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * 1.5)
   if wgt.invalid then reaper.ImGui_BeginDisabled(ctx) end
-  acendan.ImGui_Button("Rename", ApplyName, {86, 64, 110})
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x56406EFF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x6E5288FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x4A3462FF)
+  if reaper.ImGui_Button(ctx, "Rename", 80, 0) then ApplyName() end
+  reaper.ImGui_PopStyleColor(ctx, 3)
   if wgt.invalid then reaper.ImGui_EndDisabled(ctx) end
-  reaper.ImGui_PopFont(ctx)
   acendan.ImGui_Tooltip("Applies your name to the given target!\n\nPro Tip: Press Enter to trigger renaming.")
-  local export_path = GetPreviousValue("opt_export_script", nil)
-  local has_export  = export_path and export_path ~= "" and export_path ~= "false"
-  reaper.ImGui_SameLine(ctx, 0, 40)
-  if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * 1.5)
-  acendan.ImGui_Button("Export", function()
-    if reaper.file_exists(export_path) then
-      local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
-      if cmd_id and cmd_id > 0 then reaper.Main_OnCommandEx(cmd_id, 0, 0) end
-    else acendan.msg("Export script not found:\n\n" .. export_path, "Export") end
-  end, {70, 160, 210})
-  reaper.ImGui_PopFont(ctx)
-  acendan.ImGui_Tooltip("Runs the export script configured in the standalone Renamer settings.")
-  if not has_export then reaper.ImGui_EndDisabled(ctx) end
   if wgt.invalid then
     reaper.ImGui_TextColored(ctx, 0xFFFF00BB, wgt.invalid)
   elseif wgt.error then
@@ -2260,8 +2248,8 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
       end
       reaper.ImGui_PopStyleColor(ctx)
     end
+    reaper.ImGui_EndChild(ctx)
   end
-  reaper.ImGui_EndChild(ctx)
 
   reaper.ImGui_Spacing(ctx)
 
@@ -2371,6 +2359,26 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
     end
     reaper.ImGui_EndPopup(ctx)
   end
+
+  -- Export row
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Spacing(ctx)
+  local export_path = GetPreviousValue("opt_export_script", nil)
+  local has_export  = export_path and export_path ~= "" and export_path ~= "false"
+  if not has_export then reaper.ImGui_BeginDisabled(ctx) end
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x46A0D2FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x58B8E8FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x3888BAFF)
+  if reaper.ImGui_Button(ctx, "Export", 80, 0) then
+    if reaper.file_exists(export_path) then
+      local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
+      if cmd_id and cmd_id > 0 then reaper.Main_OnCommandEx(cmd_id, 0, 0) end
+    else acendan.msg("Export script not found:\n\n" .. export_path, "Export") end
+  end
+  reaper.ImGui_PopStyleColor(ctx, 3)
+  if not has_export then reaper.ImGui_EndDisabled(ctx) end
+  acendan.ImGui_Tooltip("Runs the export script configured in the standalone Renamer settings.")
   reaper.ImGui_Spacing(ctx)
 end
 
