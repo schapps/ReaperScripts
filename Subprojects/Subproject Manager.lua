@@ -1,6 +1,6 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.2
+-- @version 0.3
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, color all subproject items, and create new
@@ -9,6 +9,7 @@
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
+--   04/29/26 - v0.3 feature additions
 --   04/28/26 - v0.2 Adding color picker, bug fixes
 --   04/27/26 - v0.1 Initial alpha release
 
@@ -253,6 +254,36 @@ local function openSelectedSubprojects(items)
     runCommand(40109)
     reaper.SetMediaItemSelected(item, false)
   end
+end
+
+-- ============================================================
+-- Feature: update (open, render RPP-PROX, close) selected subprojects
+-- ============================================================
+local function updateSubproject(items)
+  if not items or #items == 0 then return end
+  local parentName = getCurrentProjectName()
+  local rendered = {}
+  for _, item in ipairs(items) do
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local src = reaper.GetMediaItemTake_Source(take)
+      if src then
+        local fp = reaper.GetMediaSourceFileName(src, "")
+        if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
+          rendered[fp] = true
+          reaper.Main_OnCommand(40289, 0)
+          reaper.SetMediaItemSelected(item, true)
+          reaper.Main_OnCommand(40109, 0)  -- open subproject in tab
+          reaper.Main_OnCommand(42332, 0)  -- save + render RPP-PROX
+          reaper.Main_OnCommand(40860, 0)  -- close tab
+        end
+      end
+    end
+  end
+  activateProjectByName(parentName)
+  reaper.Main_OnCommand(40289, 0)
+  for _, item in ipairs(items) do reaper.SetMediaItemSelected(item, true) end
+  reaper.UpdateArrange()
 end
 
 -- ============================================================
@@ -796,13 +827,17 @@ local function loop()
     -- ── Quick action buttons ─────────────────────────────────────
     local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
     local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local btn_w      = (avail_w - sp_x * 2) / 3
+    local btn_w      = (avail_w - sp_x * 3) / 4
     local swatch_w   = 18
     local row_sx, row_sy = ImGui.GetCursorScreenPos(ctx)
 
     if not has_selection then ImGui.BeginDisabled(ctx, true) end
     if ImGui.Button(ctx, "Open Selected", btn_w, 0) then
       openSelectedSubprojects(valid_selected)
+    end
+    ImGui.SameLine(ctx)
+    if ImGui.Button(ctx, "Update Subproject", btn_w, 0) then
+      updateSubproject(valid_selected)
     end
     ImGui.SameLine(ctx)
     if ImGui.Button(ctx, "Duplicate to New Version", btn_w, 0) then
