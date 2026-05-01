@@ -1,6 +1,6 @@
 -- @description Subproject Hub
 -- @author Stephen Schappler
--- @version 0.1
+-- @version 0.2
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
@@ -8,7 +8,7 @@
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
---   04/30/26 - v0.1 Initial alpha release
+--   04/30/26 - v0.2 Initial alpha release
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
@@ -2628,11 +2628,11 @@ end
 -- Collapsible section helper
 -- ============================================================
 local function CollapsibleSection(label, is_open, on_toggle, render_fn)
-  local flags = is_open and reaper.ImGui_TreeNodeFlags_DefaultOpen() or 0
+  reaper.ImGui_SetNextItemOpen(ctx, is_open, reaper.ImGui_Cond_Always())
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Header(),        0x2A2A2AFF)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_HeaderHovered(), 0x333333FF)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_HeaderActive(),  0x3A3A3AFF)
-  local open = reaper.ImGui_CollapsingHeader(ctx, label, flags)
+  local open = reaper.ImGui_CollapsingHeader(ctx, label)
   reaper.ImGui_PopStyleColor(ctx, 3)
   if open ~= is_open then on_toggle(open) end
   if open then
@@ -2686,13 +2686,13 @@ local function loop()
   if visible then
     if reaper.ImGui_BeginTabBar(ctx, "HubTabBar") then
       if reaper.ImGui_BeginTabItem(ctx, "Hub") then
-        CollapsibleSection("01  SUBPROJECT CREATION", sec_create_open,
+        CollapsibleSection("01  CREATE SUBPROJECTS", sec_create_open,
           function(v) sec_create_open=v; reaper.SetExtState("SubprojectHub","sec_create_open",tostring(v),true) end,
           renderCreateSection)
-        CollapsibleSection("02  SUBPROJECTNAMING", sec_naming_open,
+        CollapsibleSection("02  NAME SUBPROJECTS", sec_naming_open,
           function(v) sec_naming_open=v; reaper.SetExtState("SubprojectHub","sec_naming_open",tostring(v),true) end,
           renderNamingSection)
-        CollapsibleSection("03  SUBPROJECT ITEMS", sec_items_open,
+        CollapsibleSection("03  MANAGE SUBPROJECTS", sec_items_open,
           function(v) sec_items_open=v; reaper.SetExtState("SubprojectHub","sec_items_open",tostring(v),true) end,
           function() renderItemsSection(rows, reaper_sel, valid_selected, has_selection) end)
         reaper.ImGui_EndTabItem(ctx)
