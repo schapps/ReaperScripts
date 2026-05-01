@@ -1,13 +1,15 @@
 -- @description Subproject Hub
 -- @author Stephen Schappler
--- @version 0.2
+-- @version 0.5
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
 -- @link https://www.stephenschappler.com
 -- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
+--   [nomain] ../Common/ReaImGuiTheme.lua
+--   [nomain] ../Common/line-md--play-filled.png
 -- @changelog
+--   05/01/26 - v0.5 Fixes and optimziations
 --   04/30/26 - v0.2 Initial alpha release
 
 if not reaper.ImGui_GetBuiltinPath then
@@ -36,6 +38,7 @@ local SCRIPT_NAME = "schapps_The Last Renamer"
 -- Module-level state (declared before acendan so all closures share these upvalues)
 -- ============================================================
 local ctx
+local play_img
 local wgt = {}
 
 -- ============================================================
@@ -541,7 +544,6 @@ end
 -- ============================================================
 local TITLE        = "SUBPROJECT HUB"
 local WINDOW_FLAGS = reaper.ImGui_WindowFlags_NoCollapse()
-                   | ((rawget(reaper,"ImGui_WindowFlags_NoDocking") and reaper.ImGui_WindowFlags_NoDocking()) or 0)
 local CONFIG_FLAGS = reaper.ImGui_ConfigFlags_DockingEnable()
                    | reaper.ImGui_ConfigFlags_NavEnableKeyboard()
 local SLIDER_FLAGS = reaper.ImGui_SliderFlags_AlwaysClamp()
@@ -937,6 +939,9 @@ function Init()
   wgt.mode   = "Selected"
   if not LoadScheme(wgt.scheme) then wgt.scheme = nil end
   ctx = reaper.ImGui_CreateContext(TITLE, CONFIG_FLAGS)
+  local play_img_path = parent_dir .. "Common" .. SEP .. "line-md--play-filled.png"
+  play_img = reaper.ImGui_CreateImage(play_img_path)
+  if play_img then reaper.ImGui_Attach(ctx, play_img) end
   acendan.ImGui_SetFont()
   local scale = acendan.ImGui_GetScale()
   reaper.ImGui_SetNextWindowSize(ctx, 900, 750)
@@ -1226,6 +1231,18 @@ function TabNaming()
   reaper.ImGui_SeparatorText(ctx, "Naming Scheme")
   LoadFields(wgt.data.fields)
   local capture_label = "Capture Name"
+  if not wgt.data then return end
+  local preview_name = SanitizeName(wgt.name, wgt.enumeration, {}, true)
+  ValidateFields(preview_name)
+  if wgt.invalid then reaper.ImGui_BeginDisabled(ctx) end
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x56406EFF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x6E5288FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x4A3462FF)
+  if reaper.ImGui_Button(ctx, "Rename", 80, 0) then ApplyName() end
+  reaper.ImGui_PopStyleColor(ctx, 3)
+  if wgt.invalid then reaper.ImGui_EndDisabled(ctx) end
+  acendan.ImGui_Tooltip("Applies your name to the given target!\n\nPro Tip: Press Enter to trigger renaming.")
+  reaper.ImGui_SameLine(ctx)
   Button(capture_label, function()
     local sel_item = reaper.GetSelectedMediaItem(0, 0)
     if sel_item then AutoFillFromItem(sel_item, true) end
@@ -1235,21 +1252,8 @@ function TabNaming()
     ClearFields(wgt.data.title, wgt.data.fields)
     SetScheme(wgt.scheme)
   end, "Clears out all fields, restoring them to their default state.")
-  if not wgt.data then return end
-  reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_SeparatorText(ctx, "Options")
+  reaper.ImGui_SameLine(ctx)
   LoadTargets()
-  local preview_name = SanitizeName(wgt.name, wgt.enumeration, {}, true)
-  ValidateFields(preview_name)
-  reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + 20)
-  if wgt.invalid then reaper.ImGui_BeginDisabled(ctx) end
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x56406EFF)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x6E5288FF)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x4A3462FF)
-  if reaper.ImGui_Button(ctx, "Rename", 80, 0) then ApplyName() end
-  reaper.ImGui_PopStyleColor(ctx, 3)
-  if wgt.invalid then reaper.ImGui_EndDisabled(ctx) end
-  acendan.ImGui_Tooltip("Applies your name to the given target!\n\nPro Tip: Press Enter to trigger renaming.")
   if wgt.invalid then
     reaper.ImGui_TextColored(ctx, 0xFFFF00BB, wgt.invalid)
   elseif wgt.error then
@@ -2473,7 +2477,15 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
 
           -- Play button drawn last so it overlaps the SpanAllColumns selectable
           reaper.ImGui_TableSetColumnIndex(ctx, 0)
-          if reaper.ImGui_SmallButton(ctx, "▶##play"..i) then
+          local play_clicked
+          if play_img then
+            reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(), 2, 2)
+            play_clicked = reaper.ImGui_ImageButton(ctx, "##play"..i, play_img, 14, 14)
+            reaper.ImGui_PopStyleVar(ctx)
+          else
+            play_clicked = reaper.ImGui_SmallButton(ctx, "▶##play"..i)
+          end
+          if play_clicked then
             reaper.Main_OnCommand(40289, 0)
             reaper.SetMediaItemSelected(r.item, true)
             last_clicked_idx = i
