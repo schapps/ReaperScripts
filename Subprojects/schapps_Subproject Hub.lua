@@ -584,7 +584,8 @@ local search_buf = ""
 -- Persistent section open states
 local function getHubState(key, default)
   local v = reaper.GetExtState("SubprojectHub", key)
-  return v ~= "" and (v == "true") or default
+  if v == "" then return default end
+  return v == "true"
 end
 local sec_create_open = getHubState("sec_create_open", true)
 local sec_naming_open  = getHubState("sec_naming_open",  true)
@@ -2388,7 +2389,12 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
 
   -- Scrollable child window + table
   local row_h   = reaper.ImGui_GetTextLineHeightWithSpacing(ctx)
-  local child_h = math.min(600, math.max(row_h * 3, row_h * (#filtered_rows + 1) + 4))
+  local fhws    = reaper.ImGui_GetFrameHeightWithSpacing(ctx)
+  local _, ispy = reaper.ImGui_GetStyleVar(ctx, reaper.ImGui_StyleVar_ItemSpacing())
+  -- reserve space for: spacing + button row + spacing + separator + spacing + export row + spacing
+  local footer_h = fhws * 2 + ispy * 4 + 1
+  local _, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
+  local child_h = math.max(400, avail_h - footer_h)
   local ChildFlags_Border = (rawget(reaper,"ImGui_ChildFlags_Border") and reaper.ImGui_ChildFlags_Border()) or 1
   local child_visible = reaper.ImGui_BeginChild(ctx, "##preview", 0, child_h, ChildFlags_Border)
   if child_visible then
@@ -2404,9 +2410,8 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
       local KEY_RCTRL  = reaper.ImGui_Key_RightCtrl()
       local KEY_LSHIFT = reaper.ImGui_Key_LeftShift()
       local KEY_RSHIFT = reaper.ImGui_Key_RightShift()
-      local hdr_c   = reaper.ImGui_GetStyleColor(ctx, reaper.ImGui_Col_Header())
-      local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
-      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Header(), hdr_dim)
+      local sel_color = (color_r << 24) | (color_g << 16) | (color_b << 8) | 0x66
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Header(), sel_color)
       if reaper.ImGui_BeginTable(ctx, "##ptable", 5, reaper.ImGui_TableFlags_BordersInnerV()) then
         reaper.ImGui_TableSetupColumn(ctx, "##playcol",    reaper.ImGui_TableColumnFlags_WidthFixed(), 24)
         reaper.ImGui_TableSetupColumn(ctx, "Take Name",    reaper.ImGui_TableColumnFlags_WidthStretch())
@@ -2679,22 +2684,12 @@ local function loop()
   local visible, still_open = reaper.ImGui_Begin(ctx, TITLE, true, WINDOW_FLAGS)
 
   if visible then
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x7AD9C4FF)
-    reaper.ImGui_Text(ctx, "●  SUBPROJECT HUB")
-    reaper.ImGui_PopStyleColor(ctx)
-    reaper.ImGui_SameLine(ctx)
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x444444FF)
-    reaper.ImGui_Text(ctx, "v1.0")
-    reaper.ImGui_PopStyleColor(ctx)
-    reaper.ImGui_Separator(ctx)
-    reaper.ImGui_Spacing(ctx)
-
     if reaper.ImGui_BeginTabBar(ctx, "HubTabBar") then
       if reaper.ImGui_BeginTabItem(ctx, "Hub") then
-        CollapsibleSection("01  CREATE SUBPROJECT", sec_create_open,
+        CollapsibleSection("01  SUBPROJECT CREATION", sec_create_open,
           function(v) sec_create_open=v; reaper.SetExtState("SubprojectHub","sec_create_open",tostring(v),true) end,
           renderCreateSection)
-        CollapsibleSection("02  NAMING", sec_naming_open,
+        CollapsibleSection("02  SUBPROJECTNAMING", sec_naming_open,
           function(v) sec_naming_open=v; reaper.SetExtState("SubprojectHub","sec_naming_open",tostring(v),true) end,
           renderNamingSection)
         CollapsibleSection("03  SUBPROJECT ITEMS", sec_items_open,
