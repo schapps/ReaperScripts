@@ -932,10 +932,8 @@ function Init()
   wgt.serialize = {}
   wgt.values   = {}
   wgt.last_selected_item = nil
-  wgt.targets  = {}
-  wgt.targets.Regions = { "Selected", "All", "Time Selection", "Edit Cursor" }
-  wgt.targets.Items   = { "Selected", "All" }
-  wgt.targets.Tracks  = { "Selected", "All" }
+  wgt.target = "Items"
+  wgt.mode   = "Selected"
   if not LoadScheme(wgt.scheme) then wgt.scheme = nil end
   ctx = reaper.ImGui_CreateContext(TITLE, CONFIG_FLAGS)
   acendan.ImGui_SetFont()
@@ -1029,36 +1027,16 @@ function LoadFields(fields, parent)
 end
 
 function LoadTargets()
-  if not wgt.target then wgt.target = GetPreviousValue("target", nil) end
-  if not wgt.mode   then wgt.mode   = GetPreviousValue("mode",   nil) end
-  if reaper.ImGui_BeginCombo(ctx, "Target", wgt.target) then
-    for target, _ in pairs(wgt.targets) do
-      if reaper.ImGui_Selectable(ctx, target, wgt.target == target) then
-        wgt.target = target; SetCurrentValue("target", target); wgt.mode = nil; DeleteCurrentValue("mode")
-      end
-    end
-    reaper.ImGui_EndCombo(ctx)
-  end
-  if wgt.target then
-    if reaper.ImGui_BeginCombo(ctx, "Mode", wgt.mode) then
-      for _, mode in ipairs(wgt.targets[wgt.target]) do
-        if reaper.ImGui_Selectable(ctx, mode, wgt.mode == mode) then
-          wgt.mode = mode; SetCurrentValue("mode", mode)
-        end
-      end
-      reaper.ImGui_EndCombo(ctx)
-    end
-  end
-  if wgt.target == "Items" then
-    if not wgt.overlap then wgt.overlap = GetPreviousValue("opt_overlap", false) == "true" end
-    local rv, overlap = reaper.ImGui_Checkbox(ctx, "Respect Overlaps", wgt.overlap)
-    if rv then wgt.overlap = overlap; SetCurrentValue("opt_overlap", overlap) end
-    acendan.ImGui_Tooltip("If checked, enumeration will not increment on items that overlap with neighbors on this track.")
-  end
-  if wgt.target == "Items" and wgt.mode == "Selected" and GetPreviousValue("opt_nvk_only", false) == "true" then
+  wgt.target = "Items"
+  wgt.mode   = "Selected"
+  if not wgt.overlap then wgt.overlap = GetPreviousValue("opt_overlap", false) == "true" end
+  local rv, overlap = reaper.ImGui_Checkbox(ctx, "Respect Overlaps", wgt.overlap)
+  if rv then wgt.overlap = overlap; SetCurrentValue("opt_overlap", overlap) end
+  acendan.ImGui_Tooltip("If checked, enumeration will not increment on items that overlap with neighbors on this track.")
+  if GetPreviousValue("opt_nvk_only", false) == "true" then
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_TextColored(ctx, 0x13BD99FF, "NVK")
-    acendan.ImGui_Tooltip("Only NVK Folder Items will be targeted when set to 'Items - Selected'.")
+    acendan.ImGui_Tooltip("Only NVK Folder Items will be targeted.")
   end
 end
 
@@ -1066,8 +1044,6 @@ function ValidateFields(preview_name)
   wgt.invalid = nil
   if wgt.required ~= "" then wgt.invalid = "Missing field: " .. wgt.required; return end
   if wgt.name == "" then wgt.invalid = "Generated name is blank!"; return end
-  if not wgt.target then wgt.invalid = "Please set a renaming target!"; return end
-  if wgt.target and not wgt.mode then wgt.invalid = "Please set a renaming mode for target: " .. wgt.target; return end
   if wgt.data.maxchars and preview_name and #preview_name > wgt.data.maxchars then
     wgt.invalid = "Name length (" .. #preview_name .. ") exceeds max (" .. wgt.data.maxchars .. ")."; return
   end
@@ -1260,7 +1236,7 @@ function TabNaming()
   end, "Clears out all fields, restoring them to their default state.")
   if not wgt.data then return end
   reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_SeparatorText(ctx, "Targets")
+  reaper.ImGui_SeparatorText(ctx, "Options")
   LoadTargets()
   local preview_name = SanitizeName(wgt.name, wgt.enumeration, {}, true)
   ValidateFields(preview_name)
@@ -2001,6 +1977,282 @@ function SetMetadataMarker(marker, pos, num)
 end
 
 -- ============================================================
+-- Settings tab (ported from schapps_The Last Renamer)
+-- ============================================================
+function TabSettings()
+  reaper.ImGui_SeparatorText(ctx, "Scheme")
+
+  if reaper.ImGui_BeginCombo(ctx, "Scheme", wgt.scheme) then
+    for i, scheme in ipairs(wgt.schemes) do
+      if reaper.ImGui_Selectable(ctx, scheme, wgt.scheme == scheme) then
+        SetScheme(scheme)
+      end
+    end
+    reaper.ImGui_EndCombo(ctx)
+  end
+
+  Button("Validate Scheme", function()
+    if wgt.scheme and ValidateScheme(wgt.scheme) then
+      acendan.msg("Scheme is valid!", "The Last Renamer")
+    end
+  end, "Check the selected scheme for YAML formatting errors.")
+
+  Button("Add Shared Scheme", function()
+    local shared_scheme = acendan.promptForFile("Select a shared scheme to import", "", "",
+      "YAML Files (*.yaml)\0*.yaml\0\0")
+    if shared_scheme then
+      local shared_scheme_name = shared_scheme:match("[^/\\]+$")
+      if shared_scheme:find(SCHEMES_DIR) then
+        acendan.msg("Shared scheme must be outside of the schemes directory!", "The Last Renamer")
+        return
+      end
+      local shared_schemes_table = GetSharedSchemes()
+      for _, scheme in ipairs(shared_schemes_table) do
+        if scheme == shared_scheme then
+          acendan.msg("Shared scheme already exists!", "The Last Renamer")
+          return
+        end
+      end
+      shared_schemes_table[#shared_schemes_table + 1] = shared_scheme
+      SetCurrentValue("shared_schemes", table.concat(shared_schemes_table, ";"))
+      wgt.schemes = FetchSchemes()
+      SetScheme("Shared: " .. shared_scheme_name)
+    else
+      acendan.msg("No shared scheme selected!", "The Last Renamer")
+    end
+  end,
+    "Import a shared scheme from a YAML file outside of the schemes directory (for example, a file used by multiple team members via Perforce).\n\nNote: Shared Schemes can not have hyphens in their filename.")
+
+  reaper.ImGui_SameLine(ctx)
+  Button("Remove Shared Scheme", function()
+    if not wgt.scheme:find("Shared: ") then
+      acendan.msg("Selected scheme is not a shared scheme!", "The Last Renamer")
+      return
+    end
+    local shared_scheme_name = wgt.scheme:match("Shared: ([^/\\]+)")
+    local shared_schemes_table = GetSharedSchemes()
+    for i, scheme in ipairs(shared_schemes_table) do
+      if scheme:find(shared_scheme_name) then
+        table.remove(shared_schemes_table, i)
+        break
+      end
+    end
+    SetCurrentValue("shared_schemes", table.concat(shared_schemes_table, ";"))
+    wgt.schemes = FetchSchemes()
+    SetScheme(wgt.schemes[1])
+  end, "Removes the selected shared scheme from the schemes list.", 0)
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_Text(ctx, "File System")
+  Button("Open Schemes Folder", function()
+    reaper.CF_ShellExecute(SCHEMES_DIR)
+  end, "Open the folder containing your schemes in a file browser.")
+
+  reaper.ImGui_SameLine(ctx)
+  Button("Rescan Folder", function()
+    wgt.schemes = FetchSchemes()
+  end, "Rescan the schemes directory for new scheme files.")
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_SeparatorText(ctx, "Options")
+
+  local auto_clear = GetPreviousValue("opt_auto_clear", false)
+  local rv, auto_clear = reaper.ImGui_Checkbox(ctx, "Auto Clear Fields", auto_clear == "true" and true or false)
+  if rv then SetCurrentValue("opt_auto_clear", auto_clear) end
+  acendan.ImGui_Tooltip("Automatically clear all fields when loading scheme (opening tool or switching scheme).")
+
+  local enable_meta = GetPreviousValue("opt_enable_meta", false)
+  local rv, enable_meta = reaper.ImGui_Checkbox(ctx, "Enable Metadata Tab", enable_meta == "true" and true or false)
+  if rv then SetCurrentValue("opt_enable_meta", enable_meta) end
+  acendan.ImGui_Tooltip(
+    "Enable the metadata tab for adding metadata to your renaming targets.\n\nRequires 'Add new metadata' setting in the Render window!")
+
+  local autofill = GetPreviousValue("opt_autofill", false)
+  local rv, autofill = reaper.ImGui_Checkbox(ctx, "Enable Autofill Dropdowns", autofill == "true" and true or false)
+  if rv then SetCurrentValue("opt_autofill", autofill) end
+  acendan.ImGui_Tooltip(
+    "Experimental - Overrides standard dropdowns with custom dropdowns that auto-fill with tab while typing.\n\nMay be buggy!")
+
+  local nvk_only = GetPreviousValue("opt_nvk_only", false)
+  local rv, nvk_only = reaper.ImGui_Checkbox(ctx, "NVK Folder Items", nvk_only == "true" and true or false)
+  if rv then SetCurrentValue("opt_nvk_only", nvk_only) end
+  acendan.ImGui_Tooltip("Only target NVK Folder Items when set to 'Items - Selected'. If unsure, leave unchecked.")
+
+  local auto_populate = GetPreviousValue("opt_auto_populate", false)
+  local rv, auto_populate = reaper.ImGui_Checkbox(ctx, "Auto Populate from Selected Item", auto_populate == "true" and true or false)
+  if rv then
+    SetCurrentValue("opt_auto_populate", auto_populate)
+    wgt.last_selected_item = nil
+  end
+  acendan.ImGui_Tooltip("When enabled, selecting an item in Reaper will automatically parse its name and populate the naming fields based on the current scheme.")
+
+  local ext_app_options = { "None", "Open Minori", "Open Minoru" }
+  local ext_app_btn = GetPreviousValue("opt_ext_app_btn", "None")
+  if reaper.ImGui_BeginCombo(ctx, "External App Button", ext_app_btn) then
+    for _, option in ipairs(ext_app_options) do
+      if reaper.ImGui_Selectable(ctx, option, ext_app_btn == option) then
+        SetCurrentValue("opt_ext_app_btn", option)
+      end
+    end
+    reaper.ImGui_EndCombo(ctx)
+  end
+  acendan.ImGui_Tooltip("Show a button in the main panel to open an external app.")
+
+  if acendan.ImGui_ScaleSlider() then wgt.set_font = true end
+
+  local num_hist = tonumber(GetPreviousValue("opt_num_hist", 10))
+  local rv, num_hist = reaper.ImGui_SliderInt(ctx, "History Count", num_hist, 1, 50)
+  if rv then SetCurrentValue("opt_num_hist", num_hist) end
+  acendan.ImGui_Tooltip("Number of history entries to store for each scheme.")
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_SeparatorText(ctx, "Export Script")
+
+  local export_path = GetPreviousValue("opt_export_script", nil)
+  local display_path = (export_path and export_path ~= "" and export_path ~= "false")
+                       and export_path or "None configured"
+  reaper.ImGui_PushTextWrapPos(ctx, 0.0)
+  reaper.ImGui_TextDisabled(ctx, display_path)
+  reaper.ImGui_PopTextWrapPos(ctx)
+
+  if reaper.ImGui_Button(ctx, "Browse...") then
+    local path = acendan.promptForFile("Select export script", "", "", "Lua Scripts (*.lua)\0*.lua\0\0")
+    if path then SetCurrentValue("opt_export_script", path) end
+  end
+  acendan.ImGui_Tooltip("Select the Reaper Lua script to run when the Export button is clicked.")
+
+  if export_path and export_path ~= "" and export_path ~= "false" then
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Clear") then
+      SetCurrentValue("opt_export_script", "")
+    end
+    acendan.ImGui_Tooltip("Remove the configured export script.")
+  end
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_SeparatorText(ctx, "Backup")
+
+  Button("Export Presets", function()
+    local presets = {}
+    while true do
+      local preset_title = wgt.data.title .. " - Preset" .. tostring(#presets + 1)
+      local preset = GetPreviousValue(preset_title, nil)
+      if not preset then break end
+      presets[#presets + 1] = { title = preset_title, preset = preset }
+    end
+    if #presets == 0 then
+      acendan.msg("No presets found for scheme: " .. wgt.data.title, "The Last Renamer")
+      return
+    end
+
+    local start_ini_path = acendan.encapsulate(BACKUPS_DIR .. "TheLastRenamer_" .. wgt.scheme:gsub("yaml", "ini"))
+    local ini_path = start_ini_path
+    if not acendan.directoryExists(BACKUPS_DIR) then
+      reaper.RecursiveCreateDirectory(BACKUPS_DIR, 0)
+      if not acendan.directoryExists(BACKUPS_DIR) then
+        acendan.msg("Error creating backups directory:\n\n" .. BACKUPS_DIR, "The Last Renamer")
+        return
+      end
+    end
+    local i = 1
+    while acendan.fileExists(ini_path) do
+      ini_path = start_ini_path:gsub(".ini", "_" .. tostring(i) .. ".ini")
+      i = i + 1
+    end
+
+    local file, err = io.open(ini_path, "w")
+    if not file or err then
+      acendan.msg("Error creating ini file:\n\n" .. tostring(err), "The Last Renamer")
+      return
+    end
+    file:write("[The Last Renamer]\n")
+    for _, preset in ipairs(presets) do
+      file:write(preset.title .. "=" .. preset.preset .. "\n")
+    end
+    file:close()
+
+    reaper.CF_SetClipboard(ini_path)
+    acendan.msg(tostring(#presets) .. " preset(s) exported to:\n\n" .. ini_path .. "\n\nPath copied to clipboard.",
+      "The Last Renamer")
+  end, "Exports all presets for the selected scheme to an ini file.")
+
+  reaper.ImGui_SameLine(ctx)
+  Button("Import Presets", function()
+    if #wgt.dragdrop == 0 then
+      acendan.msg("No preset files found to import! Please drag-drop preset .ini files below.", "The Last Renamer")
+      return
+    end
+
+    local presets = {}
+    for _, file in ipairs(wgt.dragdrop) do
+      local i = 1
+      while true do
+        local preset_title = wgt.data.title .. " - Preset" .. tostring(i)
+        local ret, preset = reaper.BR_Win32_GetPrivateProfileString("The Last Renamer", preset_title, "", file)
+        if not ret or not preset or preset == "" then break end
+        presets[#presets + 1] = {
+          title  = wgt.data.title .. " - Preset" .. tostring(#presets + 1),
+          preset = preset
+        }
+        i = i + 1
+      end
+    end
+
+    if GetPreviousValue("opt_overwrite", false) == "true" then
+      local num_presets = #wgt.preset.presets
+      for i = 1, num_presets do
+        local preset_title = wgt.data.title .. " - Preset" .. tostring(i)
+        if HasValue(preset_title) then DeleteCurrentValue(preset_title) end
+      end
+      wgt.preset.presets = {}
+    end
+
+    for _, preset in ipairs(presets) do
+      StorePreset(preset.title, nil, nil, preset.preset)
+    end
+    acendan.msg(tostring(#presets) .. " preset(s) imported from " .. tostring(#wgt.dragdrop) .. " files!",
+      "The Last Renamer")
+  end, "Imports presets from ini file(s) drag-dropped below. Only imports presets for the active scheme.")
+
+  reaper.ImGui_SameLine(ctx)
+  local overwrite = GetPreviousValue("opt_overwrite", false)
+  local rv, overwrite = reaper.ImGui_Checkbox(ctx, "Overwrite?", overwrite == "true" and true or false)
+  if rv then SetCurrentValue("opt_overwrite", overwrite) end
+  acendan.ImGui_Tooltip(
+    "If unchecked, imported presets will be added to existing ones. If checked, will erase pre-existing presets on import.\n\nIf you enable this, back up existing ones with the Export button first!")
+
+  if reaper.ImGui_BeginChild(ctx, '##drop_files', 300, 50, reaper.ImGui_ChildFlags_FrameStyle()) then
+    if #wgt.dragdrop == 0 then
+      reaper.ImGui_Text(ctx, 'Drag-drop preset file(s) to import...')
+    else
+      reaper.ImGui_Text(ctx, ('Ready to import %d file(s):'):format(#wgt.dragdrop))
+      reaper.ImGui_SameLine(ctx)
+      if reaper.ImGui_SmallButton(ctx, 'Clear') then wgt.dragdrop = {} end
+    end
+    for _, file in ipairs(wgt.dragdrop) do
+      reaper.ImGui_Bullet(ctx)
+      reaper.ImGui_TextWrapped(ctx, file:match('[^/\\]+$'))
+    end
+    reaper.ImGui_EndChild(ctx)
+  end
+
+  if reaper.ImGui_BeginDragDropTarget(ctx) then
+    local rv, count = reaper.ImGui_AcceptDragDropPayloadFiles(ctx)
+    if rv then
+      wgt.dragdrop = {}
+      for i = 0, count - 1 do
+        local filename
+        rv, filename = reaper.ImGui_GetDragDropPayloadFile(ctx, i)
+        if rv and filename:match("%.ini$") then
+          table.insert(wgt.dragdrop, filename)
+        end
+      end
+    end
+    reaper.ImGui_EndDragDropTarget(ctx)
+  end
+end
+
+-- ============================================================
 -- Render sections
 -- ============================================================
 local function renderCreateSection()
@@ -2104,22 +2356,6 @@ local function renderCreateSection()
 end
 
 local function renderNamingSection()
-  reaper.ImGui_Spacing(ctx)
-  -- Scheme selector (no settings tab in hub)
-  local scheme_lbl = (wgt.scheme and wgt.scheme:gsub("%.yaml$", "")) or "(none)"
-  reaper.ImGui_SetNextItemWidth(ctx, 280)
-  if reaper.ImGui_BeginCombo(ctx, "##hub_scheme", scheme_lbl) then
-    for _, s in ipairs(wgt.schemes or {}) do
-      local display = s:gsub("%.yaml$", "")
-      if reaper.ImGui_Selectable(ctx, display, wgt.scheme == s) then SetScheme(s) end
-    end
-    reaper.ImGui_EndCombo(ctx)
-  end
-  reaper.ImGui_SameLine(ctx)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x666666FF)
-  reaper.ImGui_Text(ctx, "  Scheme")
-  reaper.ImGui_PopStyleColor(ctx)
-  reaper.ImGui_Separator(ctx)
   reaper.ImGui_Spacing(ctx)
   TabNaming()
 end
@@ -2379,7 +2615,7 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
   end
   reaper.ImGui_PopStyleColor(ctx, 3)
   if not has_export then reaper.ImGui_EndDisabled(ctx) end
-  acendan.ImGui_Tooltip("Runs the export script configured in the standalone Renamer settings.")
+  acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
   reaper.ImGui_Spacing(ctx)
 end
 
@@ -2453,15 +2689,25 @@ local function loop()
     reaper.ImGui_Separator(ctx)
     reaper.ImGui_Spacing(ctx)
 
-    CollapsibleSection("01  CREATE SUBPROJECT", sec_create_open,
-      function(v) sec_create_open=v; reaper.SetExtState("SubprojectHub","sec_create_open",tostring(v),true) end,
-      renderCreateSection)
-    CollapsibleSection("02  NAMING", sec_naming_open,
-      function(v) sec_naming_open=v; reaper.SetExtState("SubprojectHub","sec_naming_open",tostring(v),true) end,
-      renderNamingSection)
-    CollapsibleSection("03  SUBPROJECT ITEMS", sec_items_open,
-      function(v) sec_items_open=v; reaper.SetExtState("SubprojectHub","sec_items_open",tostring(v),true) end,
-      function() renderItemsSection(rows, reaper_sel, valid_selected, has_selection) end)
+    if reaper.ImGui_BeginTabBar(ctx, "HubTabBar") then
+      if reaper.ImGui_BeginTabItem(ctx, "Hub") then
+        CollapsibleSection("01  CREATE SUBPROJECT", sec_create_open,
+          function(v) sec_create_open=v; reaper.SetExtState("SubprojectHub","sec_create_open",tostring(v),true) end,
+          renderCreateSection)
+        CollapsibleSection("02  NAMING", sec_naming_open,
+          function(v) sec_naming_open=v; reaper.SetExtState("SubprojectHub","sec_naming_open",tostring(v),true) end,
+          renderNamingSection)
+        CollapsibleSection("03  SUBPROJECT ITEMS", sec_items_open,
+          function(v) sec_items_open=v; reaper.SetExtState("SubprojectHub","sec_items_open",tostring(v),true) end,
+          function() renderItemsSection(rows, reaper_sel, valid_selected, has_selection) end)
+        reaper.ImGui_EndTabItem(ctx)
+      end
+      if reaper.ImGui_BeginTabItem(ctx, "Settings") then
+        TabSettings()
+        reaper.ImGui_EndTabItem(ctx)
+      end
+      reaper.ImGui_EndTabBar(ctx)
+    end
 
     reaper.ImGui_Separator(ctx)
     reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x333333FF)
