@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="12fd805e48664781e6ebb81f29a3169ba7b2e62d">
+<index version="1" name="SPS Scripts" commit="be8d77dd969d74e7fb667a208f4a3ecf78c076be">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -5018,23 +5018,6 @@
 4/16/25 - v1.02 - Making it so that the subproject's parent project is activated after saving.
 10/3/25 - v1.03 - Disabling the return to parent project function until I can debug it better, as it will fail often.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/bfb1c770dd18fdba7a57416a4d414b914e367d1b/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
-      </version>
-    </reapack>
-    <reapack name="schapps_Subproject Hub.lua" type="script" desc="Subproject Hub">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Unified hub combining Subproject Manager and The Last Renamer (schapps fork). Three collapsible sections: Create Subproject, Naming, Subproject Items.\par}
-}
-]]></description>
-        <link rel="website">https://www.stephenschappler.com</link>
-      </metadata>
-      <version name="0.2" author="Stephen Schappler" time="2026-05-01T04:46:43Z">
-        <changelog><![CDATA[04/30/26 - v0.2 Initial alpha release]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/7a38645d78e43e3fb7330187bf812aa0f83a5c7f/Subprojects/schapps_Subproject%20Hub.lua</source>
-        <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/7a38645d78e43e3fb7330187bf812aa0f83a5c7f/Common/ReaImGuiTheme.lua</source>
       </version>
     </reapack>
     <reapack name="Subproject Manager.lua" type="script" desc="Subproject Manager">
