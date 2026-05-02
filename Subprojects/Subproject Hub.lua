@@ -1,6 +1,6 @@
 -- @description Subproject Hub
 -- @author Stephen Schappler
--- @version 0.5
+-- @version 0.6
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
@@ -9,7 +9,7 @@
 --   [nomain] ../Common/ReaImGuiTheme.lua
 --   [nomain] ../Common/line-md--play-filled.png
 -- @changelog
---   05/01/26 - v0.5 Fixes and optimziations
+--   05/01/26 - v0.6 Fixes and optimziations
 --   04/30/26 - v0.2 Initial alpha release
 
 if not reaper.ImGui_GetBuiltinPath then
@@ -2508,24 +2508,33 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
   reaper.ImGui_Spacing(ctx)
 
   -- Action buttons row
-  local avail_w, _ = reaper.ImGui_GetContentRegionAvail(ctx)
-  local sp_x, _   = reaper.ImGui_GetStyleVar(ctx, reaper.ImGui_StyleVar_ItemSpacing())
-  local swatch_w   = 18
-  local btn_w      = (avail_w - sp_x * 3) / 4
-  local row_sx, row_sy = reaper.ImGui_GetCursorScreenPos(ctx)
-
+  local export_path = GetPreviousValue("opt_export_script", nil)
+  local has_export  = export_path and export_path ~= "" and export_path ~= "false"
+  if not has_export then reaper.ImGui_BeginDisabled(ctx) end
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x46A0D2FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x58B8E8FF)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x3888BAFF)
+  if reaper.ImGui_Button(ctx, "Export", 0, 0) then
+    if reaper.file_exists(export_path) then
+      local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
+      if cmd_id and cmd_id > 0 then reaper.Main_OnCommandEx(cmd_id, 0, 0) end
+    else acendan.msg("Export script not found:\n\n" .. export_path, "Export") end
+  end
+  reaper.ImGui_PopStyleColor(ctx, 3)
+  if not has_export then reaper.ImGui_EndDisabled(ctx) end
+  acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
+  reaper.ImGui_SameLine(ctx)
   if not has_selection then reaper.ImGui_BeginDisabled(ctx, true) end
-  if reaper.ImGui_Button(ctx, "Open Selected",            btn_w, 0) then openSelectedSubprojects(valid_selected) end
+  if reaper.ImGui_Button(ctx, "Open Selected",            0, 0) then openSelectedSubprojects(valid_selected) end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "Update Subproject",        btn_w, 0) then updateSubproject(valid_selected) end
+  if reaper.ImGui_Button(ctx, "Update Subproject",        0, 0) then updateSubproject(valid_selected) end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "Duplicate to New Version", btn_w, 0) then duplicateToNewVersion(valid_selected) end
+  if reaper.ImGui_Button(ctx, "Duplicate to New Version", 0, 0) then duplicateToNewVersion(valid_selected) end
   if not has_selection then reaper.ImGui_EndDisabled(ctx) end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "Color All Subproject Items", btn_w - swatch_w, 0) then colorAllSubprojectItems() end
-
-  -- Color swatch pinned to right edge
-  reaper.ImGui_SetCursorScreenPos(ctx, row_sx + avail_w - swatch_w, row_sy)
+  if reaper.ImGui_Button(ctx, "Color All Subproject Items", 0, 0) then colorAllSubprojectItems() end
+  reaper.ImGui_SameLine(ctx)
+  local swatch_w = 18
   if reaper.ImGui_ColorButton(ctx, "##color_swatch", rgbToImGui(color_r,color_g,color_b),
       reaper.ImGui_ColorEditFlags_NoTooltip(), swatch_w, 0) then
     reaper.ImGui_OpenPopup(ctx, "##color_picker_popup")
@@ -2614,25 +2623,6 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
     reaper.ImGui_EndPopup(ctx)
   end
 
-  -- Export row
-  reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_Separator(ctx)
-  reaper.ImGui_Spacing(ctx)
-  local export_path = GetPreviousValue("opt_export_script", nil)
-  local has_export  = export_path and export_path ~= "" and export_path ~= "false"
-  if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x46A0D2FF)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x58B8E8FF)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(),  0x3888BAFF)
-  if reaper.ImGui_Button(ctx, "Export", 80, 0) then
-    if reaper.file_exists(export_path) then
-      local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
-      if cmd_id and cmd_id > 0 then reaper.Main_OnCommandEx(cmd_id, 0, 0) end
-    else acendan.msg("Export script not found:\n\n" .. export_path, "Export") end
-  end
-  reaper.ImGui_PopStyleColor(ctx, 3)
-  if not has_export then reaper.ImGui_EndDisabled(ctx) end
-  acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
   reaper.ImGui_Spacing(ctx)
 end
 

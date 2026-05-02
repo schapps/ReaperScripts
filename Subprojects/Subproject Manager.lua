@@ -1,15 +1,17 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.3
+-- @version 0.5
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
---   duplicate to new versioned takes, color all subproject items, and create new
---   subprojects from selected tracks — all in one ReaImGUI panel.
+--   duplicate to new versioned takes, and color all subproject items — all in one ReaImGUI panel.
 -- @link https://www.stephenschappler.com
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
+--   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
---   04/29/26 - v0.3 feature additions
+--   05/01/26 - v0.5 Image-based play button (cross-platform)
+--   05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+--   04/29/26 - v0.3 Feature additions
 --   04/28/26 - v0.2 Adding color picker, bug fixes
 --   04/27/26 - v0.1 Initial alpha release
 
@@ -37,16 +39,14 @@ local ctx       = ImGui.CreateContext(TITLE)
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
                 | (rawget(ImGui, "WindowFlags_NoDocking") or 0)
 
-local name_buf      = ""
-local _ca           = reaper.GetExtState("CreateSubproject", "ChannelsAuto")
-local channels_auto = (_ca == "") and true or (_ca == "true")
-local channels_buf  = reaper.GetExtState("CreateSubproject", "ChannelCount")
-if channels_buf == "" then channels_buf = "2" end
-local tail_buf      = reaper.GetExtState("CreateSubproject", "TailSeconds")
-if tail_buf == "" then tail_buf = "0.000" end
-local copy_video        = reaper.GetExtState("CreateSubproject", "CopyVideoTracks")    == "true"
-local close_after       = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
-local run_dynamic_split = reaper.GetExtState("CreateSubproject", "RunDynamicSplit")    == "true"
+local play_img
+do
+  local p = script_dir .. "Common/line-md--play-filled.png"
+  if not reaper.file_exists(p) then p = script_dir .. "../Common/line-md--play-filled.png" end
+  play_img = ImGui.CreateImage(p)
+  if play_img then ImGui.Attach(ctx, play_img) end
+end
+
 local last_clicked_idx  = nil  -- anchor row for shift-click range selection
 local preview_stop_pos  = nil  -- item end position for auto-stop after play button
 
@@ -67,10 +67,6 @@ local hex_buf = string.format("%02X%02X%02X", color_r, color_g, color_b)
 
 local function rgbToImGui(r, g, b)
   return (r << 24) | (g << 16) | (b << 8) | 0xFF
-end
-
-local function imGuiToRgb(col)
-  return (col >> 24) & 0xFF, (col >> 16) & 0xFF, (col >> 8) & 0xFF
 end
 
 local function rgbToHsv(r, g, b)
@@ -128,54 +124,8 @@ local function file_exists(path)
   return f ~= nil
 end
 
-local function getItemChannelCount(item)
-  local take = reaper.GetActiveTake(item)
-  if not take then return 0 end
-  local src = reaper.GetMediaItemTake_Source(take)
-  if not src then return 0 end
-  return reaper.GetMediaSourceNumChannels(src)
-end
-
-local function setTrackChannelCount(track, n)
-  reaper.SetMediaTrackInfo_Value(track, "I_NCHAN", n)
-end
-
-local function adjustTrackChannelCountToMatchItem(item)
-  local track = reaper.GetMediaItem_Track(item)
-  if not track then return end
-  local n = getItemChannelCount(item)
-  if n > 0 then setTrackChannelCount(track, n) end
-end
-
-local function getLastRenderedItem()
-  local n = reaper.CountMediaItems(0)
-  if n == 0 then return nil end
-  return reaper.GetMediaItem(0, n - 1)
-end
-
 local function runCommand(id)
   reaper.Main_OnCommand(id, 0)
-end
-
-local function clearAllMarkers()
-  local i = reaper.CountProjectMarkers(0) - 1
-  while i >= 0 do
-    local _, isrgn, _, _, _, idx = reaper.EnumProjectMarkers(i)
-    reaper.DeleteProjectMarker(0, idx, isrgn)
-    i = i - 1
-  end
-end
-
-local function addMarkersToTimeSelection(tail)
-  tail = tail or 0.0
-  local s, e = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
-  if s ~= e then
-    clearAllMarkers()
-    reaper.AddProjectMarker(0, false, s,       0, "=START", -1)
-    reaper.AddProjectMarker(0, false, e + tail, 0, "=END",   -1)
-  else
-    reaper.ShowMessageBox("No time selection set.", "Error", 0)
-  end
 end
 
 local function getCurrentProjectName()
@@ -193,23 +143,6 @@ local function activateProjectByName(targetName)
     end
     i = i + 1
   end
-end
-
-local function isTimeSelectionPresent()
-  local s, e = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
-  return s ~= e
-end
-
-local function areItemsSelected()
-  return reaper.CountSelectedMediaItems(0) > 0
-end
-
-local function isSubprojectItem(item)
-  local take = reaper.GetActiveTake(item)
-  if not take then return false end
-  local src = reaper.GetMediaItemTake_Source(take)
-  if not src then return false end
-  return reaper.GetMediaSourceFileName(src, ""):sub(-4):lower() == ".rpp"
 end
 
 -- ============================================================
@@ -447,98 +380,6 @@ local function duplicateToNewVersion(items)
 end
 
 -- ============================================================
--- Feature: create subproject from selected tracks
--- ============================================================
-local function collectVideoTrackChunks()
-  local chunks = {}
-  for i = 0, reaper.CountTracks(0) - 1 do
-    local track = reaper.GetTrack(0, i)
-    local _, name = reaper.GetTrackName(track, "")
-    if name:lower():find("video", 1, true) then
-      local ok, chunk = reaper.GetTrackStateChunk(track, "", false)
-      if ok then chunks[#chunks + 1] = chunk end
-    end
-  end
-  return chunks
-end
-
-local function pasteVideoTracksAtTop(chunks, subproj)
-  for i = #chunks, 1, -1 do
-    reaper.InsertTrackAtIndex(0, false)
-    local t = reaper.GetTrack(subproj, 0)
-    reaper.SetTrackStateChunk(t, chunks[i], false)
-  end
-  reaper.TrackList_AdjustWindows(false)
-end
-
-local function createSubproject()
-  local tail_secs    = tonumber(tail_buf) or 0.0
-  local manual_chans = not channels_auto
-                       and math.max(2, math.floor(tonumber(channels_buf) or 2))
-                       or nil
-  local video_chunks = copy_video and collectVideoTrackChunks() or {}
-  local first_track  = reaper.GetSelectedTrack(0, 0)
-
-  reaper.Undo_BeginBlock()
-  reaper.PreventUIRefresh(1)
-
-  if name_buf ~= "" and first_track then
-    reaper.GetSetMediaTrackInfo_String(first_track, "P_NAME", name_buf, true)
-  end
-
-  if isTimeSelectionPresent() or areItemsSelected() then
-    local parentName = getCurrentProjectName()
-    runCommand(40290)
-    runCommand(41997)
-    runCommand(41205)
-    runCommand(41816)
-
-    local subproj = reaper.EnumProjects(-1, "")
-    if manual_chans then
-      local master = reaper.GetMasterTrack(subproj)
-      if master then setTrackChannelCount(master, manual_chans) end
-    end
-    if #video_chunks > 0 then pasteVideoTracksAtTop(video_chunks, subproj) end
-
-    addMarkersToTimeSelection(tail_secs)
-    runCommand(40031)
-    runCommand(42332)
-    if close_after then runCommand(40860) end
-
-    activateProjectByName(parentName)
-
-    local lastItem = getLastRenderedItem()
-    if lastItem then
-      if channels_auto then
-        adjustTrackChannelCountToMatchItem(lastItem)
-      else
-        local track = reaper.GetMediaItem_Track(lastItem)
-        if track then setTrackChannelCount(track, manual_chans) end
-      end
-    end
-
-    local cmd_id = reaper.NamedCommandLookup("_XENAKIOS_RESETITEMLENMEDOFFS")
-    reaper.Main_OnCommand(cmd_id, 0)
-    if run_dynamic_split then runCommand(42951) end
-    runCommand(40635)
-    reaper.Undo_EndBlock("Create subproject from selected track(s)", -1)
-  else
-    local parentName = getCurrentProjectName()
-    runCommand(41997)
-    runCommand(41816)
-    if #video_chunks > 0 then
-      local subproj = reaper.EnumProjects(-1, "")
-      pasteVideoTracksAtTop(video_chunks, subproj)
-    end
-    if close_after then runCommand(40026); runCommand(40860) end
-    reaper.Undo_EndBlock("Create subproject (basic path)", -1)
-  end
-
-  reaper.PreventUIRefresh(-1)
-  reaper.UpdateArrange()
-end
-
--- ============================================================
 -- Render loop
 -- ============================================================
 local function loop()
@@ -553,7 +394,7 @@ local function loop()
 
   local cc, vc = theme.Push(ctx)
 
-  ImGui.SetNextWindowSize(ctx, 800, 700, ImGui.Cond_FirstUseEver)
+  ImGui.SetNextWindowSize(ctx, 800, 500, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, TITLE, true, WIN_FLAGS)
 
   if visible then
@@ -574,136 +415,6 @@ local function loop()
     end
     local has_selection = #valid_selected > 0
 
-    -- ── Create Subproject form ───────────────────────────────────
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    ImGui.Text(ctx, "CREATE SUBPROJECT")
-    ImGui.PopStyleColor(ctx)
-    ImGui.Separator(ctx)
-    ImGui.Spacing(ctx)
-
-    if ImGui.BeginTable(ctx, "##create_cols", 2, ImGui.TableFlags_SizingStretchSame) then
-      ImGui.TableSetupColumn(ctx, "##col_fields",  ImGui.TableColumnFlags_WidthStretch)
-      ImGui.TableSetupColumn(ctx, "##col_options", ImGui.TableColumnFlags_WidthStretch)
-      ImGui.TableNextRow(ctx)
-
-      -- Left column: Name / Channels / Tail
-      ImGui.TableSetColumnIndex(ctx, 0)
-      if ImGui.BeginTable(ctx, "##fields", 2) then
-        ImGui.TableSetupColumn(ctx, "##input", ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "##label", ImGui.TableColumnFlags_WidthFixed, 80)
-
-        -- Name
-        ImGui.TableNextRow(ctx)
-        ImGui.TableSetColumnIndex(ctx, 0)
-        ImGui.SetNextItemWidth(ctx, -1)
-        local _, nn = ImGui.InputTextWithHint(ctx, "##name", "optional", name_buf)
-        name_buf = nn
-        ImGui.TableSetColumnIndex(ctx, 1)
-        ImGui.Text(ctx, "Name")
-
-        -- Channels
-        ImGui.TableNextRow(ctx)
-        ImGui.TableSetColumnIndex(ctx, 0)
-        if channels_auto then
-          ImGui.BeginDisabled(ctx, true)
-          ImGui.SetNextItemWidth(ctx, 110)
-          ImGui.InputText(ctx, "##ch_display", "Auto", ImGui.InputTextFlags_ReadOnly)
-          ImGui.EndDisabled(ctx)
-        else
-          ImGui.SetNextItemWidth(ctx, 110)
-          local ch_c, nc = ImGui.InputText(ctx, "##ch_val", channels_buf,
-            ImGui.InputTextFlags_CharsDecimal)
-          if ch_c then
-            channels_buf = nc
-            reaper.SetExtState("CreateSubproject", "ChannelCount", channels_buf, true)
-          end
-        end
-        ImGui.SameLine(ctx)
-        local ch_a, na = ImGui.Checkbox(ctx, "Auto##ch_auto", channels_auto)
-        if ch_a then
-          channels_auto = na
-          reaper.SetExtState("CreateSubproject", "ChannelsAuto", channels_auto and "true" or "false", true)
-        end
-        ImGui.TableSetColumnIndex(ctx, 1)
-        ImGui.Text(ctx, "Channels")
-
-        -- Tail
-        ImGui.TableNextRow(ctx)
-        ImGui.TableSetColumnIndex(ctx, 0)
-        ImGui.SetNextItemWidth(ctx, -1)
-        local ch_t, nt = ImGui.InputText(ctx, "##tail", tail_buf,
-          ImGui.InputTextFlags_CharsDecimal)
-        if ch_t then
-          tail_buf = nt
-          reaper.SetExtState("CreateSubproject", "TailSeconds", tail_buf, true)
-        end
-        ImGui.TableSetColumnIndex(ctx, 1)
-        ImGui.Text(ctx, "Tail  (sec)")
-
-        ImGui.EndTable(ctx)
-      end
-
-      -- Right column: Options checkboxes
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-      ImGui.PopStyleColor(ctx)
-
-      local ch_v, ncv = ImGui.Checkbox(ctx, "Copy Video Track(s)", copy_video)
-      if ch_v then
-        copy_video = ncv
-        reaper.SetExtState("CreateSubproject", "CopyVideoTracks", ncv and "true" or "false", true)
-      end
-      local ch_d, nds = ImGui.Checkbox(ctx, "Run Dynamic Split", run_dynamic_split)
-      if ch_d then
-        run_dynamic_split = nds
-        reaper.SetExtState("CreateSubproject", "RunDynamicSplit", nds and "true" or "false", true)
-      end
-      local ch_ca, nca = ImGui.Checkbox(ctx, "Close Subproject After Creation", close_after)
-      if ch_ca then
-        close_after = nca
-        reaper.SetExtState("CreateSubproject", "CloseAfterCreation", nca and "true" or "false", true)
-      end
-
-      ImGui.EndTable(ctx)
-    end
-
-    ImGui.Spacing(ctx)
-    ImGui.Separator(ctx)
-    ImGui.Spacing(ctx)
-
-    local sel_t     = reaper.CountSelectedTracks(0)
-    local track_str = sel_t == 1 and "track" or "tracks"
-    local no_tracks = sel_t == 0
-
-    if no_tracks then ImGui.BeginDisabled(ctx, true) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x2C6B64FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x338077FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x2A5C56FF)
-    if ImGui.Button(ctx, "Create", 80, 0) then
-      reaper.SetExtState("CreateSubproject", "CopyVideoTracks",    copy_video        and "true" or "false", true)
-      reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after       and "true" or "false", true)
-      reaper.SetExtState("CreateSubproject", "RunDynamicSplit",    run_dynamic_split and "true" or "false", true)
-      createSubproject()
-    end
-    ImGui.PopStyleColor(ctx, 3)
-    if no_tracks then ImGui.EndDisabled(ctx) end
-    ImGui.SameLine(ctx)
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    ImGui.Text(ctx, ("Create subproject from %d selected %s"):format(sel_t, track_str))
-    ImGui.PopStyleColor(ctx)
-
-    if not no_tracks and (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) or
-                          ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)) then
-      reaper.SetExtState("CreateSubproject", "CopyVideoTracks",    copy_video        and "true" or "false", true)
-      reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after       and "true" or "false", true)
-      reaper.SetExtState("CreateSubproject", "RunDynamicSplit",    run_dynamic_split and "true" or "false", true)
-      createSubproject()
-    end
-
-    ImGui.Spacing(ctx)
-    ImGui.Separator(ctx)
-    ImGui.Spacing(ctx)
-
     -- ── Subproject items table ───────────────────────────────────
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
     ImGui.Text(ctx, "SUBPROJECT ITEMS")
@@ -711,8 +422,9 @@ local function loop()
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
-    local row_h   = ImGui.GetTextLineHeightWithSpacing(ctx)
-    local child_h = math.min(600, math.max(row_h * 3, row_h * (#rows + 1) + 4))
+    local _, avail_h = ImGui.GetContentRegionAvail(ctx)
+    local _, sp_y    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
+    local child_h    = math.max(400, avail_h - ImGui.GetFrameHeight(ctx) - sp_y * 2)
     local child_visible = ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
     if child_visible then
     if #rows == 0 then
@@ -802,7 +514,15 @@ local function loop()
           ImGui.TableSetColumnIndex(ctx, 4) ImGui.Text(ctx, r.file)
           -- Play button drawn last so it renders on top of the SpanAllColumns selectable
           ImGui.TableSetColumnIndex(ctx, 0)
-          if ImGui.SmallButton(ctx, "▶##play"..i) then
+          local play_clicked
+          if play_img then
+            ImGui.PushStyleVar(ctx, ImGui.StyleVar_FramePadding, 2, 2)
+            play_clicked = ImGui.ImageButton(ctx, "##play"..i, play_img, 14, 14)
+            ImGui.PopStyleVar(ctx)
+          else
+            play_clicked = ImGui.SmallButton(ctx, "▶##play"..i)
+          end
+          if play_clicked then
             reaper.Main_OnCommand(40289, 0)
             reaper.SetMediaItemSelected(r.item, true)
             last_clicked_idx = i
