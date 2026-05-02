@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="62ff893c3dceb8310ad648c75cbf1dc08da13d36">
+<index version="1" name="SPS Scripts" commit="5b212c0af01653377e126e478148d08deb1bddd2">
   <category name="Common">
-    <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
+    <reapack name="Schapps Script Resources.data" type="data" desc="Schapps Script Resources">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI Theme file for my scripts\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Shared resources required by Schapps scripts. Install this package before installing other Schapps scripts that depend on it.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
       </metadata>
-      <version name="1.0" author="Stephen Schappler" time="2026-03-31T02:52:23Z">
-        <changelog><![CDATA[3/28/25 - v1.0 Initial release]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/c09443c899bd02bfc80182c82930d735ac5f988a/Common/ReaImGuiTheme.lua</source>
-      </version>
-      <version name="1.1" author="Stephen Schappler" time="2026-03-31T20:50:27Z">
-        <changelog><![CDATA[3/28/25 - v1.0 Initial release]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/7b129fd470db9ff6c4487c8ec49b790d0512920a/Common/ReaImGuiTheme.lua</source>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-02T23:06:45Z">
+        <source type="data" file="ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Common/ReaImGuiTheme.lua</source>
+        <source type="data" file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Common/line-md--play-filled.png</source>
       </version>
     </reapack>
   </category>
@@ -4875,7 +4871,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI version of the subproject creation script. Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks before running the Subproject Workflow.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI version of the subproject creation script. Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks before running the Subproject Workflow. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -4962,7 +4958,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Presents a ReaImGUI dialog showing how many subproject items are selected, then explodes them into child tracks of their parent track.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Presents a ReaImGUI dialog showing how many subproject items are selected, then explodes them into child tracks of their parent track. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -5023,7 +5019,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Unified hub combining Subproject Manager and The Last Renamer (schapps fork). Three collapsible sections: Create Subproject, Naming, Subproject Items.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Unified hub combining Subproject Manager and The Last Renamer (schapps fork). Three collapsible sections: Create Subproject, Naming, Subproject Items. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -5035,6 +5031,13 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Subprojects/Subproject%20Hub.lua</source>
         <source file="Common/line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Common/line-md--play-filled.png</source>
       </version>
+      <version name="0.8" author="Stephen Schappler, Aaron Cendan" time="2026-05-02T23:06:45Z">
+        <changelog><![CDATA[05/02/26 - v0.8 Test updates
+05/02/26 - v0.7 Added Explode Subprojects button
+05/01/26 - v0.6 Fixes and optimziations
+04/30/26 - v0.2 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Subprojects/Subproject%20Hub.lua</source>
+      </version>
     </reapack>
     <reapack name="Subproject Manager.lua" type="script" desc="Subproject Manager">
       <metadata>
@@ -5042,7 +5045,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Unified subproject management window: preview selected subprojects, open them, duplicate to new versioned takes, color all subproject items, and create new subprojects from selected tracks \u8212- all in one ReaImGUI panel.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Unified subproject management window: preview selected subprojects, open them, duplicate to new versioned takes, explode to child tracks, and color all subproject items \u8212- all in one ReaImGUI panel. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -5055,6 +5058,15 @@
         <changelog><![CDATA[04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/12fd805e48664781e6ebb81f29a3169ba7b2e62d/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="0.6" author="Stephen Schappler" time="2026-05-02T23:06:45Z">
+        <changelog><![CDATA[05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
