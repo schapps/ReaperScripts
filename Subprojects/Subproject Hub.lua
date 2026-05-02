@@ -7,7 +7,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
---   05/02/26 - v0.8 Test updates
+--   05/02/26 - v0.8 Test updates, cleaning up subproject hub options
 --   05/02/26 - v0.7 Added Explode Subprojects button
 --   05/01/26 - v0.6 Fixes and optimziations
 --   04/30/26 - v0.2 Initial alpha release
@@ -1339,19 +1339,6 @@ function TabNaming()
   LoadPresets()
   LoadHistory()
   reaper.ImGui_PopItemFlag(ctx)
-  local ext_app_btn = GetPreviousValue("opt_ext_app_btn", "None")
-  if ext_app_btn == "Open Minori" then
-    local localappdata = os.getenv("LOCALAPPDATA")
-    if localappdata then
-      if reaper.ImGui_Button(ctx, "Open Minori") then
-        reaper.ExecProcess('"' .. localappdata .. '\\Programs\\Minori\\Minori.exe"', -1)
-      end
-    end
-  elseif ext_app_btn == "Open Minoru" then
-    if reaper.ImGui_Button(ctx, "Open Minoru") then
-      reaper.ExecProcess('"C:\\Program Files\\Minoru\\Minoru.exe"', -1)
-    end
-  end
   reaper.ImGui_SeparatorText(ctx, "Naming Scheme")
   LoadFields(wgt.data.fields)
   local capture_label = "Capture Name"
@@ -2190,12 +2177,6 @@ function TabSettings()
   if rv then SetCurrentValue("opt_auto_clear", auto_clear) end
   acendan.ImGui_Tooltip("Automatically clear all fields when loading scheme (opening tool or switching scheme).")
 
-  local enable_meta = GetPreviousValue("opt_enable_meta", false)
-  local rv, enable_meta = reaper.ImGui_Checkbox(ctx, "Enable Metadata Tab", enable_meta == "true" and true or false)
-  if rv then SetCurrentValue("opt_enable_meta", enable_meta) end
-  acendan.ImGui_Tooltip(
-    "Enable the metadata tab for adding metadata to your renaming targets.\n\nRequires 'Add new metadata' setting in the Render window!")
-
   local autofill = GetPreviousValue("opt_autofill", false)
   local rv, autofill = reaper.ImGui_Checkbox(ctx, "Enable Autofill Dropdowns", autofill == "true" and true or false)
   if rv then SetCurrentValue("opt_autofill", autofill) end
@@ -2214,18 +2195,6 @@ function TabSettings()
     wgt.last_selected_item = nil
   end
   acendan.ImGui_Tooltip("When enabled, selecting an item in Reaper will automatically parse its name and populate the naming fields based on the current scheme.")
-
-  local ext_app_options = { "None", "Open Minori", "Open Minoru" }
-  local ext_app_btn = GetPreviousValue("opt_ext_app_btn", "None")
-  if reaper.ImGui_BeginCombo(ctx, "External App Button", ext_app_btn) then
-    for _, option in ipairs(ext_app_options) do
-      if reaper.ImGui_Selectable(ctx, option, ext_app_btn == option) then
-        SetCurrentValue("opt_ext_app_btn", option)
-      end
-    end
-    reaper.ImGui_EndCombo(ctx)
-  end
-  acendan.ImGui_Tooltip("Show a button in the main panel to open an external app.")
 
   if acendan.ImGui_ScaleSlider() then wgt.set_font = true end
 
