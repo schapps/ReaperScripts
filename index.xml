@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="8ce0f31584be7c434090642acc08339b6a637bf6">
+<index version="1" name="SPS Scripts" commit="62ff893c3dceb8310ad648c75cbf1dc08da13d36">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="ReaImGUI Theme">
       <metadata>
@@ -4829,34 +4829,6 @@
       </version>
     </reapack>
   </category>
-  <category name="ReaTemplates">
-    <reapack name="ReaTemplates.lua" type="script" desc="ReaTemplates">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI-based REAPER script for saving, tagging, browsing, and sharing track templates via a private GitHub repository. Features: rich metadata, tag filtering, plugin detection, background sync.\par}
-}
-]]></description>
-        <link rel="website">https://www.stephenschappler.com</link>
-      </metadata>
-      <version name="0.1" author="Stephen Schappler" time="2026-03-30T05:21:18Z">
-        <changelog><![CDATA[0.1 - Just experimenting. Not ready for use.]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/ReaTemplates.lua</source>
-        <source file="modules/json.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/json.lua</source>
-        <source file="modules/base64.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/base64.lua</source>
-        <source file="modules/http.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/http.lua</source>
-        <source file="modules/config.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/config.lua</source>
-        <source file="modules/metadata.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/metadata.lua</source>
-        <source file="modules/github.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/github.lua</source>
-        <source file="modules/sync.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/sync.lua</source>
-        <source file="modules/plugin_detect.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/plugin_detect.lua</source>
-        <source file="modules/toast.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/toast.lua</source>
-        <source file="modules/ui.lua">https://github.com/schapps/ReaperScripts/raw/d5c6be9401e611a6218941b4f7440679adbedd57/ReaTemplates/modules/ui.lua</source>
-      </version>
-    </reapack>
-  </category>
   <category name="Renamer">
     <reapack name="schapps_The Last Renamer.lua" type="script" desc="Schapps Renamer - a fork of The Last Renamer">
       <metadata>
@@ -4984,6 +4956,22 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3dadc7c66523e4f06f66b309b7f355328c1ce155/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
       </version>
     </reapack>
+    <reapack name="Explode Selected Subprojects to Tracks.lua" type="script" desc="Explode Selected Subprojects to Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Presents a ReaImGUI dialog showing how many subproject items are selected, then explodes them into child tracks of their parent track.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-02T21:47:02Z">
+        <changelog><![CDATA[5/2/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Subprojects/Explode%20Selected%20Subprojects%20to%20Tracks.lua</source>
+      </version>
+    </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
@@ -5027,6 +5015,25 @@
 4/16/25 - v1.02 - Making it so that the subproject's parent project is activated after saving.
 10/3/25 - v1.03 - Disabling the return to parent project function until I can debug it better, as it will fail often.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/bfb1c770dd18fdba7a57416a4d414b914e367d1b/Subprojects/Save%20and%20Render%20RPP-Prox,%20Disabling%20Video%20Track%20First.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Subproject Hub.lua" type="script" desc="Subproject Hub">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Unified hub combining Subproject Manager and The Last Renamer (schapps fork). Three collapsible sections: Create Subproject, Naming, Subproject Items.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="0.7" author="Stephen Schappler" time="2026-05-02T21:47:02Z">
+        <changelog><![CDATA[05/02/26 - v0.7 Added Explode Subprojects button
+05/01/26 - v0.6 Fixes and optimziations
+04/30/26 - v0.2 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Subprojects/Subproject%20Hub.lua</source>
+        <source file="Common/line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Common/line-md--play-filled.png</source>
       </version>
     </reapack>
     <reapack name="Subproject Manager.lua" type="script" desc="Subproject Manager">
