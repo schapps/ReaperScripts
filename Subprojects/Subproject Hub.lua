@@ -6,8 +6,8 @@
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
 -- @link https://www.stephenschappler.com
 -- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua
---   [nomain] ../Common/line-md--play-filled.png
+--   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
+--   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
 --   05/01/26 - v0.6 Fixes and optimziations
 --   04/30/26 - v0.2 Initial alpha release
