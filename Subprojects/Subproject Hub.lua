@@ -1,13 +1,13 @@
 -- @description Subproject Hub
--- @author Stephen Schappler
--- @version 0.7
+-- @author Stephen Schappler, Aaron Cendan
+-- @version 0.8
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
+--   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
--- @provides
---   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
+--   05/02/26 - v0.8 Test updates
 --   05/02/26 - v0.7 Added Explode Subprojects button
 --   05/01/26 - v0.6 Fixes and optimziations
 --   04/30/26 - v0.2 Initial alpha release

@@ -1,3 +1,4 @@
+-- @noindex
 -- @description ReaImGUI Theme
 -- @author Stephen Schappler
 -- @version 1.1

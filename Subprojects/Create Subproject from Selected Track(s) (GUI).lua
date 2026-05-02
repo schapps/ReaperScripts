@@ -5,9 +5,8 @@
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
 --   before running the Subproject Workflow.
+--   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
--- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
 --   4/27/26 - v1.4 Fixing window title
 --   4/27/26 - v1.3 Adding provides for ReaImGui Theme

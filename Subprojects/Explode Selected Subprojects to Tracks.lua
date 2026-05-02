@@ -4,6 +4,7 @@
 -- @about
 --   Presents a ReaImGUI dialog showing how many subproject items are selected,
 --   then explodes them into child tracks of their parent track.
+--   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
 --   5/2/26 - v1.0 Initial release

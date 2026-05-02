@@ -4,9 +4,8 @@
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
+--   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
--- @provides
---   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
 --   05/02/26 - v0.6 Added Explode Subprojects button
 --   05/01/26 - v0.5 Image-based play button (cross-platform)
