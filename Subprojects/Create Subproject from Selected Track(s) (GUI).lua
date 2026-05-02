@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -9,6 +9,7 @@
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
+--   4/27/26 - v1.4 Fixing window title
 --   4/27/26 - v1.3 Adding provides for ReaImGui Theme
 --   3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
 --   3/31/26 - v1.1 Added in option to auto close subproject after creation
@@ -41,7 +42,7 @@ local theme = dofile(theme_path)
 -- ============================================================
 -- Context + state variables
 -- ============================================================
-local script_title  = "SUBPROJECT"
+local script_title  = "CREATE SUBPROJECT"
 local ctx           = ImGui.CreateContext(script_title)
 
 local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar

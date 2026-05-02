@@ -1,14 +1,15 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.5
+-- @version 0.6
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
---   duplicate to new versioned takes, and color all subproject items — all in one ReaImGUI panel.
+--   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 -- @link https://www.stephenschappler.com
 -- @provides
 --   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 --   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
+--   05/02/26 - v0.6 Added Explode Subprojects button
 --   05/01/26 - v0.5 Image-based play button (cross-platform)
 --   05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
 --   04/29/26 - v0.3 Feature additions
@@ -380,6 +381,130 @@ local function duplicateToNewVersion(items)
 end
 
 -- ============================================================
+-- Feature: explode selected subproject items to child tracks
+-- ============================================================
+local function CountChildTrack(track)
+  local count = 0
+  local depth = reaper.GetTrackDepth(track)
+  local track_index = reaper.GetMediaTrackInfo_Value(track, 'IP_TRACKNUMBER')
+  for i = track_index, reaper.CountTracks(0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    if reaper.GetTrackDepth(tr) > depth then count = count + 1 else break end
+  end
+  return count
+end
+
+local function getTrackTablePositions(project_table)
+  local positions = {}
+  local track_start, track_count, track_closers = 0, 0, 0
+  for i = 1, #project_table do
+    local s = project_table[i]
+    if s:sub(3, 8) == "<TRACK" then track_count = track_count + 1; track_start = i end
+    if s:sub(3, 3) == ">" and track_count > track_closers then
+      track_closers = track_closers + 1
+      positions[#positions + 1] = { track_start = track_start, track_end = i }
+    end
+  end
+  return positions
+end
+
+local function rppToTable(filename)
+  local t = {}
+  local f = io.open(filename, "r")
+  if not f then return t end
+  for line in f:lines() do t[#t + 1] = line end
+  t[#t + 1] = ""
+  f:close()
+  return t
+end
+
+local function SetTrackChunkSNM(track, chunk)
+  if not (track and chunk) then return end
+  local fs = reaper.SNM_CreateFastString("")
+  if reaper.SNM_SetFastString(fs, chunk) then
+    reaper.SNM_GetSetObjectState(track, fs, true, false)
+  end
+  reaper.SNM_DeleteFastString(fs)
+end
+
+local function explodeOneSubproject(filename, track, item)
+  local t = rppToTable(filename)
+  if #t == 0 then return end
+
+  local item_pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  reaper.Main_OnCommand(40289, 0)
+  reaper.SetMediaItemSelected(item, true)
+  reaper.Main_OnCommand(42228, 0)
+  reaper.BR_SetItemEdges(item, item_pos, item_pos + item_len)
+
+  local track_number = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")
+  reaper.SetMediaTrackInfo_Value(track, 'I_FOLDERDEPTH', 1)
+  local count_child = CountChildTrack(track)
+  local positions   = getTrackTablePositions(t)
+  local new_tracks  = {}
+  local tmp_t       = {}
+
+  for i = 1, #positions do
+    reaper.InsertTrackAtIndex(track_number + i - 1, false)
+    local tptr = reaper.GetTrack(0, track_number + i - 1)
+    new_tracks[#new_tracks + 1] = tptr
+    for ii = positions[i].track_start, positions[i].track_end do
+      tmp_t[#tmp_t + 1] = t[ii]
+    end
+    SetTrackChunkSNM(tptr, table.concat(tmp_t, "\n"))
+    tmp_t = {}
+  end
+
+  reaper.SetMediaTrackInfo_Value(
+    reaper.GetTrack(0, count_child + #new_tracks - 1),
+    'I_FOLDERDEPTH', -1
+  )
+end
+
+local function explodeSubprojects(items)
+  if not items or #items == 0 then return end
+
+  local explode_list = {}
+  local seen_files   = {}
+  local all_items    = {}
+
+  for _, item in ipairs(items) do
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local src = reaper.GetMediaItemTake_Source(take)
+      if src then
+        local fn = reaper.GetMediaSourceFileName(src, "")
+        if fn and fn:sub(-4):lower() == ".rpp" then
+          local track = reaper.GetMediaItemTrack(item)
+          all_items[#all_items + 1] = { item = item, track = track }
+          if not seen_files[fn] then
+            seen_files[fn] = true
+            explode_list[#explode_list + 1] = { filename = fn, track = track, item = item }
+          end
+        end
+      end
+    end
+  end
+
+  if #explode_list == 0 then return end
+
+  reaper.PreventUIRefresh(1)
+  reaper.Undo_BeginBlock()
+
+  for _, entry in ipairs(explode_list) do
+    explodeOneSubproject(entry.filename, entry.track, entry.item)
+  end
+  for _, entry in ipairs(all_items) do
+    reaper.SetMediaItemInfo_Value(entry.item, "B_MUTE", 1)
+  end
+
+  reaper.Undo_EndBlock("Explode selected subprojects to child tracks", -1)
+  reaper.UpdateArrange()
+  reaper.PreventUIRefresh(-1)
+end
+
+-- ============================================================
 -- Render loop
 -- ============================================================
 local function loop()
@@ -547,7 +672,7 @@ local function loop()
     -- ── Quick action buttons ─────────────────────────────────────
     local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
     local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local btn_w      = (avail_w - sp_x * 3) / 4
+    local btn_w      = (avail_w - sp_x * 4) / 5
     local swatch_w   = 18
     local row_sx, row_sy = ImGui.GetCursorScreenPos(ctx)
 
@@ -556,16 +681,20 @@ local function loop()
       openSelectedSubprojects(valid_selected)
     end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Update Subproject", btn_w, 0) then
+    if ImGui.Button(ctx, "Update Subprojects", btn_w, 0) then
       updateSubproject(valid_selected)
     end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Duplicate to New Version", btn_w, 0) then
+    if ImGui.Button(ctx, "Duplicate New Version", btn_w, 0) then
       duplicateToNewVersion(valid_selected)
+    end
+    ImGui.SameLine(ctx)
+    if ImGui.Button(ctx, "Explode Subprojects", btn_w, 0) then
+      explodeSubprojects(valid_selected)
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Color All Subproject Items", btn_w - swatch_w, 0) then
+    if ImGui.Button(ctx, "Color Subprojects", btn_w - swatch_w, 0) then
       colorAllSubprojectItems()
     end
 
