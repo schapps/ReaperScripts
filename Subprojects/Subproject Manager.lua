@@ -6,7 +6,6 @@
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 -- @link https://www.stephenschappler.com
 -- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 --   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
 --   05/02/26 - v0.6 Added Explode Subprojects button

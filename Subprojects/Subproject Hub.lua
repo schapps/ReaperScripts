@@ -6,7 +6,6 @@
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
 -- @link https://www.stephenschappler.com
 -- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 --   [nomain] ../Common/line-md--play-filled.png > Common/line-md--play-filled.png
 -- @changelog
 --   05/02/26 - v0.7 Added Explode Subprojects button

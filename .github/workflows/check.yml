@@ -15,4 +15,4 @@ jobs:
     - name: Install reapack-index
       run:  gem install reapack-index
     - name: Validate packages
-      run:  reapack-index --check
+      run:  reapack-index --check --ignore 'TrackTemplates/**' --ignore 'Video/*.txt'

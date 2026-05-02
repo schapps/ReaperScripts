@@ -1,3 +1,4 @@
+-- @noindex
 -- lua-yaml
 -- https://github.com/exosite/lua-yaml/tree/master
 

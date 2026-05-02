@@ -23,6 +23,6 @@ jobs:
     - name: Install reapack-index
       run:  gem install reapack-index
     - name: Update index.xml
-      run:  reapack-index --commit
+      run:  reapack-index --commit --ignore 'TrackTemplates/**' --ignore 'Video/*.txt'
     - name: Push changes
       run:  git push

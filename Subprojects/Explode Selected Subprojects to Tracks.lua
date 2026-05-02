@@ -5,8 +5,6 @@
 --   Presents a ReaImGUI dialog showing how many subproject items are selected,
 --   then explodes them into child tracks of their parent track.
 -- @link https://www.stephenschappler.com
--- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 -- @changelog
 --   5/2/26 - v1.0 Initial release
 
