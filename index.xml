@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="58d3e0a1bcfcdb33fbbca54707f4f8e504e10de6">
+<index version="1" name="SPS Scripts" commit="8d98961b18563e620c840aea6b84eeca25c30bdb">
+  <category name="Common">
+    <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI Theme file for my scripts\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.2" author="Stephen Schappler" time="2026-05-03T20:18:32Z">
+        <changelog><![CDATA[3/28/25 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8d98961b18563e620c840aea6b84eeca25c30bdb/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/8d98961b18563e620c840aea6b84eeca25c30bdb/Common/line-md--play-filled.png</source>
+      </version>
+    </reapack>
+  </category>
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
