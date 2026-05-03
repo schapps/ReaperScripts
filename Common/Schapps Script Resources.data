@@ -1,6 +1,6 @@
 -- @description Schapps Script Resources
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.2
 -- @about
 --   Shared resources required by Schapps scripts.
 --   Install this package before installing other Schapps scripts that depend on it.
