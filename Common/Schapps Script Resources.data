@@ -1,10 +1,10 @@
 -- @description Schapps Script Resources
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Shared resources required by Schapps scripts.
 --   Install this package before installing other Schapps scripts that depend on it.
 -- @link https://www.stephenschappler.com
 -- @provides
---   [data] ReaImGuiTheme.lua
---   [data] line-md--play-filled.png
+--   ReaImGuiTheme.lua > Scripts/SPS Scripts/Common/ReaImGuiTheme.lua
+--   line-md--play-filled.png > Scripts/SPS Scripts/Common/line-md--play-filled.png
