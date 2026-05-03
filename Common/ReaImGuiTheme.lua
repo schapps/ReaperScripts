@@ -1,10 +1,12 @@
 -- @noindex
--- @description ReaImGUI Theme
+-- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
+-- @provides
+--   line-md--play-filled.png > line-md--play-filled.png
 -- @changelog
 --   3/28/25 - v1.0 Initial release
 
