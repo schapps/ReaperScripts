@@ -1,31 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="b4728f9fa52b4a735acb8d8ad4a951d354787c12">
-  <category name="Common">
-    <reapack name="Schapps Script Resources.data" type="data" desc="Schapps Script Resources">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Shared resources required by Schapps scripts. Install this package before installing other Schapps scripts that depend on it.\par}
-}
-]]></description>
-        <link rel="website">https://www.stephenschappler.com</link>
-      </metadata>
-      <version name="1.0" author="Stephen Schappler" time="2026-05-02T23:06:45Z">
-        <source type="data" file="ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Common/ReaImGuiTheme.lua</source>
-        <source type="data" file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/5b212c0af01653377e126e478148d08deb1bddd2/Common/line-md--play-filled.png</source>
-      </version>
-      <version name="1.1" author="Stephen Schappler" time="2026-05-03T19:41:26Z">
-        <source file="Scripts/SPS Scripts/Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/4116a6a0eb0957352132d1d55be88fb8ef3e31ca/Common/ReaImGuiTheme.lua</source>
-        <source file="Scripts/SPS Scripts/Common/line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/4116a6a0eb0957352132d1d55be88fb8ef3e31ca/Common/line-md--play-filled.png</source>
-      </version>
-      <version name="1.2" author="Stephen Schappler" time="2026-05-03T20:06:19Z">
-        <source file="../Scripts/SPS Scripts/Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/b4728f9fa52b4a735acb8d8ad4a951d354787c12/Common/ReaImGuiTheme.lua</source>
-        <source file="../Scripts/SPS Scripts/Common/line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/b4728f9fa52b4a735acb8d8ad4a951d354787c12/Common/line-md--play-filled.png</source>
-      </version>
-    </reapack>
-  </category>
+<index version="1" name="SPS Scripts" commit="58d3e0a1bcfcdb33fbbca54707f4f8e504e10de6">
   <category name="Items">
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
