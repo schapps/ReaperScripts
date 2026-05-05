@@ -1,13 +1,14 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 1.3
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
 -- @provides
 --   line-md--play-filled.png > line-md--play-filled.png
 -- @changelog
---   3/28/25 - v1.0 Initial release
+--   05/05/26 - v1.3 Adjusting colors
+--   03/28/25 - v1.0 Initial release
 
 local ImGui = require "imgui" "0.10"
 
@@ -18,7 +19,7 @@ function theme.Push(ctx)
     {ImGui.Col_Text, 0xE6E6E6FF},
     {ImGui.Col_TextDisabled, 0xA0A0A0FF},
     {ImGui.Col_WindowBg, 0x28282828FF},
-    {ImGui.Col_ChildBg, 0x1B1D1FFF},
+    {ImGui.Col_ChildBg, 0x222222FF},
     {ImGui.Col_PopupBg, 0x202225FF},
     {ImGui.Col_Border, 0x3A3F45FF},
     {ImGui.Col_FrameBg, 0x333333FF},
