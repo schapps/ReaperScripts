@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.15
+-- @version 1.16
 -- @changelog
---    Adding toolbar icons for minoLINK
+--    Adding toolbar icons for Subproject Manager
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
