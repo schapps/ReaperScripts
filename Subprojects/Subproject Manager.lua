@@ -7,6 +7,7 @@
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.8 adding color support
 --   05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
 --   05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
 --   05/06/26 - v1.5 Adding shortcuts (play and select all)
@@ -65,28 +66,31 @@ local search_buf         = ""
 local lasso_active       = false
 local lasso_pending      = false  -- click in empty area; waiting for drag threshold
 local lasso_x1, lasso_y1 = 0, 0  -- drag start (screen coords)
-local lasso_x2, lasso_y2 = 0, 0  -- current drag end
-local sort_col           = -1     -- sorted column index (-1 = unsorted)
+local lasso_x2, lasso_y2  = 0, 0  -- current drag end
+local sort_col            = -1    -- sorted column index (-1 = unsorted)
+local color_pick_items      = nil   -- items to apply color to when picker is open
+local color_pick_was_open   = false -- for detecting popup close → end undo block
+local color_pick_requested  = false -- deferred OpenPopup flag (child→parent scope)
 local sort_asc           = true   -- ascending direction
 local export_path_buf    = reaper.GetExtState("SchappsSubprojects", "ExportScript")
 
--- Column visibility state (cols 2-7 are user-toggleable; 0 and 1 are always shown)
+-- Column visibility state (cols 3-8 are user-toggleable; 0-2 are always shown)
 local _cv_raw = reaper.GetExtState("SubprojectManager", "ColumnVisibility")
 local _cv1, _cv2, _cv3, _cv4, _cv5, _cv6 = _cv_raw:match("(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)")
 local col_visible = {
-  [2] = (_cv1 == nil or _cv1 == "1"),
-  [3] = (_cv2 == nil or _cv2 == "1"),
-  [4] = (_cv3 == nil or _cv3 == "1"),
-  [5] = (_cv4 == nil or _cv4 == "1"),
-  [6] = (_cv5 == nil or _cv5 == "1"),
-  [7] = (_cv6 == nil or _cv6 == "1"),
+  [3] = (_cv1 == nil or _cv1 == "1"),
+  [4] = (_cv2 == nil or _cv2 == "1"),
+  [5] = (_cv3 == nil or _cv3 == "1"),
+  [6] = (_cv4 == nil or _cv4 == "1"),
+  [7] = (_cv5 == nil or _cv5 == "1"),
+  [8] = (_cv6 == nil or _cv6 == "1"),
 }
 local function saveColVisibility()
   reaper.SetExtState("SubprojectManager", "ColumnVisibility",
     string.format("%d,%d,%d,%d,%d,%d",
-      col_visible[2] and 1 or 0, col_visible[3] and 1 or 0,
-      col_visible[4] and 1 or 0, col_visible[5] and 1 or 0,
-      col_visible[6] and 1 or 0, col_visible[7] and 1 or 0), true)
+      col_visible[3] and 1 or 0, col_visible[4] and 1 or 0,
+      col_visible[5] and 1 or 0, col_visible[6] and 1 or 0,
+      col_visible[7] and 1 or 0, col_visible[8] and 1 or 0), true)
 end
 local TableSetColumnEnabled = rawget(ImGui, "TableSetColumnEnabled")
 
@@ -99,64 +103,14 @@ else
   color_r, color_g, color_b = 161, 145, 227
 end
 local color_orig_r, color_orig_g, color_orig_b = color_r, color_g, color_b
-local r_buf = tostring(color_r)
-local g_buf = tostring(color_g)
-local b_buf = tostring(color_b)
-local h_buf, s_buf, v_buf = "0", "0", "0"
-local hex_buf = string.format("%02X%02X%02X", color_r, color_g, color_b)
 
 local function rgbToImGui(r, g, b)
   return (r << 24) | (g << 16) | (b << 8) | 0xFF
 end
 
-local function rgbToHsv(r, g, b)
-  r, g, b = r / 255.0, g / 255.0, b / 255.0
-  local max, min = math.max(r, g, b), math.min(r, g, b)
-  local d = max - min
-  local h, s, v = 0, 0, max
-  if max > 0 then s = d / max end
-  if d > 0 then
-    if max == r then
-      h = (g - b) / d
-      if h < 0 then h = h + 6 end
-    elseif max == g then
-      h = (b - r) / d + 2
-    else
-      h = (r - g) / d + 4
-    end
-    h = h * 60
-  end
-  return h, s * 100, v * 100
-end
-
-local function hsvToRgb(h, s, v)
-  s, v = s / 100.0, v / 100.0
-  if s == 0 then
-    local c = math.floor(v * 255 + 0.5)
-    return c, c, c
-  end
-  h = h / 60
-  local i = math.floor(h) % 6
-  local f = h - math.floor(h)
-  local p = v * (1 - s)
-  local q = v * (1 - s * f)
-  local t = v * (1 - s * (1 - f))
-  local r, g, b
-  if     i == 0 then r, g, b = v, t, p
-  elseif i == 1 then r, g, b = q, v, p
-  elseif i == 2 then r, g, b = p, v, t
-  elseif i == 3 then r, g, b = p, q, v
-  elseif i == 4 then r, g, b = t, p, v
-  else               r, g, b = v, p, q end
-  return math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5)
-end
-
 -- ============================================================
 -- Utilities
 -- ============================================================
-local function containsString(str, substr)
-  return string.find(str, substr, 1, true) ~= nil
-end
 
 local function file_exists(path)
   local f = io.open(path, "rb")
@@ -206,9 +160,10 @@ local function getAllSubprojectItems()
             local cur_idx     = math.floor(reaper.GetMediaItemInfo_Value(item, "I_CURTAKE") + 0.5)
             local _, takeName = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
             if not takeName or takeName == "" then takeName = basename end
-            local ipos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-            local ilen = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos, len = ilen }
+            local ipos  = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+            local ilen  = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+            local icol  = math.floor(reaper.GetMediaItemInfo_Value(item, "I_CUSTOMCOLOR"))
+            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos, len = ilen, color = icol }
           end
         end
       end
@@ -271,27 +226,6 @@ local function updateSubproject(items)
   reaper.UpdateArrange()
 end
 
--- ============================================================
--- Feature: color all subproject items in the project
--- ============================================================
-local function colorAllSubprojectItems()
-  reaper.Undo_BeginBlock()
-  for i = 0, reaper.CountMediaItems(0) - 1 do
-    local item = reaper.GetMediaItem(0, i)
-    for j = 0, reaper.CountTakes(item) - 1 do
-      local take = reaper.GetTake(item, j)
-      local src  = reaper.GetMediaItemTake_Source(take)
-      local fn   = reaper.GetMediaSourceFileName(src, "")
-      if containsString(fn, ".rpp") then
-        reaper.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR",
-          reaper.ColorToNative(color_r, color_g, color_b) | 0x01000000)
-        break
-      end
-    end
-  end
-  reaper.UpdateArrange()
-  reaper.Undo_EndBlock("Color all subproject items", -1)
-end
 
 -- ============================================================
 -- Feature: duplicate selected subproject items to new versioned takes
@@ -688,13 +622,13 @@ local function loop()
       local asc, scol = sort_asc, sort_col
       table.sort(display_rows, function(a, b)
         local va, vb
-        if     scol == 1 then va, vb = a.take:lower(),          b.take:lower()
-        elseif scol == 2 then va, vb = a.take_idx,              b.take_idx
-        elseif scol == 3 then va, vb = a.start,                 b.start
-        elseif scol == 4 then va, vb = a.start + a.len,         b.start + b.len
-        elseif scol == 5 then va, vb = a.len,                   b.len
-        elseif scol == 6 then va, vb = a.track:lower(),         b.track:lower()
-        elseif scol == 7 then va, vb = a.file:lower(),          b.file:lower()
+        if     scol == 2 then va, vb = a.take:lower(),          b.take:lower()
+        elseif scol == 3 then va, vb = a.take_idx,              b.take_idx
+        elseif scol == 4 then va, vb = a.start,                 b.start
+        elseif scol == 5 then va, vb = a.start + a.len,         b.start + b.len
+        elseif scol == 6 then va, vb = a.len,                   b.len
+        elseif scol == 7 then va, vb = a.track:lower(),         b.track:lower()
+        elseif scol == 8 then va, vb = a.file:lower(),          b.file:lower()
         else return false end
         if asc then return va < vb else return va > vb end
       end)
@@ -727,9 +661,10 @@ local function loop()
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
-      if ImGui.BeginTable(ctx, "##ptable", 8,
+      if ImGui.BeginTable(ctx, "##ptable", 9,
           ImGui.TableFlags_BordersInner | (rawget(ImGui, "TableFlags_Hideable") or 0)) then
-        ImGui.TableSetupColumn(ctx, "##playcol",    ImGui.TableColumnFlags_WidthFixed, 24)
+        ImGui.TableSetupColumn(ctx, "##colswatch", ImGui.TableColumnFlags_WidthFixed, 18)
+        ImGui.TableSetupColumn(ctx, "##playcol",   ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
         ImGui.TableSetupColumn(ctx, "Start",        ImGui.TableColumnFlags_WidthFixed, 110)
@@ -738,18 +673,18 @@ local function loop()
         ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthStretch)
         if TableSetColumnEnabled then
-          TableSetColumnEnabled(ctx, 2, col_visible[2])
           TableSetColumnEnabled(ctx, 3, col_visible[3])
           TableSetColumnEnabled(ctx, 4, col_visible[4])
           TableSetColumnEnabled(ctx, 5, col_visible[5])
           TableSetColumnEnabled(ctx, 6, col_visible[6])
           TableSetColumnEnabled(ctx, 7, col_visible[7])
+          TableSetColumnEnabled(ctx, 8, col_visible[8])
         end
 
         -- Manual header row: click to sort asc, again for desc, third click clears sort
-        local hdr_names = { nil, "Take Name", "Take Version", "Start", "End", "Length", "Track", "RPP File" }
+        local hdr_names = { nil, nil, "Take Name", "Take Version", "Start", "End", "Length", "Track", "RPP File" }
         ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
-        for col = 0, 7 do
+        for col = 0, 8 do
           ImGui.TableSetColumnIndex(ctx, col)
           local name = hdr_names[col + 1]
           if name then
@@ -770,7 +705,7 @@ local function loop()
               ImGui.OpenPopup(ctx, "##col_ctx_menu")
             end
           else
-            ImGui.TableHeader(ctx, "")
+            ImGui.TableHeader(ctx, "##h"..col)
           end
         end
 
@@ -780,8 +715,8 @@ local function loop()
           ImGui.PopStyleColor(ctx)
           ImGui.Separator(ctx)
           ImGui.Spacing(ctx)
-          local col_labels = { [2]="Take Version", [3]="Start", [4]="End", [5]="Length", [6]="Track", [7]="RPP File" }
-          for _, col in ipairs({2, 3, 4, 5, 6, 7}) do
+          local col_labels = { [3]="Take Version", [4]="Start", [5]="End", [6]="Length", [7]="Track", [8]="RPP File" }
+          for _, col in ipairs({3, 4, 5, 6, 7, 8}) do
             local changed, new_val = ImGui.Checkbox(ctx, col_labels[col], col_visible[col])
             if changed then
               col_visible[col] = new_val
@@ -806,7 +741,7 @@ local function loop()
             last_rpp_file = r.file
           end
           ImGui.TableSetBgColor(ctx, tgt_row_bg, rpp_alt and row_bg1 or row_bg0)
-          ImGui.TableSetColumnIndex(ctx, 1)
+          ImGui.TableSetColumnIndex(ctx, 2)
           if renaming_idx == i then
             if rename_needs_focus then
               ImGui.SetKeyboardFocusHere(ctx)
@@ -868,8 +803,8 @@ local function loop()
             ImGui.SameLine(ctx)
             ImGui.Text(ctx, r.take)
           end
-          if col_visible[2] then
-            ImGui.TableSetColumnIndex(ctx, 2)
+          if col_visible[3] then
+            ImGui.TableSetColumnIndex(ctx, 3)
             local ci, tot = r.take_idx, r.takes
             if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
             if ImGui.SmallButton(ctx, "<##p"..i) then
@@ -887,28 +822,28 @@ local function loop()
             end
             if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
           end
-          if col_visible[3] then
-            ImGui.TableSetColumnIndex(ctx, 3)
-            ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
-          end
           if col_visible[4] then
             ImGui.TableSetColumnIndex(ctx, 4)
-            ImGui.Text(ctx, reaper.format_timestr_pos(r.start + r.len, "", -1))
+            ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
           end
           if col_visible[5] then
             ImGui.TableSetColumnIndex(ctx, 5)
-            ImGui.Text(ctx, reaper.format_timestr_len(r.len, r.start, 64, -1))
+            ImGui.Text(ctx, reaper.format_timestr_pos(r.start + r.len, "", -1))
           end
           if col_visible[6] then
             ImGui.TableSetColumnIndex(ctx, 6)
-            ImGui.Text(ctx, r.track)
+            ImGui.Text(ctx, reaper.format_timestr_len(r.len, r.start, 64, -1))
           end
           if col_visible[7] then
             ImGui.TableSetColumnIndex(ctx, 7)
+            ImGui.Text(ctx, r.track)
+          end
+          if col_visible[8] then
+            ImGui.TableSetColumnIndex(ctx, 8)
             ImGui.Text(ctx, r.file)
           end
-          -- Play button drawn last so it renders on top of the SpanAllColumns selectable
-          ImGui.TableSetColumnIndex(ctx, 0)
+          -- Play button and color swatch drawn last, on top of the SpanAllColumns selectable
+          ImGui.TableSetColumnIndex(ctx, 1)
           local play_clicked
           if play_img then
             ImGui.PushStyleVar(ctx, ImGui.StyleVar_FramePadding, 2, 2)
@@ -929,6 +864,26 @@ local function loop()
             reaper.UpdateArrange()
           end
           if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Preview track") end
+          -- Color swatch (col 0) — click to open color picker for this item (or all selected)
+          ImGui.TableSetColumnIndex(ctx, 0)
+          do
+            local raw     = r.color
+            local has_col = (raw & 0x1000000) ~= 0
+            local sw_r, sw_g, sw_b
+            if has_col then
+              sw_r, sw_g, sw_b = reaper.ColorFromNative(raw)
+            else
+              sw_r, sw_g, sw_b = 80, 80, 80
+            end
+            local sw_flags = ImGui.ColorEditFlags_NoTooltip | ImGui.ColorEditFlags_NoBorder
+            if ImGui.ColorButton(ctx, "##csw"..i, rgbToImGui(sw_r, sw_g, sw_b), sw_flags, 14, 14) then
+              color_pick_items = reaper_sel[r.item] and #valid_selected > 0 and valid_selected or { r.item }
+              if has_col then color_r, color_g, color_b = sw_r, sw_g, sw_b end
+              reaper.Undo_BeginBlock()
+              color_pick_requested = true
+            end
+            if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Click to set item color") end
+          end
         end
         ImGui.EndTable(ctx)
       end
@@ -990,6 +945,11 @@ local function loop()
       end
     end
     ImGui.EndChild(ctx)
+    -- Fire deferred OpenPopup now that we're back in the parent window scope
+    if color_pick_requested then
+      ImGui.OpenPopup(ctx, "##color_picker_popup")
+      color_pick_requested = false
+    end
     end -- child_visible
 
     ImGui.Spacing(ctx)
@@ -997,9 +957,7 @@ local function loop()
     -- ── Quick action buttons ─────────────────────────────────────
     local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
     local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local btn_w      = (avail_w - sp_x * 5) / 6
-    local swatch_w   = 18
-    local row_sx, row_sy = ImGui.GetCursorScreenPos(ctx)
+    local btn_w      = (avail_w - sp_x * 4) / 5
 
     local has_export = export_path_buf ~= ""
     if not (has_selection and has_export) then ImGui.BeginDisabled(ctx, true) end
@@ -1029,141 +987,39 @@ local function loop()
       explodeSubprojects(valid_selected)
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
-    ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Color Subprojects", btn_w - swatch_w, 0) then
-      colorAllSubprojectItems()
-    end
 
-    -- Place swatch at exact screen-space right edge of the content region
-    ImGui.SetCursorScreenPos(ctx, row_sx + avail_w - swatch_w, row_sy)
-    local cur_col = rgbToImGui(color_r, color_g, color_b)
-    if ImGui.ColorButton(ctx, "##color_swatch", cur_col, ImGui.ColorEditFlags_NoTooltip, swatch_w, 0) then
-      ImGui.OpenPopup(ctx, "##color_picker_popup")
+    -- Detect color picker popup close → end undo block
+    do
+      local picker_now_open = ImGui.IsPopupOpen(ctx, "##color_picker_popup")
+      if color_pick_was_open and not picker_now_open and color_pick_items then
+        reaper.Undo_EndBlock("Color subproject items", -1)
+        color_pick_items = nil
+      end
+      color_pick_was_open = picker_now_open
     end
-    if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Click to change color") end
 
     if ImGui.BeginPopup(ctx, "##color_picker_popup") then
       if ImGui.IsWindowAppearing(ctx) then
         color_orig_r, color_orig_g, color_orig_b = color_r, color_g, color_b
-        r_buf = tostring(color_r)
-        g_buf = tostring(color_g)
-        b_buf = tostring(color_b)
-        local h0, s0, v0 = rgbToHsv(color_r, color_g, color_b)
-        h_buf = string.format("%.0f", h0)
-        s_buf = string.format("%.0f", s0)
-        v_buf = string.format("%.0f", v0)
-        hex_buf = string.format("%02X%02X%02X", color_r, color_g, color_b)
       end
-
-      local color_changed = false
-      local edited_buf, edited_val
-
-      local sw_flags = ImGui.ColorEditFlags_NoTooltip | ImGui.ColorEditFlags_NoBorder
-      ImGui.ColorButton(ctx, "##orig_p", rgbToImGui(color_orig_r, color_orig_g, color_orig_b), sw_flags, 50, 24)
-      ImGui.SameLine(ctx)
-      ImGui.ColorButton(ctx, "##cur_p", rgbToImGui(color_r, color_g, color_b), sw_flags, 50, 24)
-      ImGui.Spacing(ctx)
-      ImGui.Separator(ctx)
-      ImGui.Spacing(ctx)
-
-      local fw  = 52
-      local dec = ImGui.InputTextFlags_CharsDecimal
-      local function lbl(t)
-        ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-        ImGui.Text(ctx, t) ImGui.PopStyleColor(ctx) ImGui.SameLine(ctx)
-      end
-
-      -- RGB
-      lbl("R") ImGui.SetNextItemWidth(ctx, fw)
-      local cr, nr = ImGui.InputText(ctx, "##r", r_buf, dec)
-      if cr and tonumber(nr) then
-        color_r = math.max(0, math.min(255, math.floor(tonumber(nr) + 0.5)))
-        color_changed = true; edited_buf = "r"; edited_val = nr
-      end
-      ImGui.SameLine(ctx)
-      lbl("G") ImGui.SetNextItemWidth(ctx, fw)
-      local cg, ng = ImGui.InputText(ctx, "##g", g_buf, dec)
-      if cg and tonumber(ng) then
-        color_g = math.max(0, math.min(255, math.floor(tonumber(ng) + 0.5)))
-        color_changed = true; edited_buf = "g"; edited_val = ng
-      end
-      ImGui.SameLine(ctx)
-      lbl("B") ImGui.SetNextItemWidth(ctx, fw)
-      local cb, nb = ImGui.InputText(ctx, "##b", b_buf, dec)
-      if cb and tonumber(nb) then
-        color_b = math.max(0, math.min(255, math.floor(tonumber(nb) + 0.5)))
-        color_changed = true; edited_buf = "b"; edited_val = nb
-      end
-
-      -- HSV
-      lbl("H") ImGui.SetNextItemWidth(ctx, fw)
-      local ch, nh = ImGui.InputText(ctx, "##h", h_buf, dec)
-      if ch and tonumber(nh) then
-        color_r, color_g, color_b = hsvToRgb(
-          math.max(0, math.min(360, tonumber(nh))),
-          math.max(0, math.min(100, tonumber(s_buf) or 0)),
-          math.max(0, math.min(100, tonumber(v_buf) or 0)))
-        color_changed = true; edited_buf = "h"; edited_val = nh
-      end
-      ImGui.SameLine(ctx)
-      lbl("S") ImGui.SetNextItemWidth(ctx, fw)
-      local cs, ns = ImGui.InputText(ctx, "##s", s_buf, dec)
-      if cs and tonumber(ns) then
-        color_r, color_g, color_b = hsvToRgb(
-          math.max(0, math.min(360, tonumber(h_buf) or 0)),
-          math.max(0, math.min(100, tonumber(ns))),
-          math.max(0, math.min(100, tonumber(v_buf) or 0)))
-        color_changed = true; edited_buf = "s"; edited_val = ns
-      end
-      ImGui.SameLine(ctx)
-      lbl("V") ImGui.SetNextItemWidth(ctx, fw)
-      local cv, nv = ImGui.InputText(ctx, "##v", v_buf, dec)
-      if cv and tonumber(nv) then
-        color_r, color_g, color_b = hsvToRgb(
-          math.max(0, math.min(360, tonumber(h_buf) or 0)),
-          math.max(0, math.min(100, tonumber(s_buf) or 0)),
-          math.max(0, math.min(100, tonumber(nv))))
-        color_changed = true; edited_buf = "v"; edited_val = nv
-      end
-
-      -- Hex
-      lbl("#") ImGui.SetNextItemWidth(ctx, -1)
-      local hxc, new_hex = ImGui.InputText(ctx, "##hex", hex_buf)
-      if hxc then
-        hex_buf = new_hex
-        local clean = new_hex:gsub("[^%x]", "")
-        if #clean == 6 then
-          local r = tonumber(clean:sub(1,2), 16)
-          local g = tonumber(clean:sub(3,4), 16)
-          local b = tonumber(clean:sub(5,6), 16)
-          if r and g and b then
-            color_r, color_g, color_b = r, g, b
-            color_changed = true; edited_buf = "hex"; edited_val = new_hex
+      local picker_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
+      local cur_col = rgbToImGui(color_r, color_g, color_b)
+      local ref_col = rgbToImGui(color_orig_r, color_orig_g, color_orig_b)
+      local changed, new_col = ImGui.ColorPicker4(ctx, "##item_color", cur_col, picker_flags, ref_col)
+      if changed then
+        color_r = (new_col >> 24) & 0xFF
+        color_g = (new_col >> 16) & 0xFF
+        color_b = (new_col >>  8) & 0xFF
+        if color_pick_items then
+          for _, item in ipairs(color_pick_items) do
+            reaper.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR",
+              reaper.ColorToNative(color_r, color_g, color_b) | 0x01000000)
           end
-        end
-      end
-
-      if color_changed then
-        -- sync all buffers from canonical color, then restore the active field
-        r_buf = tostring(color_r); g_buf = tostring(color_g); b_buf = tostring(color_b)
-        local h2, s2, v2 = rgbToHsv(color_r, color_g, color_b)
-        h_buf = string.format("%.0f", h2)
-        s_buf = string.format("%.0f", s2)
-        v_buf = string.format("%.0f", v2)
-        hex_buf = string.format("%02X%02X%02X", color_r, color_g, color_b)
-        -- keep the field the user is typing in as-is
-        if     edited_buf == "r"   then r_buf   = edited_val
-        elseif edited_buf == "g"   then g_buf   = edited_val
-        elseif edited_buf == "b"   then b_buf   = edited_val
-        elseif edited_buf == "h"   then h_buf   = edited_val
-        elseif edited_buf == "s"   then s_buf   = edited_val
-        elseif edited_buf == "v"   then v_buf   = edited_val
-        elseif edited_buf == "hex" then hex_buf = edited_val
+          reaper.UpdateArrange()
         end
         reaper.SetExtState("SubprojectManager", "SubprojectColor",
           color_r .. "," .. color_g .. "," .. color_b, true)
       end
-
       ImGui.EndPopup(ctx)
     end
 
