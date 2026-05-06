@@ -1,12 +1,15 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.9
+-- @version 1.2
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.2 Sortable column headers
+--   05/06/26 - v1.1 Settings popup with export script; Export button
+--   05/06/26 - v1.0 Start column using project ruler format
 --   05/06/26 - v0.9 Lasso drag selection in subproject list
 --   05/06/26 - v0.8 Search bar filters list by take name
 --   05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
@@ -39,7 +42,6 @@ local theme = dofile(theme_path)
 local TITLE     = "SUBPROJECT MANAGER"
 local ctx       = ImGui.CreateContext(TITLE)
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
-                | (rawget(ImGui, "WindowFlags_NoDocking") or 0)
 
 local play_img
 do
@@ -59,6 +61,9 @@ local lasso_active       = false
 local lasso_pending      = false  -- click in empty area; waiting for drag threshold
 local lasso_x1, lasso_y1 = 0, 0  -- drag start (screen coords)
 local lasso_x2, lasso_y2 = 0, 0  -- current drag end
+local sort_col           = -1     -- sorted column index (-1 = unsorted)
+local sort_asc           = true   -- ascending direction
+local export_path_buf    = reaper.GetExtState("SubprojectManager", "ExportScript")
 
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
@@ -176,7 +181,8 @@ local function getAllSubprojectItems()
             local cur_idx     = math.floor(reaper.GetMediaItemInfo_Value(item, "I_CURTAKE") + 0.5)
             local _, takeName = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
             if not takeName or takeName == "" then takeName = basename end
-            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName }
+            local ipos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos }
           end
         end
       end
@@ -514,6 +520,24 @@ local function explodeSubprojects(items)
 end
 
 -- ============================================================
+-- Feature: run configured export script on selected subproject items
+-- ============================================================
+local function exportSelectedSubprojects(items)
+  if not items or #items == 0 then return end
+  local export_path = reaper.GetExtState("SubprojectManager", "ExportScript")
+  if not export_path or export_path == "" then return end
+  if not reaper.file_exists(export_path) then
+    reaper.MB("Export script not found:\n\n" .. export_path, "Export Error", 0)
+    return
+  end
+  reaper.Main_OnCommand(40289, 0)
+  for _, item in ipairs(items) do reaper.SetMediaItemSelected(item, true) end
+  reaper.UpdateArrange()
+  local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
+  reaper.Main_OnCommand(cmd_id, 0)
+end
+
+-- ============================================================
 -- Render loop
 -- ============================================================
 local function loop()
@@ -553,6 +577,60 @@ local function loop()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
     ImGui.Text(ctx, "SUBPROJECT ITEMS")
     ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx)
+    do
+      local cur_x   = ImGui.GetCursorPosX(ctx)
+      local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+      local tw      = select(1, ImGui.CalcTextSize(ctx, "⚙"))
+      local fpx     = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding))
+      ImGui.SetCursorPosX(ctx, cur_x + avail_w - tw - fpx * 2)
+    end
+    if ImGui.SmallButton(ctx, "⚙##settings") then
+      ImGui.OpenPopup(ctx, "##settings_popup")
+    end
+    if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Settings") end
+
+    if ImGui.BeginPopup(ctx, "##settings_popup") then
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+      ImGui.Text(ctx, "SETTINGS")
+      ImGui.PopStyleColor(ctx)
+      ImGui.Separator(ctx)
+      ImGui.Spacing(ctx)
+      ImGui.Text(ctx, "Export Script")
+      ImGui.SameLine(ctx)
+      ImGui.SetNextItemWidth(ctx, 350)
+      local ch, nv = ImGui.InputText(ctx, "##exportpath", export_path_buf, 0)
+      if ch then
+        export_path_buf = nv
+        reaper.SetExtState("SubprojectManager", "ExportScript", export_path_buf, true)
+      end
+      ImGui.SameLine(ctx)
+      if ImGui.Button(ctx, "Browse...") then
+        if reaper.JS_Dialog_BrowseForOpenFiles then
+          local retval, path = reaper.JS_Dialog_BrowseForOpenFiles(
+            "Select export script", "", "", "Lua scripts (*.lua)\0*.lua\0All files\0*.*\0\0", false)
+          if retval and path ~= "" then
+            export_path_buf = path
+            reaper.SetExtState("SubprojectManager", "ExportScript", export_path_buf, true)
+            ImGui.CloseCurrentPopup(ctx)
+          end
+        else
+          reaper.MB(
+            "Install js_ReaScriptAPI to enable file browsing,\nor paste the script path directly into the field.",
+            "Browse", 0)
+        end
+      end
+      if export_path_buf ~= "" then
+        ImGui.SameLine(ctx)
+        if ImGui.Button(ctx, "Clear") then
+          export_path_buf = ""
+          reaper.SetExtState("SubprojectManager", "ExportScript", "", true)
+        end
+      end
+      ImGui.Spacing(ctx)
+      ImGui.EndPopup(ctx)
+    end
+
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
@@ -566,16 +644,24 @@ local function loop()
     ImGui.Spacing(ctx)
 
     local lower_search = search_buf:lower()
-    local display_rows
-    if lower_search == "" then
-      display_rows = rows
-    else
-      display_rows = {}
-      for _, r in ipairs(rows) do
-        if r.take:lower():find(lower_search, 1, true) then
-          display_rows[#display_rows + 1] = r
-        end
+    local display_rows = {}
+    for _, r in ipairs(rows) do
+      if lower_search == "" or r.take:lower():find(lower_search, 1, true) then
+        display_rows[#display_rows + 1] = r
       end
+    end
+    if sort_col >= 0 then
+      local asc, scol = sort_asc, sort_col
+      table.sort(display_rows, function(a, b)
+        local va, vb
+        if     scol == 1 then va, vb = a.take:lower(),  b.take:lower()
+        elseif scol == 2 then va, vb = a.take_idx,      b.take_idx
+        elseif scol == 3 then va, vb = a.start,         b.start
+        elseif scol == 4 then va, vb = a.track:lower(), b.track:lower()
+        elseif scol == 5 then va, vb = a.file:lower(),  b.file:lower()
+        else return false end
+        if asc then return va < vb else return va > vb end
+      end)
     end
 
     local _, avail_h = ImGui.GetContentRegionAvail(ctx)
@@ -605,14 +691,40 @@ local function loop()
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
-      if ImGui.BeginTable(ctx, "##ptable", 5,
+      if ImGui.BeginTable(ctx, "##ptable", 6,
           ImGui.TableFlags_BordersInner) then
         ImGui.TableSetupColumn(ctx, "##playcol",    ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
+        ImGui.TableSetupColumn(ctx, "Start",        ImGui.TableColumnFlags_WidthFixed, 110)
         ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableHeadersRow(ctx)
+
+        -- Manual header row: click to sort asc, again for desc, third click clears sort
+        local hdr_names = { nil, "Take Name", "Take Version", "Start", "Track", "RPP File" }
+        ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
+        for col = 0, 5 do
+          ImGui.TableSetColumnIndex(ctx, col)
+          local name = hdr_names[col + 1]
+          if name then
+            local arrow = sort_col == col and (sort_asc and " ▲" or " ▼") or ""
+            ImGui.TableHeader(ctx, name .. arrow)
+            if ImGui.IsItemClicked(ctx, 0) then
+              if sort_col == col then
+                if sort_asc then sort_asc = false
+                else sort_col = -1 end
+              else
+                sort_col = col
+                sort_asc = true
+              end
+              last_clicked_idx = nil
+              renaming_idx     = nil
+            end
+          else
+            ImGui.TableHeader(ctx, "")
+          end
+        end
+
         local last_rpp_file = nil
         local rpp_alt       = false
         local row_bg0       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBg)
@@ -706,8 +818,9 @@ local function loop()
             reaper.UpdateArrange()
           end
           if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
-          ImGui.TableSetColumnIndex(ctx, 3) ImGui.Text(ctx, r.track)
-          ImGui.TableSetColumnIndex(ctx, 4) ImGui.Text(ctx, r.file)
+          ImGui.TableSetColumnIndex(ctx, 3) ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
+          ImGui.TableSetColumnIndex(ctx, 4) ImGui.Text(ctx, r.track)
+          ImGui.TableSetColumnIndex(ctx, 5) ImGui.Text(ctx, r.file)
           -- Play button drawn last so it renders on top of the SpanAllColumns selectable
           ImGui.TableSetColumnIndex(ctx, 0)
           local play_clicked
@@ -798,10 +911,21 @@ local function loop()
     -- ── Quick action buttons ─────────────────────────────────────
     local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
     local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local btn_w      = (avail_w - sp_x * 4) / 5
+    local btn_w      = (avail_w - sp_x * 5) / 6
     local swatch_w   = 18
     local row_sx, row_sy = ImGui.GetCursorScreenPos(ctx)
 
+    local has_export = export_path_buf ~= ""
+    if not (has_selection and has_export) then ImGui.BeginDisabled(ctx, true) end
+    if ImGui.Button(ctx, "Export", btn_w, 0) then
+      exportSelectedSubprojects(valid_selected)
+    end
+    if not (has_selection and has_export) then ImGui.EndDisabled(ctx) end
+    local hov_dis = rawget(ImGui, "HoveredFlags_AllowWhenDisabled") or 0
+    if ImGui.IsItemHovered(ctx, hov_dis) and not has_export then
+      ImGui.SetTooltip(ctx, "Configure an export script in Settings (⚙)")
+    end
+    ImGui.SameLine(ctx)
     if not has_selection then ImGui.BeginDisabled(ctx, true) end
     if ImGui.Button(ctx, "Open Selected", btn_w, 0) then
       openSelectedSubprojects(valid_selected)
