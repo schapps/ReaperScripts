@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.4 Fixing Shift + Click selection bug
 --   05/06/26 - v1.3 Fixing Open Subproject Logic
 --   05/06/26 - v1.2 Sortable column headers
 --   05/06/26 - v1.1 Settings popup with export script; Export button
@@ -788,7 +789,7 @@ local function loop()
                 local lo = math.min(last_clicked_idx, i)
                 local hi = math.max(last_clicked_idx, i)
                 for ri = lo, hi do
-                  if rows[ri] then reaper.SetMediaItemSelected(rows[ri].item, true) end
+                  if display_rows[ri] then reaper.SetMediaItemSelected(display_rows[ri].item, true) end
                 end
               elseif ctrl then
                 reaper.SetMediaItemSelected(r.item, not reaper_sel[r.item])
