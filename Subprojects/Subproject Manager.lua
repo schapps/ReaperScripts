@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.8
+-- @version 0.9
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v0.9 Lasso drag selection in subproject list
 --   05/06/26 - v0.8 Search bar filters list by take name
 --   05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
 --   05/02/26 - v0.6 Added Explode Subprojects button
@@ -54,6 +55,10 @@ local renaming_idx       = nil  -- row index currently being renamed (nil = not 
 local rename_buf         = ""
 local rename_needs_focus = false
 local search_buf         = ""
+local lasso_active       = false
+local lasso_pending      = false  -- click in empty area; waiting for drag threshold
+local lasso_x1, lasso_y1 = 0, 0  -- drag start (screen coords)
+local lasso_x2, lasso_y2 = 0, 0  -- current drag end
 
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
@@ -594,6 +599,8 @@ local function loop()
       local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
       local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
       local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
+      local row_rects = {}
+      local row_h     = ImGui.GetFrameHeight(ctx)
       local hdr_c   = ImGui.GetStyleColor(ctx, ImGui.Col_Header)
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
@@ -613,6 +620,8 @@ local function loop()
         local tgt_row_bg    = rawget(ImGui, "TableBgTarget_RowBg0") or 1
         for i, r in ipairs(display_rows) do
           ImGui.TableNextRow(ctx)
+          local _, row_screen_y = ImGui.GetCursorScreenPos(ctx)
+          row_rects[i] = row_screen_y
           if r.file ~= last_rpp_file then
             rpp_alt = not rpp_alt
             last_rpp_file = r.file
@@ -649,7 +658,7 @@ local function loop()
             end
           else
             local is_sel = reaper_sel[r.item] == true
-            if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) then
+            if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) and not lasso_active then
               local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
                          or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
               local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
@@ -672,7 +681,7 @@ local function loop()
               reaper.SetEditCurPos(pos, true, false)
               reaper.UpdateArrange()
             end
-            if ImGui.IsItemHovered(ctx) and ImGui.IsMouseDoubleClicked(ctx, 0) then
+            if ImGui.IsItemHovered(ctx) and ImGui.IsMouseDoubleClicked(ctx, 0) and not lasso_active then
               renaming_idx = i
               rename_buf = r.take
               rename_needs_focus = true
@@ -725,6 +734,61 @@ local function loop()
         ImGui.EndTable(ctx)
       end
       ImGui.PopStyleColor(ctx, 2)
+
+      -- ── Lasso selection ─────────────────────────────────────────
+      -- InvisibleButton fills empty space below the table rows. Pressing it
+      -- makes it the active ImGui item, which prevents the parent window from
+      -- moving on drag (the fix for window-moves-while-lassoeing). It also
+      -- gives a clean hook to detect the drag start without IsAnyItemHovered.
+      do
+        local ew, eh = ImGui.GetContentRegionAvail(ctx)
+        if eh > 0 then
+          ImGui.InvisibleButton(ctx, "##lasso_area", ew, eh)
+          if not lasso_active and not lasso_pending and ImGui.IsItemClicked(ctx, 0) then
+            lasso_pending = true
+            lasso_x1, lasso_y1 = ImGui.GetMousePos(ctx)
+            lasso_x2, lasso_y2 = lasso_x1, lasso_y1
+          end
+        end
+      end
+      local mouse_x, mouse_y = ImGui.GetMousePos(ctx)
+      if lasso_pending then
+        if ImGui.IsMouseDragging(ctx, 0, 4) then
+          lasso_active  = true
+          lasso_pending = false
+        elseif not ImGui.IsMouseDown(ctx, 0) then
+          lasso_pending = false
+        end
+      end
+      if lasso_active then
+        if ImGui.IsMouseDown(ctx, 0) then
+          lasso_x2, lasso_y2 = mouse_x, mouse_y
+          local win_x, win_y = ImGui.GetWindowPos(ctx)
+          local win_w, win_h = ImGui.GetWindowSize(ctx)
+          local sel_x1 = math.max(math.min(lasso_x1, lasso_x2), win_x)
+          local sel_y1 = math.max(math.min(lasso_y1, lasso_y2), win_y)
+          local sel_x2 = math.min(math.max(lasso_x1, lasso_x2), win_x + win_w)
+          local sel_y2 = math.min(math.max(lasso_y1, lasso_y2), win_y + win_h)
+          local dl = ImGui.GetWindowDrawList(ctx)
+          ImGui.DrawList_AddRectFilled(dl, sel_x1, sel_y1, sel_x2, sel_y2, 0x3377AA33)
+          ImGui.DrawList_AddRect(dl, sel_x1, sel_y1, sel_x2, sel_y2, 0x66BBFFAA, 0, 0, 1)
+          local lasso_ctrl = (KEY_LCTRL and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+                          or (KEY_RCTRL and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+          if not lasso_ctrl then
+            for _, r in ipairs(rows) do reaper.SetMediaItemSelected(r.item, false) end
+          end
+          local y_lo = math.min(lasso_y1, lasso_y2)
+          local y_hi = math.max(lasso_y1, lasso_y2)
+          for j, ry in pairs(row_rects) do
+            if y_hi >= ry and y_lo <= ry + row_h then
+              reaper.SetMediaItemSelected(display_rows[j].item, true)
+            end
+          end
+          reaper.UpdateArrange()
+        else
+          lasso_active = false
+        end
+      end
     end
     ImGui.EndChild(ctx)
     end -- child_visible
