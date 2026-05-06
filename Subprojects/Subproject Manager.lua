@@ -1,12 +1,14 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 0.6
+-- @version 0.8
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v0.8 Search bar filters list by take name
+--   05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
 --   05/02/26 - v0.6 Added Explode Subprojects button
 --   05/01/26 - v0.5 Image-based play button (cross-platform)
 --   05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
@@ -48,6 +50,10 @@ end
 
 local last_clicked_idx  = nil  -- anchor row for shift-click range selection
 local preview_stop_pos  = nil  -- item end position for auto-stop after play button
+local renaming_idx       = nil  -- row index currently being renamed (nil = not renaming)
+local rename_buf         = ""
+local rename_needs_focus = false
+local search_buf         = ""
 
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
@@ -545,6 +551,28 @@ local function loop()
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
+    ImGui.SetNextItemWidth(ctx, -1)
+    local sc, search_val = ImGui.InputTextWithHint(ctx, "##search", "Filter by take name...", search_buf, 0)
+    if sc then
+      search_buf = search_val
+      last_clicked_idx = nil
+      renaming_idx = nil
+    end
+    ImGui.Spacing(ctx)
+
+    local lower_search = search_buf:lower()
+    local display_rows
+    if lower_search == "" then
+      display_rows = rows
+    else
+      display_rows = {}
+      for _, r in ipairs(rows) do
+        if r.take:lower():find(lower_search, 1, true) then
+          display_rows[#display_rows + 1] = r
+        end
+      end
+    end
+
     local _, avail_h = ImGui.GetContentRegionAvail(ctx)
     local _, sp_y    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
     local child_h    = math.max(400, avail_h - ImGui.GetFrameHeight(ctx) - sp_y * 2)
@@ -553,6 +581,10 @@ local function loop()
     if #rows == 0 then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x555555FF)
       ImGui.Text(ctx, "No subproject items in project")
+      ImGui.PopStyleColor(ctx)
+    elseif #display_rows == 0 then
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x555555FF)
+      ImGui.Text(ctx, "No items match filter")
       ImGui.PopStyleColor(ctx)
     else
       local SEL_SPAN   = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
@@ -565,8 +597,9 @@ local function loop()
       local hdr_c   = ImGui.GetStyleColor(ctx, ImGui.Col_Header)
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
+      ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
       if ImGui.BeginTable(ctx, "##ptable", 5,
-          ImGui.TableFlags_BordersInnerV) then
+          ImGui.TableFlags_BordersInner) then
         ImGui.TableSetupColumn(ctx, "##playcol",    ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
@@ -578,7 +611,7 @@ local function loop()
         local row_bg0       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBg)
         local row_bg1       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBgAlt)
         local tgt_row_bg    = rawget(ImGui, "TableBgTarget_RowBg0") or 1
-        for i, r in ipairs(rows) do
+        for i, r in ipairs(display_rows) do
           ImGui.TableNextRow(ctx)
           if r.file ~= last_rpp_file then
             rpp_alt = not rpp_alt
@@ -586,36 +619,67 @@ local function loop()
           end
           ImGui.TableSetBgColor(ctx, tgt_row_bg, rpp_alt and row_bg1 or row_bg0)
           ImGui.TableSetColumnIndex(ctx, 1)
-          local is_sel = reaper_sel[r.item] == true
-          if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) then
-            local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
-                       or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
-            local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
-                       or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
-            if shift and last_clicked_idx then
-              -- Range select: additively select all rows between anchor and here
-              local lo = math.min(last_clicked_idx, i)
-              local hi = math.max(last_clicked_idx, i)
-              for ri = lo, hi do
-                if rows[ri] then reaper.SetMediaItemSelected(rows[ri].item, true) end
-              end
-            elseif ctrl then
-              reaper.SetMediaItemSelected(r.item, not reaper_sel[r.item])
-              last_clicked_idx = i
-            else
-              reaper.Main_OnCommand(40289, 0)
-              reaper.SetMediaItemSelected(r.item, true)
-              last_clicked_idx = i
+          if renaming_idx == i then
+            if rename_needs_focus then
+              ImGui.SetKeyboardFocusHere(ctx)
+              rename_needs_focus = false
             end
-            reaper.UpdateArrange()
+            ImGui.SetNextItemWidth(ctx, -1)
+            local enter_pressed, current_val = ImGui.InputText(ctx, "##rename"..i, rename_buf,
+              ImGui.InputTextFlags_EnterReturnsTrue | ImGui.InputTextFlags_AutoSelectAll)
+            rename_buf = current_val
+            local deactivated = ImGui.IsItemDeactivated(ctx)
+            local function commitRename()
+              local take = reaper.GetTake(r.item, r.take_idx)
+              reaper.Undo_BeginBlock()
+              reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", rename_buf, true)
+              reaper.UpdateArrange()
+              reaper.Undo_EndBlock("Rename take", -1)
+              renaming_idx = nil
+            end
+            if enter_pressed then
+              commitRename()
+            elseif deactivated then
+              local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
+              if not (KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE)) then
+                commitRename()
+              else
+                renaming_idx = nil
+              end
+            end
+          else
+            local is_sel = reaper_sel[r.item] == true
+            if ImGui.Selectable(ctx, "##sel"..i, is_sel, SEL_SPAN) then
+              local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+                         or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+              local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
+                         or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
+              if shift and last_clicked_idx then
+                local lo = math.min(last_clicked_idx, i)
+                local hi = math.max(last_clicked_idx, i)
+                for ri = lo, hi do
+                  if rows[ri] then reaper.SetMediaItemSelected(rows[ri].item, true) end
+                end
+              elseif ctrl then
+                reaper.SetMediaItemSelected(r.item, not reaper_sel[r.item])
+                last_clicked_idx = i
+              else
+                reaper.Main_OnCommand(40289, 0)
+                reaper.SetMediaItemSelected(r.item, true)
+                last_clicked_idx = i
+              end
+              local pos = reaper.GetMediaItemInfo_Value(r.item, "D_POSITION")
+              reaper.SetEditCurPos(pos, true, false)
+              reaper.UpdateArrange()
+            end
+            if ImGui.IsItemHovered(ctx) and ImGui.IsMouseDoubleClicked(ctx, 0) then
+              renaming_idx = i
+              rename_buf = r.take
+              rename_needs_focus = true
+            end
+            ImGui.SameLine(ctx)
+            ImGui.Text(ctx, r.take)
           end
-          if ImGui.IsItemHovered(ctx) and ImGui.IsMouseDoubleClicked(ctx, 0) then
-            local pos = reaper.GetMediaItemInfo_Value(r.item, "D_POSITION")
-            reaper.SetEditCurPos(pos, true, false)
-            reaper.UpdateArrange()
-          end
-          ImGui.SameLine(ctx)
-          ImGui.Text(ctx, r.take)
           ImGui.TableSetColumnIndex(ctx, 2)
           local ci, tot = r.take_idx, r.takes
           if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
@@ -660,7 +724,7 @@ local function loop()
         end
         ImGui.EndTable(ctx)
       end
-      ImGui.PopStyleColor(ctx)
+      ImGui.PopStyleColor(ctx, 2)
     end
     ImGui.EndChild(ctx)
     end -- child_visible
