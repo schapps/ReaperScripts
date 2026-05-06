@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0c30ebc7ae13d6b8aae2641e87f5f21a7b57c554">
+<index version="1" name="SPS Scripts" commit="ba05fe10c5af23b43572a6c12d2acead931f4e52">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5364,6 +5364,24 @@
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/0c30ebc7ae13d6b8aae2641e87f5f21a7b57c554/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.5" author="Stephen Schappler" time="2026-05-06T22:38:54Z">
+        <changelog><![CDATA[05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ba05fe10c5af23b43572a6c12d2acead931f4e52/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
