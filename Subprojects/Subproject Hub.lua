@@ -1,12 +1,13 @@
 -- @description Subproject Hub
 -- @author Stephen Schappler, Aaron Cendan
--- @version 0.8
+-- @version 0.9
 -- @about
 --   Unified hub combining Subproject Manager and The Last Renamer (schapps fork).
 --   Three collapsible sections: Create Subproject, Naming, Subproject Items.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v0.9 Fixing Export Script Setting Persistence Bug
 --   05/02/26 - v0.8 Test updates, cleaning up subproject hub options
 --   05/02/26 - v0.7 Added Explode Subprojects button
 --   05/01/26 - v0.6 Fixes and optimziations
@@ -2206,23 +2207,22 @@ function TabSettings()
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_SeparatorText(ctx, "Export Script")
 
-  local export_path = GetPreviousValue("opt_export_script", nil)
-  local display_path = (export_path and export_path ~= "" and export_path ~= "false")
-                       and export_path or "None configured"
+  local export_path = reaper.GetExtState("SchappsSubprojects", "ExportScript")
+  local display_path = export_path ~= "" and export_path or "None configured"
   reaper.ImGui_PushTextWrapPos(ctx, 0.0)
   reaper.ImGui_TextDisabled(ctx, display_path)
   reaper.ImGui_PopTextWrapPos(ctx)
 
   if reaper.ImGui_Button(ctx, "Browse...") then
     local path = acendan.promptForFile("Select export script", "", "", "Lua Scripts (*.lua)\0*.lua\0\0")
-    if path then SetCurrentValue("opt_export_script", path) end
+    if path then reaper.SetExtState("SchappsSubprojects", "ExportScript", path, true) end
   end
   acendan.ImGui_Tooltip("Select the Reaper Lua script to run when the Export button is clicked.")
 
-  if export_path and export_path ~= "" and export_path ~= "false" then
+  if export_path ~= "" then
     reaper.ImGui_SameLine(ctx)
     if reaper.ImGui_Button(ctx, "Clear") then
-      SetCurrentValue("opt_export_script", "")
+      reaper.SetExtState("SchappsSubprojects", "ExportScript", "", true)
     end
     acendan.ImGui_Tooltip("Remove the configured export script.")
   end
@@ -2601,8 +2601,8 @@ local function renderItemsSection(rows, reaper_sel, valid_selected, has_selectio
   reaper.ImGui_Spacing(ctx)
 
   -- Action buttons row
-  local export_path = GetPreviousValue("opt_export_script", nil)
-  local has_export  = export_path and export_path ~= "" and export_path ~= "false"
+  local export_path = reaper.GetExtState("SchappsSubprojects", "ExportScript")
+  local has_export  = export_path ~= ""
   if not has_export then reaper.ImGui_BeginDisabled(ctx) end
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(),        0x46A0D2FF)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x58B8E8FF)

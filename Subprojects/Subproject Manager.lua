@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.5
+-- @version 1.6
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
 --   05/06/26 - v1.5 Adding shortcuts (play and select all)
 --   05/06/26 - v1.4 Fixing Shift + Click selection bug
 --   05/06/26 - v1.3 Fixing Open Subproject Logic
@@ -66,7 +67,7 @@ local lasso_x1, lasso_y1 = 0, 0  -- drag start (screen coords)
 local lasso_x2, lasso_y2 = 0, 0  -- current drag end
 local sort_col           = -1     -- sorted column index (-1 = unsorted)
 local sort_asc           = true   -- ascending direction
-local export_path_buf    = reaper.GetExtState("SubprojectManager", "ExportScript")
+local export_path_buf    = reaper.GetExtState("SchappsSubprojects", "ExportScript")
 
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
@@ -535,7 +536,7 @@ end
 -- ============================================================
 local function exportSelectedSubprojects(items)
   if not items or #items == 0 then return end
-  local export_path = reaper.GetExtState("SubprojectManager", "ExportScript")
+  local export_path = reaper.GetExtState("SchappsSubprojects", "ExportScript")
   if not export_path or export_path == "" then return end
   if not reaper.file_exists(export_path) then
     reaper.MB("Export script not found:\n\n" .. export_path, "Export Error", 0)
@@ -613,7 +614,7 @@ local function loop()
       local ch, nv = ImGui.InputText(ctx, "##exportpath", export_path_buf, 0)
       if ch then
         export_path_buf = nv
-        reaper.SetExtState("SubprojectManager", "ExportScript", export_path_buf, true)
+        reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
       end
       ImGui.SameLine(ctx)
       if ImGui.Button(ctx, "Browse...") then
@@ -622,7 +623,7 @@ local function loop()
             "Select export script", "", "", "Lua scripts (*.lua)\0*.lua\0All files\0*.*\0\0", false)
           if retval and path ~= "" then
             export_path_buf = path
-            reaper.SetExtState("SubprojectManager", "ExportScript", export_path_buf, true)
+            reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
             ImGui.CloseCurrentPopup(ctx)
           end
         else
@@ -635,7 +636,7 @@ local function loop()
         ImGui.SameLine(ctx)
         if ImGui.Button(ctx, "Clear") then
           export_path_buf = ""
-          reaper.SetExtState("SubprojectManager", "ExportScript", "", true)
+          reaper.SetExtState("SchappsSubprojects", "ExportScript", "", true)
         end
       end
       ImGui.Spacing(ctx)
