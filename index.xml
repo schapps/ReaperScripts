@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="df28356609251d180e6ee6fee5497617e2c50b30">
+<index version="1" name="SPS Scripts" commit="32d48d80201f1bbe2be63902506b50ddc414c6a5">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5189,11 +5189,11 @@
     </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 This is a simple script to check if the selected item is a subrproject, and if it is, open it.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Opens all selected subproject items in new REAPER project tabs, keeping all other open projects intact. If a subproject is already open, switches to it.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -5201,6 +5201,13 @@
       <version name="1.0" author="Stephen Schappler" time="2024-08-23T19:52:23Z">
         <changelog><![CDATA[8/23/24 - v1.0 - Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/5db81ec4b7421b80faa77dcb7751ae8a202b92e5/Subprojects/Open%20Subproject%20Item.lua</source>
+      </version>
+      <version name="1.3" author="Stephen Schappler" time="2026-05-06T22:25:18Z">
+        <changelog><![CDATA[05/06/26 - v1.3 Collect paths before opening to fix multi-select only opening one
+05/06/26 - v1.2 Support opening multiple selected subproject items
+05/06/26 - v1.1 Use GetSubProjectFromSource + new tab; no longer triggers external editor
+08/23/24 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/32d48d80201f1bbe2be63902506b50ddc414c6a5/Subprojects/Open%20Subproject%20Item.lua</source>
       </version>
     </reapack>
     <reapack name="Save and Render RPP-Prox, Disabling Video Track First.lua" type="script" desc="Save and Render RPP Prox, Disabling Video Track Send First">
@@ -5264,7 +5271,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Unified subproject management window: preview selected subprojects, open them, duplicate to new versioned takes, explode to child tracks, and color all subproject items \u8212- all in one ReaImGUI panel. Requires: Schapps Script Resources (install from this repository first).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Unified subproject management window: preview selected subprojects, open them, duplicate to new versioned takes, explode to child tracks, and color all subproject items \u8212- all in one ReaImGUI panel. Requires: Schapps ReaImGUI Theme (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -5324,6 +5331,22 @@
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/df28356609251d180e6ee6fee5497617e2c50b30/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.3" author="Stephen Schappler" time="2026-05-06T22:25:18Z">
+        <changelog><![CDATA[05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/32d48d80201f1bbe2be63902506b50ddc414c6a5/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
