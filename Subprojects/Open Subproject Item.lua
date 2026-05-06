@@ -1,49 +1,53 @@
 -- @description Open Subproject Item
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.3
 -- @about
---   This is a simple script to check if the selected item is a subrproject, and if it is, open it.
+--   Opens all selected subproject items in new REAPER project tabs, keeping all
+--   other open projects intact. If a subproject is already open, switches to it.
 -- @link https://www.stephenschappler.com
--- @changelog 
---   8/23/24 - v1.0 - Creating the script
+-- @changelog
+--   05/06/26 - v1.3 Collect paths before opening to fix multi-select only opening one
+--   05/06/26 - v1.2 Support opening multiple selected subproject items
+--   05/06/26 - v1.1 Use GetSubProjectFromSource + new tab; no longer triggers external editor
+--   08/23/24 - v1.0 Initial release
 
--- Function to check if the selected item is a subproject
-function check_and_open_subproject()
-    -- Get the selected item
-    local item = reaper.GetSelectedMediaItem(0, 0)
-    
-    -- If no item is selected, exit the script
-    if item == nil then
-        reaper.ShowMessageBox("No item selected.", "Error", 0)
-        return
-    end
-    
-    -- Get the active take from the item
-    local take = reaper.GetActiveTake(item)
-    
-    -- If the take is not valid, exit the script
-    if take == nil then
-        reaper.ShowMessageBox("No active take found.", "Error", 0)
-        return
-    end
-    
-    -- Get the source of the take
-    local source = reaper.GetMediaItemTake_Source(take)
-    
-    -- Get the file name of the source
-    local filename = reaper.GetMediaSourceFileName(source, "")
-    
-    -- Check if the file is a .rpp file (subproject)
-    if filename:sub(-4) == ".rpp" then
-        -- Run the command to open the subproject
-        reaper.Main_OnCommand(40109, 0)  -- 40109 is the ID for "Open subproject"
-    else
-        reaper.ShowMessageBox("The selected item is not a subproject (.rpp).", "Info", 0)
-    end
+local count = reaper.CountSelectedMediaItems(0)
+if count == 0 then
+  reaper.MB("No items selected.", "Open Subproject Item", 0)
+  return
 end
 
--- Run the function
-check_and_open_subproject()
+-- Collect all targets first. GetSelectedMediaItem(0, i) uses the current active
+-- project, so once we open the first tab REAPER's focus shifts and subsequent
+-- calls would query the wrong project. Gather everything before touching tabs.
+local to_open = {}
+for i = 0, count - 1 do
+  local item = reaper.GetSelectedMediaItem(0, i)
+  local take = reaper.GetActiveTake(item)
+  if take then
+    local src = reaper.GetMediaItemTake_Source(take)
+    local fp  = reaper.GetMediaSourceFileName(src, "")
+    if fp:sub(-4):lower() == ".rpp" then
+      to_open[#to_open + 1] = {
+        fp       = fp,
+        existing = reaper.GetSubProjectFromSource(src),
+      }
+    end
+  end
+end
 
--- Update the Reaper GUI
+if #to_open == 0 then
+  reaper.MB("None of the selected items are subprojects (.rpp).", "Open Subproject Item", 0)
+  return
+end
+
+for _, entry in ipairs(to_open) do
+  if entry.existing then
+    reaper.SelectProjectInstance(entry.existing)
+  else
+    reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+    reaper.Main_openProject(entry.fp)
+  end
+end
+
 reaper.UpdateArrange()

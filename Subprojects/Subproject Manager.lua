@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 1.3
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
---   Requires: Schapps Script Resources (install from this repository first).
+--   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.3 Fixing Open Subproject Logic
 --   05/06/26 - v1.2 Sortable column headers
 --   05/06/26 - v1.1 Settings popup with export script; Export button
 --   05/06/26 - v1.0 Start column using project ruler format
@@ -196,12 +197,23 @@ end
 -- ============================================================
 local function openSelectedSubprojects(items)
   if not items or #items == 0 then return end
-  -- Deselect all, then open each subproject in turn (focus stays on the last one opened)
-  reaper.Main_OnCommand(40289, 0)
   for _, item in ipairs(items) do
-    reaper.SetMediaItemSelected(item, true)
-    runCommand(40109)
-    reaper.SetMediaItemSelected(item, false)
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local src = reaper.GetMediaItemTake_Source(take)
+      if src then
+        local existing = reaper.GetSubProjectFromSource(src)
+        if existing then
+          reaper.SelectProjectInstance(existing)
+        else
+          local fp = reaper.GetMediaSourceFileName(src, "")
+          if fp ~= "" then
+            reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+            reaper.Main_openProject(fp)
+          end
+        end
+      end
+    end
   end
 end
 
@@ -220,9 +232,8 @@ local function updateSubproject(items)
         local fp = reaper.GetMediaSourceFileName(src, "")
         if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
           rendered[fp] = true
-          reaper.Main_OnCommand(40289, 0)
-          reaper.SetMediaItemSelected(item, true)
-          reaper.Main_OnCommand(40109, 0)  -- open subproject in tab
+          reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+          reaper.Main_openProject(fp)
           reaper.Main_OnCommand(42332, 0)  -- save + render RPP-PROX
           reaper.Main_OnCommand(40860, 0)  -- close tab
         end
@@ -353,10 +364,8 @@ local function duplicateToNewVersion(items)
           local fp = reaper.GetMediaSourceFileName(src, "")
           if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
             rendered[fp] = true
-            for _, other in ipairs(savedItems) do
-              reaper.SetMediaItemSelected(other, other == item)
-            end
-            reaper.Main_OnCommand(40109, 0)
+            reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+            reaper.Main_openProject(fp)
             reaper.Main_OnCommand(42332, 0)
             activateProjectByName(parentName)
           end
