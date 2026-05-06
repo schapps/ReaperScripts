@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
 --   05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
 --   05/06/26 - v1.5 Adding shortcuts (play and select all)
 --   05/06/26 - v1.4 Fixing Shift + Click selection bug
@@ -68,6 +69,26 @@ local lasso_x2, lasso_y2 = 0, 0  -- current drag end
 local sort_col           = -1     -- sorted column index (-1 = unsorted)
 local sort_asc           = true   -- ascending direction
 local export_path_buf    = reaper.GetExtState("SchappsSubprojects", "ExportScript")
+
+-- Column visibility state (cols 2-7 are user-toggleable; 0 and 1 are always shown)
+local _cv_raw = reaper.GetExtState("SubprojectManager", "ColumnVisibility")
+local _cv1, _cv2, _cv3, _cv4, _cv5, _cv6 = _cv_raw:match("(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)")
+local col_visible = {
+  [2] = (_cv1 == nil or _cv1 == "1"),
+  [3] = (_cv2 == nil or _cv2 == "1"),
+  [4] = (_cv3 == nil or _cv3 == "1"),
+  [5] = (_cv4 == nil or _cv4 == "1"),
+  [6] = (_cv5 == nil or _cv5 == "1"),
+  [7] = (_cv6 == nil or _cv6 == "1"),
+}
+local function saveColVisibility()
+  reaper.SetExtState("SubprojectManager", "ColumnVisibility",
+    string.format("%d,%d,%d,%d,%d,%d",
+      col_visible[2] and 1 or 0, col_visible[3] and 1 or 0,
+      col_visible[4] and 1 or 0, col_visible[5] and 1 or 0,
+      col_visible[6] and 1 or 0, col_visible[7] and 1 or 0), true)
+end
+local TableSetColumnEnabled = rawget(ImGui, "TableSetColumnEnabled")
 
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
@@ -186,7 +207,8 @@ local function getAllSubprojectItems()
             local _, takeName = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
             if not takeName or takeName == "" then takeName = basename end
             local ipos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos }
+            local ilen = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+            rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos, len = ilen }
           end
         end
       end
@@ -666,11 +688,13 @@ local function loop()
       local asc, scol = sort_asc, sort_col
       table.sort(display_rows, function(a, b)
         local va, vb
-        if     scol == 1 then va, vb = a.take:lower(),  b.take:lower()
-        elseif scol == 2 then va, vb = a.take_idx,      b.take_idx
-        elseif scol == 3 then va, vb = a.start,         b.start
-        elseif scol == 4 then va, vb = a.track:lower(), b.track:lower()
-        elseif scol == 5 then va, vb = a.file:lower(),  b.file:lower()
+        if     scol == 1 then va, vb = a.take:lower(),          b.take:lower()
+        elseif scol == 2 then va, vb = a.take_idx,              b.take_idx
+        elseif scol == 3 then va, vb = a.start,                 b.start
+        elseif scol == 4 then va, vb = a.start + a.len,         b.start + b.len
+        elseif scol == 5 then va, vb = a.len,                   b.len
+        elseif scol == 6 then va, vb = a.track:lower(),         b.track:lower()
+        elseif scol == 7 then va, vb = a.file:lower(),          b.file:lower()
         else return false end
         if asc then return va < vb else return va > vb end
       end)
@@ -703,19 +727,29 @@ local function loop()
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
-      if ImGui.BeginTable(ctx, "##ptable", 6,
-          ImGui.TableFlags_BordersInner) then
+      if ImGui.BeginTable(ctx, "##ptable", 8,
+          ImGui.TableFlags_BordersInner | (rawget(ImGui, "TableFlags_Hideable") or 0)) then
         ImGui.TableSetupColumn(ctx, "##playcol",    ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
         ImGui.TableSetupColumn(ctx, "Start",        ImGui.TableColumnFlags_WidthFixed, 110)
+        ImGui.TableSetupColumn(ctx, "End",          ImGui.TableColumnFlags_WidthFixed, 110)
+        ImGui.TableSetupColumn(ctx, "Length",       ImGui.TableColumnFlags_WidthFixed, 110)
         ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthStretch)
         ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthStretch)
+        if TableSetColumnEnabled then
+          TableSetColumnEnabled(ctx, 2, col_visible[2])
+          TableSetColumnEnabled(ctx, 3, col_visible[3])
+          TableSetColumnEnabled(ctx, 4, col_visible[4])
+          TableSetColumnEnabled(ctx, 5, col_visible[5])
+          TableSetColumnEnabled(ctx, 6, col_visible[6])
+          TableSetColumnEnabled(ctx, 7, col_visible[7])
+        end
 
         -- Manual header row: click to sort asc, again for desc, third click clears sort
-        local hdr_names = { nil, "Take Name", "Take Version", "Start", "Track", "RPP File" }
+        local hdr_names = { nil, "Take Name", "Take Version", "Start", "End", "Length", "Track", "RPP File" }
         ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
-        for col = 0, 5 do
+        for col = 0, 7 do
           ImGui.TableSetColumnIndex(ctx, col)
           local name = hdr_names[col + 1]
           if name then
@@ -732,9 +766,30 @@ local function loop()
               last_clicked_idx = nil
               renaming_idx     = nil
             end
+            if ImGui.IsItemClicked(ctx, 1) then
+              ImGui.OpenPopup(ctx, "##col_ctx_menu")
+            end
           else
             ImGui.TableHeader(ctx, "")
           end
+        end
+
+        if ImGui.BeginPopup(ctx, "##col_ctx_menu") then
+          ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+          ImGui.Text(ctx, "COLUMNS")
+          ImGui.PopStyleColor(ctx)
+          ImGui.Separator(ctx)
+          ImGui.Spacing(ctx)
+          local col_labels = { [2]="Take Version", [3]="Start", [4]="End", [5]="Length", [6]="Track", [7]="RPP File" }
+          for _, col in ipairs({2, 3, 4, 5, 6, 7}) do
+            local changed, new_val = ImGui.Checkbox(ctx, col_labels[col], col_visible[col])
+            if changed then
+              col_visible[col] = new_val
+              saveColVisibility()
+            end
+          end
+          ImGui.Spacing(ctx)
+          ImGui.EndPopup(ctx)
         end
 
         local last_rpp_file = nil
@@ -813,26 +868,45 @@ local function loop()
             ImGui.SameLine(ctx)
             ImGui.Text(ctx, r.take)
           end
-          ImGui.TableSetColumnIndex(ctx, 2)
-          local ci, tot = r.take_idx, r.takes
-          if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
-          if ImGui.SmallButton(ctx, "<##p"..i) then
-            reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci - 1)
-            reaper.UpdateArrange()
+          if col_visible[2] then
+            ImGui.TableSetColumnIndex(ctx, 2)
+            local ci, tot = r.take_idx, r.takes
+            if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
+            if ImGui.SmallButton(ctx, "<##p"..i) then
+              reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci - 1)
+              reaper.UpdateArrange()
+            end
+            if ci <= 0 then ImGui.EndDisabled(ctx) end
+            ImGui.SameLine(ctx)
+            ImGui.Text(ctx, string.format("%d of %d", ci + 1, tot))
+            ImGui.SameLine(ctx)
+            if ci >= tot - 1 then ImGui.BeginDisabled(ctx, true) end
+            if ImGui.SmallButton(ctx, ">##n"..i) then
+              reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci + 1)
+              reaper.UpdateArrange()
+            end
+            if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
           end
-          if ci <= 0 then ImGui.EndDisabled(ctx) end
-          ImGui.SameLine(ctx)
-          ImGui.Text(ctx, string.format("%d of %d", ci + 1, tot))
-          ImGui.SameLine(ctx)
-          if ci >= tot - 1 then ImGui.BeginDisabled(ctx, true) end
-          if ImGui.SmallButton(ctx, ">##n"..i) then
-            reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci + 1)
-            reaper.UpdateArrange()
+          if col_visible[3] then
+            ImGui.TableSetColumnIndex(ctx, 3)
+            ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
           end
-          if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
-          ImGui.TableSetColumnIndex(ctx, 3) ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
-          ImGui.TableSetColumnIndex(ctx, 4) ImGui.Text(ctx, r.track)
-          ImGui.TableSetColumnIndex(ctx, 5) ImGui.Text(ctx, r.file)
+          if col_visible[4] then
+            ImGui.TableSetColumnIndex(ctx, 4)
+            ImGui.Text(ctx, reaper.format_timestr_pos(r.start + r.len, "", -1))
+          end
+          if col_visible[5] then
+            ImGui.TableSetColumnIndex(ctx, 5)
+            ImGui.Text(ctx, reaper.format_timestr_len(r.len, r.start, 64, -1))
+          end
+          if col_visible[6] then
+            ImGui.TableSetColumnIndex(ctx, 6)
+            ImGui.Text(ctx, r.track)
+          end
+          if col_visible[7] then
+            ImGui.TableSetColumnIndex(ctx, 7)
+            ImGui.Text(ctx, r.file)
+          end
           -- Play button drawn last so it renders on top of the SpanAllColumns selectable
           ImGui.TableSetColumnIndex(ctx, 0)
           local play_clicked
