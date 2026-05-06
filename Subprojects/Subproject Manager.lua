@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/06/26 - v1.5 Adding shortcuts (play and select all)
 --   05/06/26 - v1.4 Fixing Shift + Click selection bug
 --   05/06/26 - v1.3 Fixing Open Subproject Logic
 --   05/06/26 - v1.2 Sortable column headers
@@ -1089,6 +1090,23 @@ local function loop()
       end
 
       ImGui.EndPopup(ctx)
+    end
+
+    -- Keyboard shortcuts (suppressed when a text field has keyboard focus)
+    if not ImGui.IsAnyItemActive(ctx) then
+      local KEY_SPACE = rawget(ImGui, "Key_Space")
+      if KEY_SPACE and ImGui.IsKeyPressed(ctx, KEY_SPACE) then
+        reaper.Main_OnCommand(40044, 0)
+      end
+      local KEY_A    = rawget(ImGui, "Key_A")
+      local lctrl    = rawget(ImGui, "Key_LeftCtrl")  and ImGui.IsKeyDown(ctx, rawget(ImGui, "Key_LeftCtrl"))
+      local rctrl    = rawget(ImGui, "Key_RightCtrl") and ImGui.IsKeyDown(ctx, rawget(ImGui, "Key_RightCtrl"))
+      if KEY_A and (lctrl or rctrl) and ImGui.IsKeyPressed(ctx, KEY_A) then
+        for _, r in ipairs(display_rows) do
+          reaper.SetMediaItemSelected(r.item, true)
+        end
+        reaper.UpdateArrange()
+      end
     end
 
     ImGui.End(ctx)
