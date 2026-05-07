@@ -1,6 +1,6 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.7
+-- @version 1.8
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
