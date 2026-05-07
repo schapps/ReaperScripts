@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   5/06/26 - v1.5 Removing Provides
 --   4/27/26 - v1.4 Fixing window title
 --   4/27/26 - v1.3 Adding provides for ReaImGui Theme
 --   3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
