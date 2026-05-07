@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.5
+-- @version 1.6
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   5/07/26 - v1.6 Color Changes
 --   5/06/26 - v1.5 Removing Provides
 --   4/27/26 - v1.4 Fixing window title
 --   4/27/26 - v1.3 Adding provides for ReaImGui Theme
@@ -396,9 +397,9 @@ local function loop()
     -- Ok button with accent color (disabled when no tracks are selected)
     local no_tracks = reaper.CountSelectedTracks(0) == 0
     if no_tracks then ImGui.BeginDisabled(ctx, true) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x2C6B64FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x338077FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x2A5C56FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x60606066)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x606060FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x808080FF)
     if ImGui.Button(ctx, "Ok", btn_w, 0) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
