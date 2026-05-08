@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.8
+-- @version 1.9
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
 --   05/06/26 - v1.8 adding color support
 --   05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
 --   05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
@@ -75,6 +76,7 @@ local sort_asc           = true   -- ascending direction
 local export_path_buf    = reaper.GetExtState("SchappsSubprojects", "ExportScript")
 
 -- Column visibility state (cols 3-8 are user-toggleable; 0-2 are always shown)
+-- _cv1=col3, _cv2=col4, _cv3=col5, _cv4=col6, _cv5=col7, _cv6=col8
 local _cv_raw = reaper.GetExtState("SubprojectManager", "ColumnVisibility")
 local _cv1, _cv2, _cv3, _cv4, _cv5, _cv6 = _cv_raw:match("(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)")
 local col_visible = {
@@ -94,6 +96,20 @@ local function saveColVisibility()
 end
 local TableSetColumnEnabled = rawget(ImGui, "TableSetColumnEnabled")
 
+-- ImGui flag constants (resolved once at load time; used inside the render loop)
+local SEL_SPAN   = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
+                 | (rawget(ImGui, "SelectableFlags_AllowOverlap")
+                    or rawget(ImGui, "SelectableFlags_AllowItemOverlap") or 0)
+local KEY_LCTRL  = rawget(ImGui, "Key_LeftCtrl")
+local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
+local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
+local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
+local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
+
+-- Constant tables for column header and context-menu labels
+local HDR_NAMES  = { nil, nil, "Take Name", "Take Version", "Start", "End", "Length", "Track", "RPP File" }
+local COL_LABELS = { [3]="Take Version", [4]="Start", [5]="End", [6]="Length", [7]="Track", [8]="RPP File" }
+
 -- Color picker state
 local _cs = reaper.GetExtState("SubprojectManager", "SubprojectColor")
 local color_r, color_g, color_b = _cs:match("(%d+),(%d+),(%d+)")
@@ -112,18 +128,34 @@ end
 -- Utilities
 -- ============================================================
 
-local function file_exists(path)
-  local f = io.open(path, "rb")
-  if f then f:close() end
-  return f ~= nil
-end
-
 local function runCommand(id)
   reaper.Main_OnCommand(id, 0)
 end
 
 local function getCurrentProjectName()
   return reaper.GetProjectName(0, "")
+end
+
+-- Returns the active take's PCM source for an item, or nil if unavailable.
+local function getActiveSrc(item)
+  local take = reaper.GetActiveTake(item)
+  return take and reaper.GetMediaItemTake_Source(take)
+end
+
+-- Opens a project file in a new tab and renders its RPP-PROX proxy.
+-- Pass closeAfter=true to close the tab once rendering is done.
+local function openAndRenderRPPPROX(filepath, closeAfter)
+  reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+  reaper.Main_openProject(filepath)
+  reaper.Main_OnCommand(42332, 0)  -- save + render RPP-PROX
+  if closeAfter then reaper.Main_OnCommand(40860, 0) end  -- close tab
+end
+
+-- Clears REAPER's selection and re-selects the given item list.
+local function restoreSelection(items)
+  reaper.Main_OnCommand(40289, 0)
+  for _, item in ipairs(items) do reaper.SetMediaItemSelected(item, true) end
+  reaper.UpdateArrange()
 end
 
 local function activateProjectByName(targetName)
@@ -178,19 +210,16 @@ end
 local function openSelectedSubprojects(items)
   if not items or #items == 0 then return end
   for _, item in ipairs(items) do
-    local take = reaper.GetActiveTake(item)
-    if take then
-      local src = reaper.GetMediaItemTake_Source(take)
-      if src then
-        local existing = reaper.GetSubProjectFromSource(src)
-        if existing then
-          reaper.SelectProjectInstance(existing)
-        else
-          local fp = reaper.GetMediaSourceFileName(src, "")
-          if fp ~= "" then
-            reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
-            reaper.Main_openProject(fp)
-          end
+    local src = getActiveSrc(item)
+    if src then
+      local existing = reaper.GetSubProjectFromSource(src)
+      if existing then
+        reaper.SelectProjectInstance(existing)
+      else
+        local fp = reaper.GetMediaSourceFileName(src, "")
+        if fp ~= "" then
+          reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
+          reaper.Main_openProject(fp)
         end
       end
     end
@@ -205,25 +234,17 @@ local function updateSubproject(items)
   local parentName = getCurrentProjectName()
   local rendered = {}
   for _, item in ipairs(items) do
-    local take = reaper.GetActiveTake(item)
-    if take then
-      local src = reaper.GetMediaItemTake_Source(take)
-      if src then
-        local fp = reaper.GetMediaSourceFileName(src, "")
-        if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
-          rendered[fp] = true
-          reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
-          reaper.Main_openProject(fp)
-          reaper.Main_OnCommand(42332, 0)  -- save + render RPP-PROX
-          reaper.Main_OnCommand(40860, 0)  -- close tab
-        end
+    local src = getActiveSrc(item)
+    if src then
+      local fp = reaper.GetMediaSourceFileName(src, "")
+      if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
+        rendered[fp] = true
+        openAndRenderRPPPROX(fp, true)
       end
     end
   end
   activateProjectByName(parentName)
-  reaper.Main_OnCommand(40289, 0)
-  for _, item in ipairs(items) do reaper.SetMediaItemSelected(item, true) end
-  reaper.UpdateArrange()
+  restoreSelection(items)
 end
 
 
@@ -238,12 +259,10 @@ local function duplicateToNewVersion(items)
 
   reaper.Undo_BeginBlock()
   local parentName = getCurrentProjectName()
-  local savedItems = items
-
   local versionMap = {}
 
   -- First pass: copy RPP to new version, add new take
-  for _, item in ipairs(savedItems) do
+  for _, item in ipairs(items) do
     local take = reaper.GetActiveTake(item)
     if not take then
       reaper.ShowMessageBox("One of the items has no active take.", "Error", 0)
@@ -272,12 +291,12 @@ local function duplicateToNewVersion(items)
 
     local newFilePath = versionMap[origFile]
     if not newFilePath then
-      local origBase, curVer = base:match("^(.*)_v(%d%d)$")
+      local origBase, curVer = base:match("^(.*)_v(%d+)$")
       local newVer = curVer and tonumber(curVer) + 1 or 2
       repeat
         newFilePath = string.format("%s/%s_v%02d.%s", folder, origBase or base, newVer, ext)
         newVer = newVer + 1
-      until not file_exists(newFilePath)
+      until not reaper.file_exists(newFilePath)
 
       local infile = io.open(origFile, "rb")
       if not infile then
@@ -314,31 +333,25 @@ local function duplicateToNewVersion(items)
 
   -- Second pass: open and render each unique new RPP once, skipping duplicates
   local rendered = {}
-  for _, item in ipairs(savedItems) do
+  for _, item in ipairs(items) do
     if item then
-      local take = reaper.GetActiveTake(item)
-      if take then
-        local src = reaper.GetMediaItemTake_Source(take)
-        if src then
-          local fp = reaper.GetMediaSourceFileName(src, "")
-          if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
-            rendered[fp] = true
-            reaper.Main_OnCommand(40859, 0)  -- new project tab (keep current)
-            reaper.Main_openProject(fp)
-            reaper.Main_OnCommand(42332, 0)
-            activateProjectByName(parentName)
-          end
+      local src = getActiveSrc(item)
+      if src then
+        local fp = reaper.GetMediaSourceFileName(src, "")
+        if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
+          rendered[fp] = true
+          openAndRenderRPPPROX(fp, false)
+          activateProjectByName(parentName)
         end
       end
     end
   end
 
   -- Restore original selection
-  reaper.Main_OnCommand(40289, 0)
-  for _, item in ipairs(savedItems) do reaper.SetMediaItemSelected(item, true) end
+  restoreSelection(items)
 
   -- Add take markers showing the new versioned filename
-  for _, item in ipairs(savedItems) do
+  for _, item in ipairs(items) do
     if item then
       local tc = reaper.CountTakes(item)
       if tc > 1 then
@@ -453,18 +466,15 @@ local function explodeSubprojects(items)
   local all_items    = {}
 
   for _, item in ipairs(items) do
-    local take = reaper.GetActiveTake(item)
-    if take then
-      local src = reaper.GetMediaItemTake_Source(take)
-      if src then
-        local fn = reaper.GetMediaSourceFileName(src, "")
-        if fn and fn:sub(-4):lower() == ".rpp" then
-          local track = reaper.GetMediaItemTrack(item)
-          all_items[#all_items + 1] = { item = item, track = track }
-          if not seen_files[fn] then
-            seen_files[fn] = true
-            explode_list[#explode_list + 1] = { filename = fn, track = track, item = item }
-          end
+    local src = getActiveSrc(item)
+    if src then
+      local fn = reaper.GetMediaSourceFileName(src, "")
+      if fn and fn:sub(-4):lower() == ".rpp" then
+        local track = reaper.GetMediaItemTrack(item)
+        all_items[#all_items + 1] = { item = item, track = track }
+        if not seen_files[fn] then
+          seen_files[fn] = true
+          explode_list[#explode_list + 1] = { filename = fn, track = track, item = item }
         end
       end
     end
@@ -503,6 +513,16 @@ local function exportSelectedSubprojects(items)
   reaper.UpdateArrange()
   local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
   reaper.Main_OnCommand(cmd_id, 0)
+end
+
+-- Commits an in-progress take rename for row r and closes the rename widget.
+local function commitRename(r)
+  local take = reaper.GetTake(r.item, r.take_idx)
+  reaper.Undo_BeginBlock()
+  reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", rename_buf, true)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock("Rename take", -1)
+  renaming_idx = nil
 end
 
 -- ============================================================
@@ -648,13 +668,6 @@ local function loop()
       ImGui.Text(ctx, "No items match filter")
       ImGui.PopStyleColor(ctx)
     else
-      local SEL_SPAN   = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
-                       | (rawget(ImGui, "SelectableFlags_AllowOverlap")
-                          or rawget(ImGui, "SelectableFlags_AllowItemOverlap") or 0)
-      local KEY_LCTRL  = rawget(ImGui, "Key_LeftCtrl")
-      local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
-      local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
-      local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
       local row_rects = {}
       local row_h     = ImGui.GetFrameHeight(ctx)
       local hdr_c   = ImGui.GetStyleColor(ctx, ImGui.Col_Header)
@@ -682,11 +695,10 @@ local function loop()
         end
 
         -- Manual header row: click to sort asc, again for desc, third click clears sort
-        local hdr_names = { nil, nil, "Take Name", "Take Version", "Start", "End", "Length", "Track", "RPP File" }
         ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
         for col = 0, 8 do
           ImGui.TableSetColumnIndex(ctx, col)
-          local name = hdr_names[col + 1]
+          local name = HDR_NAMES[col + 1]
           if name then
             local arrow = sort_col == col and (sort_asc and " ▲" or " ▼") or ""
             ImGui.TableHeader(ctx, name .. arrow)
@@ -715,9 +727,8 @@ local function loop()
           ImGui.PopStyleColor(ctx)
           ImGui.Separator(ctx)
           ImGui.Spacing(ctx)
-          local col_labels = { [3]="Take Version", [4]="Start", [5]="End", [6]="Length", [7]="Track", [8]="RPP File" }
           for _, col in ipairs({3, 4, 5, 6, 7, 8}) do
-            local changed, new_val = ImGui.Checkbox(ctx, col_labels[col], col_visible[col])
+            local changed, new_val = ImGui.Checkbox(ctx, COL_LABELS[col], col_visible[col])
             if changed then
               col_visible[col] = new_val
               saveColVisibility()
@@ -752,20 +763,11 @@ local function loop()
               ImGui.InputTextFlags_EnterReturnsTrue | ImGui.InputTextFlags_AutoSelectAll)
             rename_buf = current_val
             local deactivated = ImGui.IsItemDeactivated(ctx)
-            local function commitRename()
-              local take = reaper.GetTake(r.item, r.take_idx)
-              reaper.Undo_BeginBlock()
-              reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", rename_buf, true)
-              reaper.UpdateArrange()
-              reaper.Undo_EndBlock("Rename take", -1)
-              renaming_idx = nil
-            end
             if enter_pressed then
-              commitRename()
+              commitRename(r)
             elseif deactivated then
-              local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
               if not (KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE)) then
-                commitRename()
+                commitRename(r)
               else
                 renaming_idx = nil
               end
