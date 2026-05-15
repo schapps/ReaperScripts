@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="06d9cbb7d4766ab012aede70fef67bd1d52fe863">
+<index version="1" name="SPS Scripts" commit="8cdbb1ecc1f98581f3d062e1234a1eff2075d291">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -107,7 +107,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Track\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Tracks\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -126,6 +126,24 @@
 9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
 5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/06d9cbb7d4766ab012aede70fef67bd1d52fe863/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.4" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f30bc3d110122127470c01606422043872d74900/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.6" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option
+5/15/25 v1.5 - Obey Note-Offs checkbox
+5/15/25 v1.6 - Max Voices slider (1-64)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8cdbb1ecc1f98581f3d062e1234a1eff2075d291/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
