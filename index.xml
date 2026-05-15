@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d81b9452f80b0aba24cc41030759eef94205581a">
+<index version="1" name="SPS Scripts" commit="06d9cbb7d4766ab012aede70fef67bd1d52fe863">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -101,9 +101,9 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ef9dedfb6fd83ac9350e4412f71b10a4e7cbaf8e/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
-    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Track">
+    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Tracks">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
@@ -120,6 +120,12 @@
         <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
 9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/e3433ff07ffeaa58c63ea5c1debc2fc4a52ce2ef/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.2" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T20:54:40Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/06d9cbb7d4766ab012aede70fef67bd1d52fe863/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
