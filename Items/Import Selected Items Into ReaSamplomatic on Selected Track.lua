@@ -1,6 +1,6 @@
--- @description Import Selected Items Into ReaSamplomatic on Selected Track
+-- @description Import Selected Items Into ReaSamplomatic on Selected Tracks
 -- @author Analogmad, MPL, modification by Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- Initial Script by MPL Modified by Analogmad (Chris Kowalski), and further modified by Stephen Schappler
 -- From Analogmad: MPL Helped me with this via the Reaper Forums. I had an issue of putting all samples into one RS5K. Added Arming for Audio Recording. Added Velocity Randomizer
 -- From Stephen Schappler: I changed the MIDI Velcotiy randomizer this script uses (it now uses one I wrote for this purpose), as well as the actions used to render items to a new takes before and after getting loaded into the sampler                   
@@ -10,8 +10,9 @@
 -- @changelog 
 --   9/3/24 v1.0 - Adding script to ReaPack
 --   9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+--   5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
 
-local script_title = 'Import Selected Items into ReaSamplomatic on Selected Track'
+local script_title = 'Import Selected Items into ReaSamplomatic on Selected Tracks'
 -------------------------------------------------------------------------------    
 function GetRS5kID(tr)
     local id = -1
@@ -73,50 +74,56 @@ end
 -- Clear the samples in ReaSamplomatic
 --ClearExistingSamples(track, rs5k_pos)
 
--- Iterate through samples and add them to the same ReaSamplOmatic5000 instance
+-- Iterate through samples and add only those belonging to this track
+local slot = 0
 for i = 1, number_of_samples do
   local item = reaper.GetSelectedMediaItem(0, i-1)
+  if reaper.GetMediaItemTrack(item) ~= track then goto skip_to_next_item end
   local take = reaper.GetActiveTake(item)
   if not take or reaper.TakeIsMIDI(take) then goto skip_to_next_item end
-  
+
   local tk_src = reaper.GetMediaItemTake_Source(take)
   local filename = reaper.GetMediaSourceFileName(tk_src, '')
-  
-  --reaper.TrackFX_SetParam(track, midirand_pos, 1, number_of_samples) -- setting amount of samples in sampler in velocity Generator
+
   reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 3, 0) -- note range start
   reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 8, .17) -- max voices = 12
   reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 9, 0) -- attack
   reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 11, 1) -- obey note offs
-  reaper.TrackFX_SetNamedConfigParm(track, rs5k_pos, "FILE"..(i-1), filename)
+  reaper.TrackFX_SetNamedConfigParm(track, rs5k_pos, "FILE"..slot, filename)
+  slot = slot + 1
   ::skip_to_next_item::
 end
 if rs5k_pos then reaper.TrackFX_SetNamedConfigParm(track, rs5k_pos, "DONE","") end
 end
 -------------------------------------------------------------------------------  
-function main(track)   
--- track check
-  local track = reaper.GetSelectedTrack(0,0)
-  if not track then return end
-  
--- item check
-  local item = reaper.GetSelectedMediaItem(0,0)
-  if not item then return true end        
- 
--- render items to new take
-reaper.Main_OnCommand(41999,0)
+function main()
+  -- item check
+  if reaper.CountSelectedMediaItems(0) == 0 then return end
 
--- export to RS5k
-  ExportSelItemsToRs5k(track) 
-  MIDI_prepare(track)
+  -- render items to new take
+  reaper.Main_OnCommand(41999, 0)
 
--- go back to first take
-reaper.Main_OnCommand(reaper.NamedCommandLookup("_XENAKIOS_SELECTFIRSTTAKEOFITEMS"), 0)    
+  -- collect unique tracks that have selected items, preserving order
+  local seen, track_order = {}, {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    local tr = reaper.GetMediaItemTrack(reaper.GetSelectedMediaItem(0, i))
+    if not seen[tr] then seen[tr] = true; table.insert(track_order, tr) end
+  end
 
--- crop to active take in items, so we don't see the extra take created for rendering and exporting to the sampler
-reaper.Main_OnCommand(40131,0)
+  -- export to RS5k and prepare MIDI on each track
+  for _, tr in ipairs(track_order) do
+    ExportSelItemsToRs5k(tr)
+    MIDI_prepare(tr)
+  end
 
--- close the fx windows so we don't have to have them open
-reaper.Main_OnCommand(reaper.NamedCommandLookup("_S&M_WNCLS5"), 0)    
+  -- go back to first take
+  reaper.Main_OnCommand(reaper.NamedCommandLookup("_XENAKIOS_SELECTFIRSTTAKEOFITEMS"), 0)
+
+  -- crop to active take in items, so we don't see the extra take created for rendering and exporting to the sampler
+  reaper.Main_OnCommand(40131, 0)
+
+  -- close the fx windows so we don't have to have them open
+  reaper.Main_OnCommand(reaper.NamedCommandLookup("_S&M_WNCLS5"), 0)
 end
 ------------------------------------------------------------------------------- 
 function MIDI_prepare(tr)
