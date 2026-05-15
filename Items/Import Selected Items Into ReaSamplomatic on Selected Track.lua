@@ -1,6 +1,6 @@
 -- @description Import Selected Items Into ReaSamplomatic on Selected Tracks
 -- @author Analogmad, MPL, modification by Stephen Schappler
--- @version 1.4
+-- @version 1.6
 -- Initial Script by MPL Modified by Analogmad (Chris Kowalski), and further modified by Stephen Schappler
 -- From Analogmad: MPL Helped me with this via the Reaper Forums. I had an issue of putting all samples into one RS5K. Added Arming for Audio Recording. Added Velocity Randomizer
 -- From Stephen Schappler: I changed the MIDI Velcotiy randomizer this script uses (it now uses one I wrote for this purpose), as well as the actions used to render items to a new takes before and after getting loaded into the sampler
@@ -13,6 +13,8 @@
 --   5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
 --   5/15/25 v1.3 - ReaImGUI panel with Load Items button
 --   5/15/25 v1.4 - Preserve Relative Delays option
+--   5/15/25 v1.5 - Obey Note-Offs checkbox
+--   5/15/25 v1.6 - Max Voices slider (1-64)
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
@@ -38,7 +40,9 @@ local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar
 
 local script_title    = 'Import Selected Items into ReaSamplomatic on Selected Tracks'
 local status_msg      = ""
-local preserve_delays = reaper.GetExtState("ImportToRS5K", "PreserveDelays") == "true"
+local preserve_delays  = reaper.GetExtState("ImportToRS5K", "PreserveDelays")  == "true"
+local obey_note_offs   = reaper.GetExtState("ImportToRS5K", "ObeyNoteOffs") ~= "false"
+local max_voices       = tonumber(reaper.GetExtState("ImportToRS5K", "MaxVoices")) or 12
 
 -------------------------------------------------------------------------------
 local function GetRS5kID(tr)
@@ -103,9 +107,9 @@ local function ExportSelItemsToRs5k(track)
 
     local filename = reaper.GetMediaSourceFileName(reaper.GetMediaItemTake_Source(take), '')
     reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 3, 0)   -- note range start
-    reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 8, .17) -- max voices = 12
+    reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 8, (max_voices - 1) / 63)
     reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 9, 0)   -- attack
-    reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 11, 1)  -- obey note offs
+    reaper.TrackFX_SetParamNormalized(track, rs5k_pos, 11, obey_note_offs and 1 or 0)
     reaper.TrackFX_SetNamedConfigParm(track, rs5k_pos, "FILE"..slot, filename)
     slot = slot + 1
     ::skip_to_next_item::
@@ -176,22 +180,40 @@ local function loop()
   local visible, open = ImGui.Begin(ctx, "Import into ReaSamplomatic", true, WIN_FLAGS)
 
   if visible then
-    local no_items = reaper.CountSelectedMediaItems(0) == 0
-    if no_items then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Load Items", -1, 0) then load_items() end
-    if no_items then ImGui.EndDisabled(ctx) end
-
-    ImGui.Spacing(ctx)
     local changed, new_val = ImGui.Checkbox(ctx, "Preserve Relative Delays", preserve_delays)
     if changed then
       preserve_delays = new_val
       reaper.SetExtState("ImportToRS5K", "PreserveDelays", tostring(preserve_delays), true)
+    end
+    if ImGui.IsItemHovered(ctx) then
+      ImGui.SetTooltip(ctx, "Adds a delay plugin to offset each track's audio\nby its relative start position. Max range: 0-1000ms.")
+    end
+
+    local changed2, new_val2 = ImGui.Checkbox(ctx, "Obey Note-Offs", obey_note_offs)
+    if changed2 then
+      obey_note_offs = new_val2
+      reaper.SetExtState("ImportToRS5K", "ObeyNoteOffs", tostring(obey_note_offs), true)
+    end
+
+    ImGui.Spacing(ctx)
+    ImGui.Text(ctx, "Max Voices")
+    ImGui.SetNextItemWidth(ctx, -1)
+    local changed3, new_val3 = ImGui.SliderInt(ctx, "##voices", max_voices, 1, 64)
+    if changed3 then
+      max_voices = new_val3
+      reaper.SetExtState("ImportToRS5K", "MaxVoices", tostring(max_voices), true)
     end
 
     if status_msg ~= "" then
       ImGui.Spacing(ctx)
       ImGui.Text(ctx, status_msg)
     end
+
+    ImGui.Spacing(ctx)
+    local no_items = reaper.CountSelectedMediaItems(0) == 0
+    if no_items then ImGui.BeginDisabled(ctx, true) end
+    if ImGui.Button(ctx, "Load Items", -1, 0) then load_items() end
+    if no_items then ImGui.EndDisabled(ctx) end
 
     ImGui.End(ctx)
   end
