@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
 --   5/07/26 - v1.6 Color Changes
 --   5/06/26 - v1.5 Removing Provides
 --   4/27/26 - v1.4 Fixing window title
@@ -382,35 +383,19 @@ local function loop()
 
     ImGui.Spacing(ctx)
 
-    -- Buttons: right-aligned Cancel | Ok
-    local btn_w = 80
-    local sp_x, _ = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + avail_w - (btn_w * 2) - sp_x)
-
-    if ImGui.Button(ctx, "Cancel", btn_w, 0) then
-      open = false
-    end
-
-    ImGui.SameLine(ctx)
-
-    -- Ok button with accent color (disabled when no tracks are selected)
+    -- Create button (disabled when no tracks are selected)
     local no_tracks = reaper.CountSelectedTracks(0) == 0
     if no_tracks then ImGui.BeginDisabled(ctx, true) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x60606066)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x606060FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x808080FF)
-    if ImGui.Button(ctx, "Ok", btn_w, 0) then
+    if ImGui.Button(ctx, "Create", -1, 0) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
       createSubproject()
     end
-    ImGui.PopStyleColor(ctx, 3)
     if no_tracks then ImGui.EndDisabled(ctx) end
 
-    -- Enter key as shortcut for Ok
+    -- Enter key as shortcut for Create
     if not no_tracks and (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
