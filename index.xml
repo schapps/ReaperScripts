@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="8cdbb1ecc1f98581f3d062e1234a1eff2075d291">
+<index version="1" name="SPS Scripts" commit="aab557946b95118aa46335bcd6f2837da35f730a">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5178,6 +5178,17 @@
 3/31/26 - v1.1 Added in option to auto close subproject after creation
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.7" author="Stephen Schappler" time="2026-05-18T16:09:30Z">
+        <changelog><![CDATA[5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/aab557946b95118aa46335bcd6f2837da35f730a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
