@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="aab557946b95118aa46335bcd6f2837da35f730a">
+<index version="1" name="SPS Scripts" commit="0a20a92c4c5c717aad0791ff9d7de8452d709bd3">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -395,6 +395,24 @@
 08/02/24 v1.2 - Save and restore cursor and timeline selection and keep selected items selected on stop
 07/09/25 v1.3 - Preserve user's "Stop at loop end" transport preference]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/33dbbd45f92b15bbfd81a4e19ab21ba69adfef7c/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Spread Items to Stacked Tracks.lua" type="script" desc="Spread Items to Stacked Tracks">
+      <metadata>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-21T02:29:51Z">
+        <changelog><![CDATA[2026-05-20 v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/7cb307c2880783a546a31bc5246e2308335e20cb/Items/Spread%20Items%20to%20Stacked%20Tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Stack Align Selected Items.lua" type="script" desc="Stack Align Selected Items">
+      <metadata>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-21T02:29:51Z">
+        <changelog><![CDATA[2026-05-20 v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/7cb307c2880783a546a31bc5246e2308335e20cb/Items/Stack%20Align%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Tab to Next Transient in Item Like Pro Tools.lua" type="script" desc="Tab to Next Transient in Item, Like Pro Tools">
