@@ -25,11 +25,14 @@ end
 
 -- CONFIGURATION AREA
 
--- Output filename pattern using REAPER tokens.
+-- Output root directory (maps to RENDER_FILE).
+-- Set to empty string "" to use the project folder as the root.
+local render_output_dir = "D:\\Reaper Export"
+
+-- Output filename pattern relative to render_output_dir (maps to RENDER_PATTERN).
 -- Common tokens: $item (take name), $project (project name), $projectpath (project folder),
 --                $user (Windows username), $date, $hour12_$minute
--- Default: exports WAV files to the project folder, named after the item take name.
-local render_output_pattern = "$projectpath\\$item"
+local render_output_pattern = "$project\\$item"
 
 -- Apply hardcoded render settings (WAV 24-bit, 48 kHz, selected items via master).
 -- Equivalent to the "Smart Export Simplified" preset without requiring any preset to be installed.
@@ -41,7 +44,7 @@ local function ApplyHardcodedRenderSettings()
 
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT', 'ZXZhdxgGAA==', true) -- WAV 24-bit
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '', true)
-  reaper.GetSetProjectInfo(0, 'RENDER_SRATE', 48000, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_SRATE', 96000, true)
   reaper.GetSetProjectInfo(0, 'RENDER_CHANNELS', 2, true)
   reaper.GetSetProjectInfo(0, 'RENDER_DITHER', 0, true)
 
@@ -49,7 +52,7 @@ local function ApplyHardcodedRenderSettings()
   reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',
     (render_settings & SETTINGS_MASK) | (current_settings & ~SETTINGS_MASK), true)
 
-  reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 4, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 4, true) -- 0=custom time bounds, 1=entire project, 2=time selection, 3=all project regions, 4=selected media items, 5=selected project regions, 6=all project markers, 7=selected project markers
   reaper.GetSetProjectInfo(0, 'RENDER_STARTPOS', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_ENDPOS', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_TAILFLAG', 0, true)
@@ -66,6 +69,7 @@ local function ApplyHardcodedRenderSettings()
   reaper.GetSetProjectInfo(0, 'RENDER_PADSTART', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_PADEND', 0, true)
 
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FILE',    render_output_dir,     true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', render_output_pattern, true)
 
   reaper.SNM_SetIntConfigVar('projrenderlimit', 0)        -- Full-speed offline
