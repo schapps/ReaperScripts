@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0a20a92c4c5c717aad0791ff9d7de8452d709bd3">
+<index version="1" name="SPS Scripts" commit="f1107cc5a79879b18530ab8d68b39ba6ad25bfeb">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -327,7 +327,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once. cfillion's Apply Render Preset scripts are required to work\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once. SWS extension is required. No render preset setup needed.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -361,6 +361,16 @@
 12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
 02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/dd1389948dc6fdfcec373f3e3af08e5e548171b9/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="1.8" author="Stephen Schappler" time="2026-05-21T22:22:33Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/dad6475d1d1034864e367a211eb228584129a34d/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
@@ -5657,6 +5667,24 @@
       </metadata>
       <version name="1.4.1" author="Aaron Cendan (modified by Stephen Schappler)" time="2025-10-08T00:01:56Z">
         <source main="main" file="acendan_Insert new track respect folders (no color match).lua">https://github.com/schapps/ReaperScripts/raw/034f697435bea5f9d8d825903bddcdbb0a082507/Tracks/Insert%20New%20Track%20Respect%20Folders%20(No%20Color%20Match).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Send Source Track to Selected Tracks.lua" type="script" desc="Send Source Track to Selected Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Opens a window to capture one or more source tracks and create sends from them to any selected tracks. Options: Post-Fader or Pre-Fader send mode, and optional sidechain routing to channels 3/4 on the destination. Options are remembered between sessions. Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.2" author="Stephen Schappler" time="2026-05-21T22:22:33Z">
+        <changelog><![CDATA[05/21/25 v1.2 - Get Source now captures all selected tracks
+05/21/25 v1.1 - Set destination track to 4 channels when sidechain is enabled
+05/21/25 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/dad6475d1d1034864e367a211eb228584129a34d/Tracks/Send%20Source%20Track%20to%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan.lua" type="script" desc="Set Selected Track Channel Count to 6 Channels and Add ReaSurroundPan">
