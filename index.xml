@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d81b9452f80b0aba24cc41030759eef94205581a">
+<index version="1" name="SPS Scripts" commit="0a20a92c4c5c717aad0791ff9d7de8452d709bd3">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -101,13 +101,13 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ef9dedfb6fd83ac9350e4412f71b10a4e7cbaf8e/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
-    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Track">
+    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Tracks">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Track\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Tracks\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -120,6 +120,30 @@
         <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
 9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/e3433ff07ffeaa58c63ea5c1debc2fc4a52ce2ef/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.2" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T20:54:40Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/06d9cbb7d4766ab012aede70fef67bd1d52fe863/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.4" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f30bc3d110122127470c01606422043872d74900/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.6" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option
+5/15/25 v1.5 - Obey Note-Offs checkbox
+5/15/25 v1.6 - Max Voices slider (1-64)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8cdbb1ecc1f98581f3d062e1234a1eff2075d291/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
@@ -371,6 +395,24 @@
 08/02/24 v1.2 - Save and restore cursor and timeline selection and keep selected items selected on stop
 07/09/25 v1.3 - Preserve user's "Stop at loop end" transport preference]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/33dbbd45f92b15bbfd81a4e19ab21ba69adfef7c/Items/Solo%20Play%20Selected%20Item(s).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Spread Items to Stacked Tracks.lua" type="script" desc="Spread Items to Stacked Tracks">
+      <metadata>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-21T02:29:51Z">
+        <changelog><![CDATA[2026-05-20 v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/7cb307c2880783a546a31bc5246e2308335e20cb/Items/Spread%20Items%20to%20Stacked%20Tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Stack Align Selected Items.lua" type="script" desc="Stack Align Selected Items">
+      <metadata>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-21T02:29:51Z">
+        <changelog><![CDATA[2026-05-20 v1.0 - Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/7cb307c2880783a546a31bc5246e2308335e20cb/Items/Stack%20Align%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Tab to Next Transient in Item Like Pro Tools.lua" type="script" desc="Tab to Next Transient in Item, Like Pro Tools">
@@ -5154,6 +5196,17 @@
 3/31/26 - v1.1 Added in option to auto close subproject after creation
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.7" author="Stephen Schappler" time="2026-05-18T16:09:30Z">
+        <changelog><![CDATA[5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/aab557946b95118aa46335bcd6f2837da35f730a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
