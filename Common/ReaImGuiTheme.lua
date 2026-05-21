@@ -1,12 +1,13 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
 -- @provides
 --   line-md--play-filled.png > line-md--play-filled.png
 -- @changelog
+--   05/07/26 - v1.4 Adjusting colors
 --   05/05/26 - v1.3 Adjusting colors
 --   03/28/25 - v1.0 Initial release
 
@@ -32,21 +33,21 @@ function theme.Push(ctx)
     {ImGui.Col_ScrollbarGrab, 0x3A4046FF},
     {ImGui.Col_ScrollbarGrabHovered, 0x4A545CFF},
     {ImGui.Col_ScrollbarGrabActive, 0x5A6771FF},
-    {ImGui.Col_CheckMark, 0x7AD9C4FF},
-    {ImGui.Col_SliderGrab, 0x7AD9C4FF},
-    {ImGui.Col_SliderGrabActive, 0xA0E6D8FF},
-    {ImGui.Col_Button, 0x2C6B64FF},
-    {ImGui.Col_ButtonHovered, 0x338077FF},
-    {ImGui.Col_ButtonActive, 0x2A5C56FF},
-    {ImGui.Col_Header, 0x2C6B64FF},
-    {ImGui.Col_HeaderHovered, 0x3A8A81FF},
-    {ImGui.Col_HeaderActive, 0x2B6A63FF},
-    {ImGui.Col_Separator, 0x3A3F45FF},
-    {ImGui.Col_SeparatorHovered, 0x5A7A77FF},
-    {ImGui.Col_SeparatorActive, 0x6FA39EFF},
-    {ImGui.Col_ResizeGrip, 0x2C6B6499},
-    {ImGui.Col_ResizeGripHovered, 0x3A8A81CC},
-    {ImGui.Col_ResizeGripActive, 0x2B6A63FF},
+    {ImGui.Col_CheckMark, 0xa08fe2FF},
+    {ImGui.Col_SliderGrab, 0xa08fe2FF},
+    {ImGui.Col_SliderGrabActive, 0xa08fe2FF},
+    {ImGui.Col_Button, 0x60606066},
+    {ImGui.Col_ButtonHovered, 0x606060FF},
+    {ImGui.Col_ButtonActive, 0x808080FF},
+    {ImGui.Col_Header, 0x60606066},
+    {ImGui.Col_HeaderHovered, 0x606060FF},
+    {ImGui.Col_HeaderActive, 0x808080FF},
+    {ImGui.Col_Separator, 0x80808080},
+    {ImGui.Col_SeparatorHovered, 0x808080C7},
+    {ImGui.Col_SeparatorActive, 0x808080FF},
+    {ImGui.Col_ResizeGrip, 0x60606066},
+    {ImGui.Col_ResizeGripHovered, 0x606060FF},
+    {ImGui.Col_ResizeGripActive, 0x808080FF},
   }
 
   local function add_color_name(enum_name, color)
@@ -57,7 +58,7 @@ function theme.Push(ctx)
   end
 
   add_color_name("Col_Tab", 0x23282DFF)
-  add_color_name("Col_TabHovered", 0x2F7870FF)
+  add_color_name("Col_TabHovered", 0x333333FF)
   add_color_name("Col_TabActive", 0x2C6B64FF)
   add_color_name("Col_TabUnfocused", 0x1E2226FF)
   add_color_name("Col_TabUnfocusedActive", 0x273035FF)

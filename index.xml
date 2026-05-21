@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="1463f18697d83049b1619e13608b72bdcd643713">
+<index version="1" name="SPS Scripts" commit="aab557946b95118aa46335bcd6f2837da35f730a">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -22,6 +22,13 @@
 03/28/25 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/9a1f5a120e2c6b47b6b2e90b3b7026a683afe383/Common/ReaImGuiTheme.lua</source>
         <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/9a1f5a120e2c6b47b6b2e90b3b7026a683afe383/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.4" author="Stephen Schappler" time="2026-05-07T20:45:43Z">
+        <changelog><![CDATA[05/07/26 - v1.4 Adjusting colors
+05/05/26 - v1.3 Adjusting colors
+03/28/25 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Common/line-md--play-filled.png</source>
       </version>
     </reapack>
   </category>
@@ -94,13 +101,13 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/ef9dedfb6fd83ac9350e4412f71b10a4e7cbaf8e/Items/Find%20and%20Select%20Items%20by%20Name%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
-    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Track">
+    <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Tracks">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Track\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Import Selected Items Into ReaSamplomatic on Selected Tracks\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -113,6 +120,30 @@
         <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
 9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/e3433ff07ffeaa58c63ea5c1debc2fc4a52ce2ef/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.2" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T20:54:40Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/06d9cbb7d4766ab012aede70fef67bd1d52fe863/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.4" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f30bc3d110122127470c01606422043872d74900/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.6" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-05-15T22:14:33Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option
+5/15/25 v1.5 - Obey Note-Offs checkbox
+5/15/25 v1.6 - Max Voices slider (1-64)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8cdbb1ecc1f98581f3d062e1234a1eff2075d291/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
@@ -5129,6 +5160,36 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/8ce0f31584be7c434090642acc08339b6a637bf6/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
         <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/8ce0f31584be7c434090642acc08339b6a637bf6/Common/ReaImGuiTheme.lua</source>
       </version>
+      <version name="1.5" author="Stephen Schappler" time="2026-05-07T01:25:33Z">
+        <changelog><![CDATA[5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/a95321821da81673ddeb7194c5757c9bd02a7f24/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.6" author="Stephen Schappler" time="2026-05-07T20:45:43Z">
+        <changelog><![CDATA[5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.7" author="Stephen Schappler" time="2026-05-18T16:09:30Z">
+        <changelog><![CDATA[5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/aab557946b95118aa46335bcd6f2837da35f730a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
       <metadata>
@@ -5192,6 +5253,11 @@
       <version name="1.0" author="Stephen Schappler" time="2026-05-02T21:47:02Z">
         <changelog><![CDATA[5/2/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/62ff893c3dceb8310ad648c75cbf1dc08da13d36/Subprojects/Explode%20Selected%20Subprojects%20to%20Tracks.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-05-07T20:45:43Z">
+        <changelog><![CDATA[5/7/26 - v1.1 Color adjustments
+5/2/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Subprojects/Explode%20Selected%20Subprojects%20to%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Open Subproject Item.lua" type="script" desc="Open Subproject Item">
@@ -5457,6 +5523,28 @@
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/9113513f7037203a212490d0334ac059527820f4/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.9" author="Stephen Schappler" time="2026-05-08T19:22:44Z">
+        <changelog><![CDATA[05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d81b9452f80b0aba24cc41030759eef94205581a/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>

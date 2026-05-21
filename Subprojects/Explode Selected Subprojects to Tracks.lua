@@ -1,12 +1,13 @@
 -- @description Explode Selected Subprojects to Tracks
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Presents a ReaImGUI dialog showing how many subproject items are selected,
 --   then explodes them into child tracks of their parent track.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   5/7/26 - v1.1 Color adjustments
 --   5/2/26 - v1.0 Initial release
 
 -- ============================================================
@@ -280,9 +281,9 @@ local function loop()
 
     local no_items = total == 0
     if no_items then ImGui.BeginDisabled(ctx, true) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x2C6B64FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x338077FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x2A5C56FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0x60606066)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0x606060FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x808080FF)
     if ImGui.Button(ctx, "Explode", btn_w, 0) then
       open = false
       runExplode()
