@@ -1,8 +1,8 @@
 -- @description Smart Export Selected Items
--- @version 1.7
+-- @version 1.8
 -- @about
 --   A script to easily export selected items of many different channel counts all at once.
---   cfillion's Apply Render Preset scripts are required to work
+--   SWS extension is required. No render preset setup needed.
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
@@ -12,37 +12,66 @@
 --   11/21/24 v1.5 - Changing how Config Area works
 --   12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
 --   02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+--   05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
 
 
 -- Clear the console at the start
 reaper.ClearConsole()
 
--- CONFIGURATION AREA
-local render_preset_name = "Smart Export Simplified"
-
--- Path to cfillion's Apply render preset script
-local apply_preset_script_path = ("%s/Scripts/ReaTeam Scripts/Rendering/cfillion_Apply render preset.lua"):format(reaper.GetResourcePath())
-
--- Ensure ReaPack and cfillion's preset script are available
-local function EnsureDependencies()
-  if not reaper.ReaPack_GetRepositoryInfo then
-    reaper.ShowMessageBox("ReaPack extension is not installed.\nPlease install ReaPack and add the ReaTeam repository to get cfillion's Render Presets package.", "Missing dependency", 0)
-    return false
-  end
-  if not reaper.file_exists(apply_preset_script_path) then
-    reaper.ShowMessageBox("cfillion Render Presets package is missing.\nInstall it from ReaPack:\n  Extensions > ReaPack > Browse Packages\n  Search for: cfillion Apply render preset\nThen try again.", "Missing dependency", 0)
-    return false
-  end
-  return true
+if not reaper.SNM_SetIntConfigVar then
+  reaper.ShowMessageBox("The SWS extension is required but not installed.\nDownload it from https://www.sws-extension.org", "Missing dependency", 0)
+  return
 end
 
--- Ensure the Apply Render Preset script is available
-local function ApplyRenderPresetByName(preset_name)
-  if not EnsureDependencies() then
-    return false
-  end
-  ApplyPresetByName = preset_name
-  dofile(apply_preset_script_path)
+-- CONFIGURATION AREA
+
+-- Output filename pattern using REAPER tokens.
+-- Common tokens: $item (take name), $project (project name), $projectpath (project folder),
+--                $user (Windows username), $date, $hour12_$minute
+-- Default: exports WAV files to the project folder, named after the item take name.
+local render_output_pattern = "$projectpath\\$item"
+
+-- Apply hardcoded render settings (WAV 24-bit, 48 kHz, selected items via master).
+-- Equivalent to the "Smart Export Simplified" preset without requiring any preset to be installed.
+local function ApplyHardcodedRenderSettings()
+  local SETTINGS_MASK = 0x7FFF
+  -- Source: selected items via master (0x40) + embed metadata (0x200)
+  -- + mono media to mono files (0x10) + multichannel tracks to multichannel files (0x4)
+  local render_settings = 596
+
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT', 'ZXZhdxgGAA==', true) -- WAV 24-bit
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '', true)
+  reaper.GetSetProjectInfo(0, 'RENDER_SRATE', 48000, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_CHANNELS', 2, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_DITHER', 0, true)
+
+  local current_settings = reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS', 0, false)
+  reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',
+    (render_settings & SETTINGS_MASK) | (current_settings & ~SETTINGS_MASK), true)
+
+  reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 4, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_STARTPOS', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_ENDPOS', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_TAILFLAG', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_TAILMS', 2000, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE_TARGET', 0.063096, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_BRICKWALL', 1, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_FADEIN', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_FADEOUT', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_FADEINSHAPE', 1, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_FADEOUTSHAPE', 1, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_TRIMSTART', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_TRIMEND', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_PADSTART', 0, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_PADEND', 0, true)
+
+  reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', render_output_pattern, true)
+
+  reaper.SNM_SetIntConfigVar('projrenderlimit', 0)        -- Full-speed offline
+  reaper.SNM_SetIntConfigVar('projrenderrateinternal', 1) -- Use project sample rate
+  reaper.SNM_SetIntConfigVar('projrenderresample', 10)
+
   return true
 end
 
@@ -152,7 +181,7 @@ for _, group in ipairs(overlapping_groups) do
     local glued_take = reaper.GetActiveTake(glued_item)
     local group_name = group[1].name
     reaper.GetSetMediaItemTakeInfo_String(glued_take, "P_NAME", group_name, true)
-    if ApplyRenderPresetByName(render_preset_name) then
+    if ApplyHardcodedRenderSettings() then
       reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
       reaper.Main_OnCommand(41824, 0) -- Render
     end
@@ -161,7 +190,7 @@ for _, group in ipairs(overlapping_groups) do
 end
 
 -- Process non-overlapping items
-if #non_overlapping_items > 0 and ApplyRenderPresetByName(render_preset_name) then
+if #non_overlapping_items > 0 and ApplyHardcodedRenderSettings() then
   reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
   reaper.Main_OnCommand(40289, 0) -- Unselect all items
   for _, info in ipairs(non_overlapping_items) do
