@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="1f8876215af18b32fc67013e23a299847382a147">
+<index version="1" name="SPS Scripts" commit="5d857f9a93594002018a54e0e1db1bef0b4094d1">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -394,6 +394,19 @@
 05/26/25 v1.9 - Splitting up export directory path
 05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/1f8876215af18b32fc67013e23a299847382a147/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="2.1" author="Stephen Schappler" time="2026-05-26T23:28:40Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path
+05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
+05/26/25 v2.1 - First-run ReaImGUI setup dialog with folder browse]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5d857f9a93594002018a54e0e1db1bef0b4094d1/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
