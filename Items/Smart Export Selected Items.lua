@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items
--- @version 1.8
+-- @version 1.9
 -- @about
 --   A script to easily export selected items of many different channel counts all at once.
 --   SWS extension is required. No render preset setup needed.
@@ -13,6 +13,7 @@
 --   12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
 --   02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
 --   05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+--   05/26/25 v1.9 - Splitting up export directory path
 
 
 -- Clear the console at the start
