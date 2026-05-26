@@ -39,15 +39,23 @@ local function load_config(path)
   if not f then return cfg end
   local content = f:read("*all")
   f:close()
-  local chunk, err = loadstring(content)
+  local env = setmetatable({}, {
+    __index = _G,
+    __newindex = function(t, k, v) cfg[k] = v end
+  })
+  local chunk, err
+  if _VERSION == "Lua 5.1" then
+    -- LuaJIT / Lua 5.1: loadstring + setfenv
+    chunk, err = loadstring(content)  -- luacheck: ignore
+    if chunk then setfenv(chunk, env) end  -- luacheck: ignore
+  else
+    -- Lua 5.2+: pass env directly to load
+    chunk, err = load(content, "config", "t", env)
+  end
   if not chunk then
     reaper.ShowMessageBox("Config syntax error:\n" .. tostring(err), "Smart Export Config Error", 0)
     return cfg
   end
-  setfenv(chunk, setmetatable({}, {
-    __index = _G,
-    __newindex = function(t, k, v) cfg[k] = v end
-  }))
   local ok, run_err = pcall(chunk)
   if not ok then
     reaper.ShowMessageBox("Config error:\n" .. tostring(run_err), "Smart Export Config Error", 0)
