@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items
--- @version 1.9
+-- @version 2.0
 -- @about
 --   A script to easily export selected items of many different channel counts all at once.
 --   SWS extension is required. No render preset setup needed.
@@ -14,6 +14,7 @@
 --   02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
 --   05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
 --   05/26/25 v1.9 - Splitting up export directory path
+--   05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
 
 
 -- Clear the console at the start
@@ -25,15 +26,58 @@ if not reaper.SNM_SetIntConfigVar then
 end
 
 -- CONFIGURATION AREA
+-- Settings are stored in a separate config file that ReaPack will not overwrite.
+-- The config file is created automatically next to this script on first run.
 
--- Output root directory (maps to RENDER_FILE).
--- Set to empty string "" to use the project folder as the root.
-local render_output_dir = "D:\\Reaper Export"
+local script_path = ({reaper.get_action_context()})[2]
+local script_dir  = script_path:match("(.*[/\\])")
+local config_path = script_dir .. "Smart Export Selected Items - User Config.lua"
 
--- Output filename pattern relative to render_output_dir (maps to RENDER_PATTERN).
--- Common tokens: $item (take name), $project (project name), $projectpath (project folder),
---                $user (Windows username), $date, $hour12_$minute
-local render_output_pattern = "$project\\$item"
+local function load_config(path)
+  local cfg = {}
+  local f = io.open(path, "r")
+  if not f then return cfg end
+  local content = f:read("*all")
+  f:close()
+  local chunk, err = loadstring(content)
+  if not chunk then
+    reaper.ShowMessageBox("Config syntax error:\n" .. tostring(err), "Smart Export Config Error", 0)
+    return cfg
+  end
+  setfenv(chunk, setmetatable({}, {
+    __index = _G,
+    __newindex = function(t, k, v) cfg[k] = v end
+  }))
+  local ok, run_err = pcall(chunk)
+  if not ok then
+    reaper.ShowMessageBox("Config error:\n" .. tostring(run_err), "Smart Export Config Error", 0)
+  end
+  return cfg
+end
+
+local default_output_dir     = "D:\\Reaper Export"
+local default_output_pattern = "$project\\$item"
+
+if not reaper.file_exists(config_path) then
+  local f = io.open(config_path, "w")
+  if f then
+    f:write("-- Smart Export Selected Items - User Config\n")
+    f:write("-- Edit these settings to customize your export.\n")
+    f:write("-- This file will NOT be overwritten by ReaPack updates.\n\n")
+    f:write("-- Output root directory (maps to RENDER_FILE).\n")
+    f:write("-- Set to empty string \"\" to use the project folder as the root.\n")
+    f:write("render_output_dir = " .. string.format("%q", default_output_dir) .. "\n\n")
+    f:write("-- Output filename pattern (maps to RENDER_PATTERN).\n")
+    f:write("-- Common tokens: $item (take name), $project (project name), $projectpath (project folder),\n")
+    f:write("--                $user (Windows username), $date, $hour12_$minute\n")
+    f:write("render_output_pattern = " .. string.format("%q", default_output_pattern) .. "\n")
+    f:close()
+  end
+end
+
+local cfg = load_config(config_path)
+local render_output_dir     = cfg.render_output_dir     or default_output_dir
+local render_output_pattern = cfg.render_output_pattern or default_output_pattern
 
 -- Apply hardcoded render settings (WAV 24-bit, 48 kHz, selected items via master).
 -- Equivalent to the "Smart Export Simplified" preset without requiring any preset to be installed.
