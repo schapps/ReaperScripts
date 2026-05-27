@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="f1107cc5a79879b18530ab8d68b39ba6ad25bfeb">
+<index version="1" name="SPS Scripts" commit="d4f0aa8c1122c37ef698b04ab8deaec66b170caf">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -371,6 +371,42 @@
 02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
 05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/dad6475d1d1034864e367a211eb228584129a34d/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="1.9" author="Stephen Schappler" time="2026-05-26T23:02:11Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ec39a35f988a75a177bf017217c5edf183280e5d/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="2.0" author="Stephen Schappler" time="2026-05-26T23:06:12Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path
+05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/1f8876215af18b32fc67013e23a299847382a147/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="2.1" author="Stephen Schappler" time="2026-05-26T23:28:40Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path
+05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
+05/26/25 v2.1 - First-run ReaImGUI setup dialog with folder browse]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5d857f9a93594002018a54e0e1db1bef0b4094d1/Items/Smart%20Export%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
@@ -5573,6 +5609,29 @@
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/d81b9452f80b0aba24cc41030759eef94205581a/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.10" author="Stephen Schappler" time="2026-05-27T00:27:20Z">
+        <changelog><![CDATA[05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
+05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d4f0aa8c1122c37ef698b04ab8deaec66b170caf/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>

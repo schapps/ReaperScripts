@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.9
+-- @version 1.10
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
 --   05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
 --   05/06/26 - v1.8 adding color support
 --   05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
@@ -515,6 +516,27 @@ local function exportSelectedSubprojects(items)
   reaper.Main_OnCommand(cmd_id, 0)
 end
 
+-- Removes rows where another row shares the same take name and overlaps in time,
+-- keeping only the earliest-starting representative for each such group.
+local function deduplicateOverlappingRows(rows)
+  local result = {}
+  for _, r in ipairs(rows) do
+    local duplicate = false
+    for _, existing in ipairs(result) do
+      if r.take == existing.take then
+        local r_end = r.start + r.len
+        local e_end = existing.start + existing.len
+        if r.start < e_end and existing.start < r_end then
+          duplicate = true
+          break
+        end
+      end
+    end
+    if not duplicate then result[#result + 1] = r end
+  end
+  return result
+end
+
 -- Commits an in-progress take rename for row r and closes the rename widget.
 local function commitRename(r)
   local take = reaper.GetTake(r.item, r.take_idx)
@@ -638,6 +660,7 @@ local function loop()
         display_rows[#display_rows + 1] = r
       end
     end
+    display_rows = deduplicateOverlappingRows(display_rows)
     if sort_col >= 0 then
       local asc, scol = sort_asc, sort_col
       table.sort(display_rows, function(a, b)
