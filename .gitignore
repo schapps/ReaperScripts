@@ -1,3 +1,4 @@
 .claude/settings.local.json
 .vscode
 Examples\
+.DS_Store
