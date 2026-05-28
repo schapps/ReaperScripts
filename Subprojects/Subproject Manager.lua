@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.10
+-- @version 1.11
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/28/26 - v1.11 Fixing column width display
 --   05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
 --   05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
 --   05/06/26 - v1.8 adding color support
@@ -693,21 +694,39 @@ local function loop()
     else
       local row_rects = {}
       local row_h     = ImGui.GetFrameHeight(ctx)
+      local take_name_col_w, track_col_w, rpp_col_w
+      do
+        local tn_max = select(1, ImGui.CalcTextSize(ctx, "Take Name"))
+        local tr_max = select(1, ImGui.CalcTextSize(ctx, "Track"))
+        local rp_max = select(1, ImGui.CalcTextSize(ctx, "RPP File"))
+        for _, r in ipairs(display_rows) do
+          local tn = select(1, ImGui.CalcTextSize(ctx, r.take))
+          local tr = select(1, ImGui.CalcTextSize(ctx, r.track))
+          local rp = select(1, ImGui.CalcTextSize(ctx, r.file))
+          if tn > tn_max then tn_max = tn end
+          if tr > tr_max then tr_max = tr end
+          if rp > rp_max then rp_max = rp end
+        end
+        take_name_col_w = tn_max + 16
+        track_col_w     = tr_max + 16
+        rpp_col_w       = rp_max + 16
+      end
       local hdr_c   = ImGui.GetStyleColor(ctx, ImGui.Col_Header)
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
       if ImGui.BeginTable(ctx, "##ptable", 9,
-          ImGui.TableFlags_BordersInner | (rawget(ImGui, "TableFlags_Hideable") or 0)) then
+          ImGui.TableFlags_BordersInner | (rawget(ImGui, "TableFlags_Hideable") or 0)
+          | (rawget(ImGui, "TableFlags_ScrollX") or 0)) then
         ImGui.TableSetupColumn(ctx, "##colswatch", ImGui.TableColumnFlags_WidthFixed, 18)
         ImGui.TableSetupColumn(ctx, "##playcol",   ImGui.TableColumnFlags_WidthFixed, 24)
-        ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 130)
-        ImGui.TableSetupColumn(ctx, "Start",        ImGui.TableColumnFlags_WidthFixed, 110)
-        ImGui.TableSetupColumn(ctx, "End",          ImGui.TableColumnFlags_WidthFixed, 110)
-        ImGui.TableSetupColumn(ctx, "Length",       ImGui.TableColumnFlags_WidthFixed, 110)
-        ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthStretch)
+        ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthFixed, take_name_col_w)
+        ImGui.TableSetupColumn(ctx, "Take Version", ImGui.TableColumnFlags_WidthFixed, 100)
+        ImGui.TableSetupColumn(ctx, "Start",        ImGui.TableColumnFlags_WidthFixed, 85)
+        ImGui.TableSetupColumn(ctx, "End",          ImGui.TableColumnFlags_WidthFixed, 85)
+        ImGui.TableSetupColumn(ctx, "Length",       ImGui.TableColumnFlags_WidthFixed, 80)
+        ImGui.TableSetupColumn(ctx, "Track",        ImGui.TableColumnFlags_WidthFixed, track_col_w)
+        ImGui.TableSetupColumn(ctx, "RPP File",     ImGui.TableColumnFlags_WidthFixed, rpp_col_w)
         if TableSetColumnEnabled then
           TableSetColumnEnabled(ctx, 3, col_visible[3])
           TableSetColumnEnabled(ctx, 4, col_visible[4])
