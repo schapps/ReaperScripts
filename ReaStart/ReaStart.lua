@@ -621,9 +621,30 @@ local function build_project_list()
 end
 
 -- ── Open project ──────────────────────────────────────────────────────
+
+-- Returns the ReaProject handle if path is already open in a tab, else nil.
+-- Normalises path separators and case (Windows paths are case-insensitive).
+local function find_open_project(path)
+  local target = path:lower():gsub("\\", "/")
+  local i = 0
+  while true do
+    local proj, proj_path = reaper.EnumProjects(i, "")
+    if not proj then break end
+    if proj_path:lower():gsub("\\", "/") == target then return proj end
+    i = i + 1
+  end
+end
+
 local function open_project(path)
   if not reaper.file_exists(path) then
     ui.flash_msg = "File not found: " .. path_name(path)
+    ui.flash_t   = os.time()
+    return
+  end
+  local existing = find_open_project(path)
+  if existing then
+    reaper.SelectProjectInstance(existing)
+    ui.flash_msg = "Already open: " .. path_name(path)
     ui.flash_t   = os.time()
     return
   end
@@ -642,24 +663,35 @@ end
 local function open_project_set(set_id)
   local s = project_sets[set_id]
   if not s then return end
-  local opened = 0
+  local opened, skipped = 0, 0
   for _, path in ipairs(s.paths) do
     if reaper.file_exists(path) then
-      reaper.Main_OnCommand(40859, 0)              -- New project tab
-      reaper.Main_openProject("noprompt:" .. path) -- Load project into that tab
-      last_opened[path] = os.time()
-      opened = opened + 1
+      if find_open_project(path) then
+        skipped = skipped + 1
+      else
+        reaper.Main_OnCommand(40859, 0)              -- New project tab
+        reaper.Main_openProject("noprompt:" .. path) -- Load project into that tab
+        last_opened[path] = os.time()
+        opened = opened + 1
+      end
     end
   end
   save_last_opened_state()
   build_project_list()
+  local msg
   if opened > 0 then
-    ui.flash_msg = "Opened " .. opened .. " project" .. (opened ~= 1 and "s" or "")
-                  .. " from \"" .. s.name .. "\""
+    msg = "Opened " .. opened .. " project" .. (opened ~= 1 and "s" or "")
+          .. " from \"" .. s.name .. "\""
+    if skipped > 0 then
+      msg = msg .. " (" .. skipped .. " already open)"
+    end
+  elseif skipped > 0 then
+    msg = "All projects in \"" .. s.name .. "\" already open"
   else
-    ui.flash_msg = "No valid files in set \"" .. s.name .. "\""
+    msg = "No valid files in set \"" .. s.name .. "\""
   end
-  ui.flash_t = os.time()
+  ui.flash_msg = msg
+  ui.flash_t   = os.time()
 end
 
 local function reveal_path(path)
@@ -1722,7 +1754,7 @@ local function render_detail_pane()
   -- Action buttons
   local aw = ImGui.GetContentRegionAvail(ctx)
   push_btn(C.accent2, C.accent, C.accent2)
-  if ImGui.Button(ctx, "▶  Open##d_open", aw - 56, 22) then
+  if ImGui.Button(ctx, "▶  Open##d_open", aw - 60, 22) then
     open_project(proj.path)
   end
   pop_btn()
@@ -1752,7 +1784,7 @@ local function render_detail_pane()
   -- Metadata grid
   local meta = parse_rpp(proj.path) or {}
   if ImGui.BeginTable(ctx, "##meta", 2, 0) then
-    ImGui.TableSetupColumn(ctx, "##mk", ImGui.TableColumnFlags_WidthFixed, 82)
+    ImGui.TableSetupColumn(ctx, "##mk", ImGui.TableColumnFlags_WidthFixed, 96)
     ImGui.TableSetupColumn(ctx, "##mv", ImGui.TableColumnFlags_WidthStretch)
     local rows = {
       { "Last opened", proj.last_str },
