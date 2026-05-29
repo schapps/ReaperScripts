@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d4a412fa3835e66074c196fb14f0aae7a9839024">
+<index version="1" name="SPS Scripts" commit="27b356b0efac253a52cfb62a773279fbb7548f8d">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5159,6 +5159,9 @@
       </metadata>
       <version name="0.1.0" author="Stephen Schappler" time="2026-05-27T20:29:50Z">
         <source main="main">https://github.com/schapps/ReaperScripts/raw/34f3821d5b48355ffe21a97df5d46f5a249a3bd4/ReaStart/ReaStart.lua</source>
+      </version>
+      <version name="0.2.0" author="Stephen Schappler" time="2026-05-29T16:23:34Z">
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/27b356b0efac253a52cfb62a773279fbb7548f8d/ReaStart/ReaStart.lua</source>
       </version>
     </reapack>
   </category>
