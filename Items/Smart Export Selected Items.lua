@@ -83,6 +83,7 @@ local default_output_pattern = "$project\\$item"
 
 local render_output_dir     = default_output_dir
 local render_output_pattern = default_output_pattern
+local active_template       = nil  -- set below if GUI template is available
 
 local config_exists = reaper.file_exists(config_path)
 if config_exists then
@@ -91,11 +92,32 @@ if config_exists then
   render_output_pattern = cfg.render_output_pattern or default_output_pattern
 end
 
+-- Override with the last-active GUI template if one exists
+do
+  local tpl_name = reaper.GetExtState("SmartExport", "active_template")
+  if tpl_name ~= "" then
+    local tpl_path = script_dir .. "Smart Export Templates/" .. tpl_name .. ".lua"
+    if reaper.file_exists(tpl_path) then
+      local tpl = load_config(tpl_path)
+      if tpl.render_output_dir     then render_output_dir     = tpl.render_output_dir     end
+      if tpl.render_output_pattern then render_output_pattern = tpl.render_output_pattern end
+      active_template = tpl
+    end
+  end
+end
+
 -- ============================================================
 -- Render settings
 -- ============================================================
 
-local function ApplyHardcodedRenderSettings()
+local function normalize_bits(tpl)
+  if not (tpl and tpl.normalize_enabled) then return 0 end
+  local bits = 0x1
+  if tpl.normalize_mode == "lufs_m" then bits = bits | 0x8 end
+  return bits
+end
+
+local function ApplyHardcodedRenderSettings(tpl)
   local SETTINGS_MASK = 0x7FFF
   -- Source: selected items via master (0x40) + embed metadata (0x200)
   -- + mono media to mono files (0x10) + multichannel tracks to multichannel files (0x4)
@@ -111,14 +133,18 @@ local function ApplyHardcodedRenderSettings()
   reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',
     (render_settings & SETTINGS_MASK) | (current_settings & ~SETTINGS_MASK), true)
 
-  reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 4, true) -- 0=custom time bounds, 1=entire project, 2=time selection, 3=all project regions, 4=selected media items, 5=selected project regions, 6=all project markers, 7=selected project markers
+  reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 4, true)
   reaper.GetSetProjectInfo(0, 'RENDER_STARTPOS', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_ENDPOS', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_TAILFLAG', 0, true)
-  reaper.GetSetProjectInfo(0, 'RENDER_TAILMS', 2000, true)
-  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE', 0, true)
-  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE_TARGET', 0.063096, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_TAILMS', tpl and tpl.tail_ms or 2000, true)
+
+  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE', normalize_bits(tpl), true)
+  local norm_target = (tpl and tpl.normalize_target_db)
+    and (10 ^ (tpl.normalize_target_db / 20)) or 0.063096
+  reaper.GetSetProjectInfo(0, 'RENDER_NORMALIZE_TARGET', norm_target, true)
   reaper.GetSetProjectInfo(0, 'RENDER_BRICKWALL', 1, true)
+
   reaper.GetSetProjectInfo(0, 'RENDER_FADEIN', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_FADEOUT', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_FADEINSHAPE', 1, true)
@@ -246,7 +272,7 @@ local function run_export()
       local glued_take = reaper.GetActiveTake(glued_item)
       local group_name = group[1].name
       reaper.GetSetMediaItemTakeInfo_String(glued_take, "P_NAME", group_name, true)
-      if ApplyHardcodedRenderSettings() then
+      if ApplyHardcodedRenderSettings(active_template) then
         reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
         reaper.Main_OnCommand(41824, 0) -- Render
       end
@@ -255,7 +281,7 @@ local function run_export()
   end
 
   -- Process non-overlapping items
-  if #non_overlapping_items > 0 and ApplyHardcodedRenderSettings() then
+  if #non_overlapping_items > 0 and ApplyHardcodedRenderSettings(active_template) then
     reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
     reaper.Main_OnCommand(40289, 0) -- Unselect all items
     for _, info in ipairs(non_overlapping_items) do
@@ -279,119 +305,9 @@ local function run_export()
 end
 
 -- ============================================================
--- Entry point: run directly if config exists, else show setup GUI
+-- Entry point
 -- ============================================================
-
-if config_exists then
-  run_export()
-else
-  if not reaper.ImGui_GetBuiltinPath then
-    -- ReaImGUI not installed: create config with defaults and run
-    save_config(default_output_dir, default_output_pattern)
-    run_export()
-    return
-  end
-
-  package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-  local ImGui = require 'imgui' '0.10'
-
-  local theme_path = script_dir .. "Common/ReaImGuiTheme.lua"
-  if not reaper.file_exists(theme_path) then
-    theme_path = script_dir .. "../Common/ReaImGuiTheme.lua"
-  end
-  local theme = dofile(theme_path)
-
-  local script_title = "SMART EXPORT SETUP"
-  local ctx = ImGui.CreateContext(script_title)
-
-  local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar
-                 | ImGui.WindowFlags_NoCollapse
-                 | ImGui.WindowFlags_AlwaysAutoResize
-                 | ImGui.WindowFlags_NoScrollWithMouse
-
-  local dir_buf     = default_output_dir
-  local pattern_buf = default_output_pattern
-  local open        = true
-  local saved       = false
-
-  local function loop()
-    local color_count, var_count = theme.Push(ctx)
-
-    ImGui.SetNextWindowSize(ctx, 480, 0, ImGui.Cond_FirstUseEver)
-    local visible, still_open = ImGui.Begin(ctx, script_title, true, WIN_FLAGS)
-
-    if visible then
-      if ImGui.BeginTable(ctx, "##fields", 2) then
-        ImGui.TableSetupColumn(ctx, "##input", ImGui.TableColumnFlags_WidthStretch)
-        ImGui.TableSetupColumn(ctx, "##label", ImGui.TableColumnFlags_WidthFixed, 100)
-
-        -- Output directory
-        ImGui.TableNextRow(ctx)
-        ImGui.TableSetColumnIndex(ctx, 0)
-        ImGui.SetNextItemWidth(ctx, -1)
-        local _, new_dir = ImGui.InputText(ctx, "##dir", dir_buf)
-        dir_buf = new_dir
-        ImGui.TableSetColumnIndex(ctx, 1)
-        ImGui.Text(ctx, "Output Dir")
-
-        -- Filename pattern
-        ImGui.TableNextRow(ctx)
-        ImGui.TableSetColumnIndex(ctx, 0)
-        ImGui.SetNextItemWidth(ctx, -1)
-        local _, new_pattern = ImGui.InputText(ctx, "##pattern", pattern_buf)
-        pattern_buf = new_pattern
-        ImGui.TableSetColumnIndex(ctx, 1)
-        ImGui.Text(ctx, "Filename")
-
-        ImGui.EndTable(ctx)
-      end
-
-      ImGui.Spacing(ctx)
-
-      -- Browse button (requires js_ReaScriptAPI)
-      if reaper.JS_Dialog_BrowseForFolder then
-        if ImGui.Button(ctx, "Browse...", 0, 0) then
-          local retval, folder = reaper.JS_Dialog_BrowseForFolder("Select Export Folder", dir_buf)
-          if retval == 1 then dir_buf = folder end
-        end
-        ImGui.SameLine(ctx)
-      end
-
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-      ImGui.Text(ctx, "Tokens: $item  $project  $projectpath  $user  $date")
-      ImGui.PopStyleColor(ctx)
-
-      ImGui.Spacing(ctx)
-      ImGui.Separator(ctx)
-      ImGui.Spacing(ctx)
-
-      local function do_save()
-        open  = false
-        saved = true
-        render_output_dir     = dir_buf
-        render_output_pattern = pattern_buf
-        save_config(dir_buf, pattern_buf)
-      end
-
-      if ImGui.Button(ctx, "Save & Export", -1, 0) then
-        do_save()
-      end
-
-      if ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter) then
-        do_save()
-      end
-
-      ImGui.End(ctx)
-    end
-
-    theme.Pop(ctx, color_count, var_count)
-
-    if still_open and open then
-      reaper.defer(loop)
-    elseif saved then
-      run_export()
-    end
-  end
-
-  reaper.defer(loop)
-end
+-- Runs with the last-active GUI template (set via SmartExport ExtState),
+-- falling back to the user config file, then hardcoded defaults.
+-- Use "Smart Export Selected Items (GUI)" to configure settings.
+run_export()

@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.2.0
+-- @version 0.2.1
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -156,6 +156,7 @@ local set_popup = {
   skip_close  = false,
   name_buf    = "",
   focus_input = false,
+  new_color   = 0x9b8fc4ff,
 }
 
 local DENSITY_H = { compact = 22, comfort = 32, detail = 48 }
@@ -1185,6 +1186,7 @@ local function render_project_table(list)
     if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
       set_popup.open        = true
       set_popup.name_buf    = ""
+      set_popup.new_color   = C.accent
       set_popup.focus_input = true
       set_popup.skip_close  = true
     end
@@ -1307,12 +1309,17 @@ local function render_sets_panel()
 
   for _, id in ipairs(sets_order) do
     local s      = project_sets[id]
+    if not s then goto continue_set_row end
     local is_sel = (ui.selected_set_id == id)
 
     ImGui.TableNextRow(ctx, 0, row_h)
     ImGui.TableSetColumnIndex(ctx, 0)
     local cx, cy = ImGui.GetCursorPos(ctx)
     local sx, sy = ImGui.GetCursorScreenPos(ctx)
+
+    -- Color stripe
+    local stripe_col = s.color or C.accent
+    ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + 3, sy + row_h, stripe_col)
 
     ImGui.SetCursorPos(ctx, cx + 4, cy)
     local clicked  = ImGui.Selectable(ctx, "##setrow_" .. id, is_sel, SEL_SPAN, 0, row_h)
@@ -1358,6 +1365,7 @@ local function render_sets_panel()
       pop_btn()
       ImGui.PopStyleVar(ctx)
     end
+    ::continue_set_row::
   end
 
   ImGui.EndTable(ctx)
@@ -1673,7 +1681,6 @@ local function render_mini_wave(seed)
 end
 
 local function render_set_detail_pane()
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing,    6,  4)
 
   local s = ui.selected_set_id and project_sets[ui.selected_set_id]
@@ -1686,7 +1693,7 @@ local function render_set_detail_pane()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.TextWrapped(ctx, "Select a set to see its projects.")
     ImGui.PopStyleColor(ctx)
-    ImGui.PopStyleVar(ctx, 2)
+    ImGui.PopStyleVar(ctx, 1)
     return
   end
 
@@ -1726,8 +1733,8 @@ local function render_set_detail_pane()
   ImGui.Separator(ctx)
   ImGui.Dummy(ctx, 0, 2)
 
-  local avail_h = select(2, ImGui.GetContentRegionAvail(ctx))
-  if ImGui.BeginChild(ctx, "##sdprojlist", 0, avail_h, 0) then
+  local avail_h = select(2, ImGui.GetContentRegionAvail(ctx)) - 34
+  if ImGui.BeginChild(ctx, "##sdprojlist", 0, math.max(avail_h, 0), 0) then
     local to_remove = nil
     for i, path in ipairs(s.paths) do
       local exists = reaper.file_exists(path)
@@ -1761,14 +1768,29 @@ local function render_set_detail_pane()
     ImGui.EndChild(ctx)
   end
 
-  ImGui.PopStyleVar(ctx, 2)
+  ImGui.Dummy(ctx, 0, 4)
+  local aw = select(1, ImGui.GetContentRegionAvail(ctx))
+  push_btn(0x00000000, C.panel3, C.border)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
+  if ImGui.Button(ctx, "Delete Set##sd_delete", aw, 26) then
+    local del_id = s.id
+    for i, id in ipairs(sets_order) do
+      if id == del_id then table.remove(sets_order, i); break end
+    end
+    project_sets[del_id] = nil
+    ui.selected_set_id   = nil
+    save_sets()
+  end
+  ImGui.PopStyleColor(ctx)
+  pop_btn()
+
+  ImGui.PopStyleVar(ctx, 1)
 end
 
 local function render_detail_pane()
   -- Sets tab has its own detail pane
   if ui.tab == "sets" then render_set_detail_pane(); return end
 
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing,    6,  4)
 
   local proj = get_selected()
@@ -1781,7 +1803,7 @@ local function render_detail_pane()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.TextWrapped(ctx, "Select a project to see details, notes, and quick actions.")
     ImGui.PopStyleColor(ctx)
-    ImGui.PopStyleVar(ctx, 2)
+    ImGui.PopStyleVar(ctx, 1)
     return
   end
 
@@ -1932,7 +1954,7 @@ local function render_detail_pane()
     save_project_data(proj.path)
   end
 
-  ImGui.PopStyleVar(ctx, 2)
+  ImGui.PopStyleVar(ctx, 1)
 end
 
 -- ── Render: tag popup ────────────────────────────────────────────────
@@ -1940,7 +1962,7 @@ local function render_tag_popup()
   if not tag_popup.open then return end
 
   local pw     = 320
-  local ph     = tag_popup.creating and 460 or 320
+  local ph     = tag_popup.creating and 640 or 320
   local cx     = ui.win_x + math.floor((ui.win_w - pw) / 2)
   local cy     = ui.win_y + math.floor((ui.win_h - ph) / 2)
   ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
@@ -2099,34 +2121,24 @@ local function render_tag_popup()
         ImGui.SetKeyboardFocusHere(ctx)
         tag_popup.focus_input = false
       end
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg,        C.bg)
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered, C.panel)
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgActive,  C.panel)
       ImGui.SetNextItemWidth(ctx, -1)
       local nc, nn = ImGui.InputText(ctx, "##tp_name", tag_popup.new_name)
       if nc then tag_popup.new_name = nn end
+      ImGui.PopStyleColor(ctx, 3)
 
       ImGui.Dummy(ctx, 0, 6)
 
-      -- Color swatches (no popup — avoids click-outside false-close)
+      -- Color picker
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
       ImGui.Text(ctx, "Color")
       ImGui.PopStyleColor(ctx)
-      ImGui.Dummy(ctx, 0, 4)
-      local SWATCH_COLORS = {
-        C.accent, C.orange, C.pink, C.teal, C.info, C.warning, C.danger, C.text3,
-      }
-      local sw, sh = 24, 24
-      local cbf = (rawget(ImGui, "ColorEditFlags_NoTooltip") or 0)
-                | (rawget(ImGui, "ColorEditFlags_NoBorder")  or 0)
-      local sdl = ImGui.GetWindowDrawList(ctx)
-      for i, col in ipairs(SWATCH_COLORS) do
-        if ImGui.ColorButton(ctx, "##swatch"..i, col, cbf, sw, sh) then
-          tag_popup.new_color = col
-        end
-        if tag_popup.new_color == col then
-          local rx, ry = ImGui.GetItemRectMin(ctx)
-          local rx2, ry2 = ImGui.GetItemRectMax(ctx)
-          ImGui.DrawList_AddRect(sdl, rx - 2, ry - 2, rx2 + 2, ry2 + 2, 0xffffffff, 3, 0, 2)
-        end
-        if i < #SWATCH_COLORS then ImGui.SameLine(ctx, 0, 4) end
+      local pick_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
+      local col_chg, new_col = ImGui.ColorPicker4(ctx, "##tp_color", tag_popup.new_color, pick_flags)
+      if col_chg then
+        tag_popup.new_color = (new_col & 0xFFFFFF00) | 0xFF
       end
 
       ImGui.Dummy(ctx, 0, 8)
@@ -2185,7 +2197,7 @@ end
 local function render_set_popup()
   if not set_popup.open then return end
 
-  local pw, ph = 320, 148
+  local pw, ph = 320, 420
   local cx = ui.win_x + math.floor((ui.win_w - pw) / 2)
   local cy = ui.win_y + math.floor((ui.win_h - ph) / 2)
   ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
@@ -2235,6 +2247,18 @@ local function render_set_popup()
 
     ImGui.Dummy(ctx, 0, 6)
 
+    -- Color picker
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "Color")
+    ImGui.PopStyleColor(ctx)
+    local pick_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
+    local col_chg, new_col = ImGui.ColorPicker4(ctx, "##sp_color", set_popup.new_color, pick_flags)
+    if col_chg then
+      set_popup.new_color = (new_col & 0xFFFFFF00) | 0xFF
+    end
+
+    ImGui.Dummy(ctx, 0, 6)
+
     -- Confirm button
     local n_sel     = selection_count()
     local can_create = set_popup.name_buf ~= "" and n_sel > 0
@@ -2257,7 +2281,7 @@ local function render_set_popup()
 
     if do_create then
       local id = new_set_id()
-      project_sets[id] = { id = id, name = set_popup.name_buf, paths = selection_list() }
+      project_sets[id] = { id = id, name = set_popup.name_buf, paths = selection_list(), color = set_popup.new_color }
       sets_order[#sets_order + 1] = id
       save_sets()
       ui.selected_set_id = id
@@ -2462,11 +2486,14 @@ end
 
 -- ── Render: status bar ────────────────────────────────────────────────
 local function render_statusbar()
+  local pad_x, pad_y = 10, 4
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 3)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
   if ImGui.BeginChild(ctx, "##statusbar", 0, 22, 0) then
+    local ox, oy = ImGui.GetCursorPos(ctx)
     push_mono()
     local now = os.time()
+    ImGui.SetCursorPos(ctx, ox + pad_x, oy + pad_y)
     if ui.flash_msg and os.difftime(now, ui.flash_t) < 3 then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.teal)
       ImGui.Text(ctx, ui.flash_msg)
@@ -2479,7 +2506,7 @@ local function render_statusbar()
     end
     -- Keyboard hint (right side)
     local hint = "Ctrl+K  quick open"
-    ImGui.SetCursorPos(ctx, ImGui.GetWindowWidth(ctx) - (#hint * 6.5) - 4, 3)
+    ImGui.SetCursorPos(ctx, ImGui.GetWindowWidth(ctx) - (#hint * 6.5) - pad_x, oy + pad_y)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.Text(ctx, hint)
     ImGui.PopStyleColor(ctx)
@@ -2531,10 +2558,21 @@ local function loop()
       local dx, dy = ImGui.GetCursorScreenPos(ctx)
       ImGui.DrawList_AddLine(dl, dx, dy, dx, dy + avail_h, C.border, 1)
       ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
+      ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
       if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - 24, 0) then
-        render_detail_pane()
+        local pad = 10
+        local ox, oy = ImGui.GetCursorPos(ctx)
+        ImGui.SetCursorPos(ctx, ox + pad, oy + pad)
+        local cw, ch = ImGui.GetContentRegionAvail(ctx)
+        ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
+        if ImGui.BeginChild(ctx, "##detail_inner", cw - pad, ch - pad, 0) then
+          render_detail_pane()
+        end
+        ImGui.EndChild(ctx)
+        ImGui.PopStyleVar(ctx)
       end
       ImGui.EndChild(ctx)
+      ImGui.PopStyleVar(ctx)
       ImGui.PopStyleColor(ctx)
     end
 
