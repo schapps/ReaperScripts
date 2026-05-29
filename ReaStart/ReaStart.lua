@@ -94,20 +94,23 @@ local TABLE_ROW_BG_TARGET = rawget(ImGui, "TableBgTarget_RowBg0") or 1
 
 -- ── State ─────────────────────────────────────────────────────────────
 local ui = {
-  tab           = "recent",
-  search        = "",
-  tag_filter    = nil,
-  selected_path = nil,
-  palette_open  = false,
-  palette_q     = "",
-  palette_sel   = 1,
-  palette_focus = false,
-  flash_msg     = nil,
-  flash_t       = 0,
-  win_x         = 0,
-  win_y         = 0,
-  win_w         = 900,
-  win_h         = 650,
+  tab             = "recent",
+  search          = "",
+  tag_filter      = nil,
+  selected_path   = nil,
+  selected_paths  = {},   -- path -> true (multi-select)
+  selected_set_id = nil,  -- active set in Sets tab
+  ctx_menu_open   = false,
+  palette_open    = false,
+  palette_q       = "",
+  palette_sel     = 1,
+  palette_focus   = false,
+  flash_msg       = nil,
+  flash_t         = 0,
+  win_x           = 0,
+  win_y           = 0,
+  win_w           = 900,
+  win_h           = 650,
 }
 
 local projects        = {}
@@ -131,6 +134,8 @@ local project_tags  = {}   -- filename_key → {tag,...}
 local project_notes = {}   -- filename_key → string
 local last_opened   = {}   -- full_path → os.time()
 local tag_registry  = {}   -- tag_name → 0xRRGGBBAA (user-defined colors)
+local project_sets  = {}   -- set_id → { id, name, paths={} }
+local sets_order    = {}   -- array of set_ids in insertion order
 
 local tag_popup = {
   open        = false,
@@ -141,6 +146,13 @@ local tag_popup = {
   focus_input = false,
   new_name    = "",
   new_color   = 0x9b8fc4ff,
+}
+
+local set_popup = {
+  open        = false,
+  skip_close  = false,
+  name_buf    = "",
+  focus_input = false,
 }
 
 local DENSITY_H = { compact = 22, comfort = 32, detail = 48 }
@@ -171,6 +183,27 @@ end
 local function path_name(p)
   local base = path_key(p)
   return base:match("^(.-)%.[^.]*$") or base
+end
+
+local function new_set_id()
+  return "set_" .. tostring(os.time()) .. "_" .. tostring(math.random(999))
+end
+
+local function selection_count()
+  local n = 0
+  for _ in pairs(ui.selected_paths) do n = n + 1 end
+  return n
+end
+
+local function selection_list()
+  local out = {}
+  for p in pairs(ui.selected_paths) do out[#out + 1] = p end
+  return out
+end
+
+local function clear_selection()
+  ui.selected_paths = {}
+  ui.selected_path  = nil
 end
 
 -- ── Tag utilities ─────────────────────────────────────────────────────
@@ -288,6 +321,19 @@ local function load_all_state()
   for name, col in pairs(TAG_COLORS) do
     if not tag_registry[name] then tag_registry[name] = col end
   end
+
+  -- project sets
+  for id in es_get("sets_index"):gmatch("[^\n]+") do
+    local name = es_get("sets/" .. id .. "/name")
+    local paths = {}
+    for p in es_get("sets/" .. id .. "/paths"):gmatch("[^\n]+") do
+      paths[#paths + 1] = p
+    end
+    if name ~= "" then
+      project_sets[id] = { id = id, name = name, paths = paths }
+      sets_order[#sets_order + 1] = id
+    end
+  end
 end
 
 local function save_settings()
@@ -339,6 +385,15 @@ local function save_tag_registry()
     parts[#parts + 1] = name .. "\t" .. string.format("%08x", col)
   end
   es_set("tag_registry", table.concat(parts, "\n"))
+end
+
+local function save_sets()
+  es_set("sets_index", table.concat(sets_order, "\n"))
+  for _, id in ipairs(sets_order) do
+    local s = project_sets[id]
+    es_set("sets/" .. id .. "/name",  s.name)
+    es_set("sets/" .. id .. "/paths", table.concat(s.paths, "\n"))
+  end
 end
 
 -- ── Data layer ────────────────────────────────────────────────────────
@@ -582,6 +637,29 @@ local function open_project(path)
   else
     build_project_list()
   end
+end
+
+local function open_project_set(set_id)
+  local s = project_sets[set_id]
+  if not s then return end
+  local opened = 0
+  for _, path in ipairs(s.paths) do
+    if reaper.file_exists(path) then
+      reaper.Main_OnCommand(40859, 0)              -- New project tab
+      reaper.Main_openProject("noprompt:" .. path) -- Load project into that tab
+      last_opened[path] = os.time()
+      opened = opened + 1
+    end
+  end
+  save_last_opened_state()
+  build_project_list()
+  if opened > 0 then
+    ui.flash_msg = "Opened " .. opened .. " project" .. (opened ~= 1 and "s" or "")
+                  .. " from \"" .. s.name .. "\""
+  else
+    ui.flash_msg = "No valid files in set \"" .. s.name .. "\""
+  end
+  ui.flash_t = os.time()
 end
 
 local function reveal_path(path)
@@ -888,7 +966,7 @@ local function render_project_table(list)
     end
 
     -- Data row
-    local is_sel = (ui.selected_path == proj.path)
+    local is_sel = (ui.selected_paths[proj.path] == true)
     ImGui.TableNextRow(ctx, 0, row_h)
     ImGui.TableSetColumnIndex(ctx, 0)
     local cx, cy = ImGui.GetCursorPos(ctx)
@@ -897,10 +975,31 @@ local function render_project_table(list)
     -- Selectable hit area; is_sel drives Col_Header highlight
     ImGui.SetCursorPos(ctx, cx + 4, cy)
     local clicked = ImGui.Selectable(ctx, "##row_" .. proj.path, is_sel, SEL_SPAN, 0, row_h)
-    if clicked then ui.selected_path = proj.path end
+    if clicked then
+      local ctrl = ImGui.IsKeyDown(ctx, ImGui.Key_LeftCtrl)
+               or ImGui.IsKeyDown(ctx, ImGui.Key_RightCtrl)
+      if ctrl then
+        if ui.selected_paths[proj.path] then
+          ui.selected_paths[proj.path] = nil
+        else
+          ui.selected_paths[proj.path] = true
+          ui.selected_path = proj.path
+        end
+      else
+        ui.selected_paths = { [proj.path] = true }
+        ui.selected_path  = proj.path
+      end
+    end
     local row_hovered = ImGui.IsItemHovered(ctx)
     if row_hovered and ImGui.IsMouseDoubleClicked(ctx, 0) then
       open_project(proj.path)
+    end
+    if row_hovered and ImGui.IsMouseClicked(ctx, 1) then
+      if not ui.selected_paths[proj.path] then
+        ui.selected_paths = { [proj.path] = true }
+        ui.selected_path  = proj.path
+      end
+      ui.ctx_menu_open = true
     end
 
     -- Content overlaid on the selectable
@@ -993,6 +1092,44 @@ local function render_project_table(list)
   end
 
   ImGui.EndTable(ctx)
+
+  -- Context menu (triggered by right-click in the row loop above)
+  if ui.ctx_menu_open then
+    ImGui.OpenPopup(ctx, "##proj_ctx")
+    ui.ctx_menu_open = false
+  end
+  if ImGui.BeginPopup(ctx, "##proj_ctx") then
+    local n = selection_count()
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, n .. " project" .. (n ~= 1 and "s" or "") .. " selected")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Separator(ctx)
+    if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
+      set_popup.open        = true
+      set_popup.name_buf    = ""
+      set_popup.focus_input = true
+      set_popup.skip_close  = true
+    end
+    if #sets_order > 0 then
+      if ImGui.BeginMenu(ctx, "Add to existing set") then
+        for _, id in ipairs(sets_order) do
+          local s = project_sets[id]
+          if ImGui.MenuItem(ctx, s.name .. "##addto_" .. id) then
+            for path in pairs(ui.selected_paths) do
+              local dup = false
+              for _, p in ipairs(s.paths) do if p == path then dup = true; break end end
+              if not dup then s.paths[#s.paths + 1] = path end
+            end
+            save_sets()
+            ui.flash_msg = "Added to \"" .. s.name .. "\""
+            ui.flash_t   = os.time()
+          end
+        end
+        ImGui.EndMenu(ctx)
+      end
+    end
+    ImGui.EndPopup(ctx)
+  end
 end
 
 -- ── Render: filtered project list ─────────────────────────────────────
@@ -1060,6 +1197,101 @@ local function render_pinned_panel()
   end
 
   render_project_table(filtered_projects(pinned_src))
+end
+
+-- ── Render: project sets panel ────────────────────────────────────────
+local function render_sets_panel()
+  ImGui.SetCursorPos(ctx, 10, 10)
+
+  if #sets_order == 0 then
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.TextWrapped(ctx, "No project sets yet.")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Dummy(ctx, 0, 6)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.TextWrapped(ctx,
+      "Select projects in the Recent or Pinned tab, then right-click \xe2\x86\x92 Create new project set.")
+    ImGui.PopStyleColor(ctx)
+    return
+  end
+
+  local row_h    = 36
+  local tbl_flags = (rawget(ImGui, "TableFlags_BordersInnerV") or 0)
+  if not ImGui.BeginTable(ctx, "##setstbl", 3, tbl_flags) then return end
+  ImGui.TableSetupColumn(ctx, "##sname", ImGui.TableColumnFlags_WidthStretch)
+  ImGui.TableSetupColumn(ctx, "##scnt",  ImGui.TableColumnFlags_WidthFixed, 64)
+  ImGui.TableSetupColumn(ctx, "##sact",  ImGui.TableColumnFlags_WidthFixed, 56)
+
+  local dl     = ImGui.GetWindowDrawList(ctx)
+  local win_sx = select(1, ImGui.GetWindowPos(ctx))
+  local win_sw = ImGui.GetWindowWidth(ctx)
+  local to_delete = nil
+
+  for _, id in ipairs(sets_order) do
+    local s      = project_sets[id]
+    local is_sel = (ui.selected_set_id == id)
+
+    ImGui.TableNextRow(ctx, 0, row_h)
+    ImGui.TableSetColumnIndex(ctx, 0)
+    local cx, cy = ImGui.GetCursorPos(ctx)
+    local sx, sy = ImGui.GetCursorScreenPos(ctx)
+
+    ImGui.SetCursorPos(ctx, cx + 4, cy)
+    local clicked  = ImGui.Selectable(ctx, "##setrow_" .. id, is_sel, SEL_SPAN, 0, row_h)
+    if clicked then
+      ui.selected_set_id = id
+      clear_selection()
+    end
+    local row_hovered = ImGui.IsItemHovered(ctx)
+    if row_hovered and ImGui.IsMouseDoubleClicked(ctx, 0) then
+      open_project_set(id)
+    end
+
+    ImGui.SameLine(ctx)
+    ImGui.SetCursorPos(ctx, cx + 14, cy + math.max(2, math.floor((row_h - 14) * 0.3)))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
+    ImGui.Text(ctx, s.name)
+    ImGui.PopStyleColor(ctx)
+
+    ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
+
+    ImGui.TableSetColumnIndex(ctx, 1)
+    push_mono()
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, tostring(#s.paths) .. " proj")
+    ImGui.PopStyleColor(ctx)
+    pop_mono()
+
+    ImGui.TableSetColumnIndex(ctx, 2)
+    if row_hovered or is_sel then
+      ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 2, 0)
+      push_btn(0x00000000, C.panel3, C.border)
+      ImGui.SetCursorPosY(ctx, cy + math.max(2, math.floor((row_h - 16) * 0.5)))
+
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
+      if ImGui.SmallButton(ctx, "\xe2\x96\xb6##ops_" .. id) then open_project_set(id) end
+      ImGui.PopStyleColor(ctx)
+      ImGui.SameLine(ctx)
+
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
+      if ImGui.SmallButton(ctx, "\xe2\x9c\x95##dls_" .. id) then to_delete = id end
+      ImGui.PopStyleColor(ctx)
+
+      pop_btn()
+      ImGui.PopStyleVar(ctx)
+    end
+  end
+
+  ImGui.EndTable(ctx)
+
+  if to_delete then
+    for i, id in ipairs(sets_order) do
+      if id == to_delete then table.remove(sets_order, i); break end
+    end
+    project_sets[to_delete] = nil
+    if ui.selected_set_id == to_delete then ui.selected_set_id = nil end
+    save_sets()
+  end
 end
 
 -- ── Render: templates panel ────────────────────────────────────────────
@@ -1362,7 +1594,102 @@ local function render_mini_wave(seed)
   ImGui.Dummy(ctx, w, 22)
 end
 
+local function render_set_detail_pane()
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing,    6,  4)
+
+  local s = ui.selected_set_id and project_sets[ui.selected_set_id]
+  if not s then
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "SETS")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Separator(ctx)
+    ImGui.Dummy(ctx, 0, 4)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.TextWrapped(ctx, "Select a set to see its projects.")
+    ImGui.PopStyleColor(ctx)
+    ImGui.PopStyleVar(ctx, 2)
+    return
+  end
+
+  -- Set name header
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
+  ImGui.TextWrapped(ctx, s.name)
+  ImGui.PopStyleColor(ctx)
+  push_mono()
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+  ImGui.Text(ctx, tostring(#s.paths) .. " project" .. (#s.paths ~= 1 and "s" or ""))
+  ImGui.PopStyleColor(ctx)
+  pop_mono()
+
+  ImGui.Dummy(ctx, 0, 6)
+
+  -- Open Set button (full width)
+  if #s.paths > 0 then
+    local aw = select(1, ImGui.GetContentRegionAvail(ctx))
+    push_btn(C.accent2, C.accent, C.accent2)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
+    if ImGui.Button(ctx, "\xe2\x96\xb6  Open Set##sd_open", aw, 24) then
+      open_project_set(s.id)
+    end
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+  else
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.TextWrapped(ctx, "Set is empty.")
+    ImGui.PopStyleColor(ctx)
+  end
+
+  ImGui.Dummy(ctx, 0, 8)
+
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+  ImGui.Text(ctx, "PROJECTS")
+  ImGui.PopStyleColor(ctx)
+  ImGui.Separator(ctx)
+  ImGui.Dummy(ctx, 0, 2)
+
+  local avail_h = select(2, ImGui.GetContentRegionAvail(ctx))
+  if ImGui.BeginChild(ctx, "##sdprojlist", 0, avail_h, 0) then
+    local to_remove = nil
+    for i, path in ipairs(s.paths) do
+      local exists = reaper.file_exists(path)
+      local name   = path_name(path)
+      local avail  = select(1, ImGui.GetContentRegionAvail(ctx))
+
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, exists and C.text or C.text4)
+      ImGui.Text(ctx, name)
+      ImGui.PopStyleColor(ctx)
+      if not exists then
+        ImGui.SameLine(ctx, 0, 4)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
+        ImGui.Text(ctx, "\xe2\x9a\xa0")
+        ImGui.PopStyleColor(ctx)
+      end
+
+      ImGui.SameLine(ctx)
+      ImGui.SetCursorPosX(ctx, avail - 18)
+      push_btn(0x00000000, C.panel3, C.border)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+      if ImGui.SmallButton(ctx, "\xc3\x97##rmfset_" .. i) then
+        to_remove = i
+      end
+      ImGui.PopStyleColor(ctx)
+      pop_btn()
+    end
+    if to_remove then
+      table.remove(s.paths, to_remove)
+      save_sets()
+    end
+    ImGui.EndChild(ctx)
+  end
+
+  ImGui.PopStyleVar(ctx, 2)
+end
+
 local function render_detail_pane()
+  -- Sets tab has its own detail pane
+  if ui.tab == "sets" then render_set_detail_pane(); return end
+
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing,    6,  4)
 
@@ -1458,7 +1785,7 @@ local function render_detail_pane()
   ImGui.Text(ctx, "TAGS")
   ImGui.PopStyleColor(ctx)
   ImGui.SameLine(ctx)
-  ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - 70)
+  ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - 94)
   push_btn(0x00000000, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.SmallButton(ctx, "+ Add / Edit##open_tp") then
@@ -1776,6 +2103,111 @@ local function render_tag_popup()
   ImGui.PopStyleColor(ctx, 2)
 end
 
+-- ── Render: set creation popup ───────────────────────────────────────
+local function render_set_popup()
+  if not set_popup.open then return end
+
+  local pw, ph = 320, 148
+  local cx = ui.win_x + math.floor((ui.win_w - pw) / 2)
+  local cy = ui.win_y + math.floor((ui.win_h - ph) / 2)
+  ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
+  ImGui.SetNextWindowSize(ctx, pw, ph, ImGui.Cond_Always)
+
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg, C.panel2)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Border,   C.border2)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding,  10, 10)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowRounding,  4)
+
+  local pop_flags = ImGui.WindowFlags_NoCollapse
+                  | ImGui.WindowFlags_NoResize
+                  | ImGui.WindowFlags_NoTitleBar
+                  | ImGui.WindowFlags_NoScrollbar
+  local visible = ImGui.Begin(ctx, "##setpopup", true, pop_flags)
+  if visible then
+    local wpx, wpy = ImGui.GetWindowPos(ctx)
+    local wpw      = ImGui.GetWindowWidth(ctx)
+    local wph      = ImGui.GetWindowHeight(ctx)
+
+    -- Header
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "NEW PROJECT SET")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx)
+    ImGui.SetCursorPosX(ctx, wpw - 22)
+    push_btn(0x00000000, C.panel3, C.border)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    if ImGui.SmallButton(ctx, "x##sp_close") then
+      set_popup.open = false
+      set_popup.skip_close = true
+    end
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    ImGui.Separator(ctx)
+    ImGui.Dummy(ctx, 0, 4)
+
+    -- Name input
+    if set_popup.focus_input then
+      ImGui.SetKeyboardFocusHere(ctx)
+      set_popup.focus_input = false
+    end
+    ImGui.SetNextItemWidth(ctx, -1)
+    local nc, nn = ImGui.InputText(ctx, "##sp_name", set_popup.name_buf)
+    if nc then set_popup.name_buf = nn end
+
+    ImGui.Dummy(ctx, 0, 6)
+
+    -- Confirm button
+    local n_sel     = selection_count()
+    local can_create = set_popup.name_buf ~= "" and n_sel > 0
+    local btn_label = "Create (" .. n_sel .. " project" .. (n_sel ~= 1 and "s" or "") .. ")##sp_ok"
+    if can_create then
+      push_btn(C.accent2, C.accent, C.accent2)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
+    else
+      push_btn(C.panel3, C.panel3, C.panel3)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    end
+    local do_create = ImGui.Button(ctx, btn_label, -1, 26) and can_create
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    -- Enter key also triggers creation
+    if KEY_ENTER and ImGui.IsKeyPressed(ctx, KEY_ENTER) and can_create then
+      do_create = true
+    end
+
+    if do_create then
+      local id = new_set_id()
+      project_sets[id] = { id = id, name = set_popup.name_buf, paths = selection_list() }
+      sets_order[#sets_order + 1] = id
+      save_sets()
+      ui.selected_set_id = id
+      ui.tab             = "sets"
+      set_popup.open     = false
+      set_popup.skip_close = true
+      ui.flash_msg = "Created set \"" .. project_sets[id].name .. "\""
+      ui.flash_t   = os.time()
+    end
+
+    -- Click-outside closes (same skip_close race-condition guard as tag_popup)
+    if set_popup.skip_close then
+      set_popup.skip_close = false
+    elseif ImGui.IsMouseReleased(ctx, 0) then
+      local mx, my = ImGui.GetMousePos(ctx)
+      if mx < wpx or mx > wpx + wpw or my < wpy or my > wpy + wph then
+        set_popup.open = false
+      end
+    end
+    if KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
+      set_popup.open = false
+    end
+  end
+  ImGui.End(ctx)
+  ImGui.PopStyleVar(ctx, 2)
+  ImGui.PopStyleColor(ctx, 2)
+end
+
 -- ── Render: command palette ────────────────────────────────────────────
 local function render_palette()
   local pw, ph = 500, 300
@@ -1877,6 +2309,7 @@ local function render_tabbar()
   local tab_defs = {
     { id = "recent",    label = "Recent",    count = #projects        },
     { id = "pinned",    label = "Pinned",    count = n_pinned         },
+    { id = "sets",      label = "Sets",      count = #sets_order      },
     { id = "templates", label = "Templates", count = #templates       },
     { id = "folders",   label = "Folders",   count = #watched_folders },
     { id = "settings",  label = "Settings",  count = nil              },
@@ -1997,14 +2430,15 @@ local function loop()
 
     -- Body
     local avail_w, avail_h = ImGui.GetContentRegionAvail(ctx)
-    local show_detail = (ui.tab == "recent" or ui.tab == "pinned")
-    local detail_w    = show_detail and 256 or 0
+    local show_detail = (ui.tab == "recent" or ui.tab == "pinned" or ui.tab == "sets")
+    local detail_w    = show_detail and 290 or 0
     local list_w      = show_detail and (avail_w - detail_w - 1) or -1
 
     ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
     if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - 24, 0) then
       if     ui.tab == "recent"    then render_recent_panel()
       elseif ui.tab == "pinned"    then render_pinned_panel()
+      elseif ui.tab == "sets"      then render_sets_panel()
       elseif ui.tab == "templates" then render_templates_panel()
       elseif ui.tab == "folders"   then render_folders_panel()
       elseif ui.tab == "settings"  then render_settings_panel()
@@ -2044,6 +2478,13 @@ local function loop()
   if tag_popup.open then
     push_rs_theme()
     render_tag_popup()
+    pop_rs_theme()
+  end
+
+  -- Set creation popup overlay
+  if set_popup.open then
+    push_rs_theme()
+    render_set_popup()
     pop_rs_theme()
   end
 
