@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.1.0
+-- @version 0.2.0
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
