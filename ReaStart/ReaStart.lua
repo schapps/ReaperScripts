@@ -84,6 +84,8 @@ local SEL_SPAN = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
 
 local KEY_LCTRL  = rawget(ImGui, "Key_LeftCtrl")
 local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
+local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
+local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
 local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
 local KEY_ENTER  = rawget(ImGui, "Key_Enter")
 local KEY_K      = rawget(ImGui, "Key_K")
@@ -99,6 +101,7 @@ local ui = {
   tag_filter      = nil,
   selected_path   = nil,
   selected_paths  = {},   -- path -> true (multi-select)
+  anchor_path     = nil,  -- shift-click range anchor (last plain click)
   selected_set_id = nil,  -- active set in Sets tab
   ctx_menu_open   = false,
   palette_open    = false,
@@ -204,6 +207,7 @@ end
 local function clear_selection()
   ui.selected_paths = {}
   ui.selected_path  = nil
+  ui.anchor_path    = nil
 end
 
 -- ── Tag utilities ─────────────────────────────────────────────────────
@@ -1029,18 +1033,39 @@ local function render_project_table(list)
     ImGui.SetCursorPos(ctx, cx + 4, cy)
     local clicked = ImGui.Selectable(ctx, "##row_" .. proj.path, is_sel, SEL_SPAN, 0, row_h)
     if clicked then
-      local ctrl = ImGui.IsKeyDown(ctx, ImGui.Key_LeftCtrl)
-               or ImGui.IsKeyDown(ctx, ImGui.Key_RightCtrl)
-      if ctrl then
+      local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+                 or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+      local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
+                 or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
+
+      if shift and ui.anchor_path then
+        -- Range-select: find anchor and target in the current list, select all between
+        local a_idx, b_idx
+        for i, p in ipairs(list) do
+          if p.path == ui.anchor_path then a_idx = i end
+          if p.path == proj.path      then b_idx = i end
+        end
+        if a_idx and b_idx then
+          if a_idx > b_idx then a_idx, b_idx = b_idx, a_idx end
+          ui.selected_paths = {}
+          for i = a_idx, b_idx do
+            ui.selected_paths[list[i].path] = true
+          end
+        end
+        ui.selected_path = proj.path
+        -- anchor stays unchanged for chained shift-clicks
+      elseif ctrl then
         if ui.selected_paths[proj.path] then
           ui.selected_paths[proj.path] = nil
         else
           ui.selected_paths[proj.path] = true
           ui.selected_path = proj.path
         end
+        -- ctrl-click doesn't move the anchor
       else
         ui.selected_paths = { [proj.path] = true }
         ui.selected_path  = proj.path
+        ui.anchor_path    = proj.path
       end
     end
     local row_hovered = ImGui.IsItemHovered(ctx)
