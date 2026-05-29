@@ -263,20 +263,74 @@ local function group_of(t)
   return "Earlier"
 end
 
--- ── ExtState layer ────────────────────────────────────────────────────
+-- ── File-based persistence ────────────────────────────────────────────
+-- User data lives in a file separate from the script so updates never
+-- wipe tags, notes, pinned projects, or sets.
+local DATA_FILE = reaper.GetResourcePath() .. "/Data/ReaStart_data.lua"
+
+-- Recursive Lua-value serialiser (handles strings, numbers, booleans, tables).
+local function serialize(v)
+  local t = type(v)
+  if t == "nil"     then return "nil"
+  elseif t == "boolean" then return tostring(v)
+  elseif t == "number"  then
+    if v == math.floor(v) and math.abs(v) < 2^53 then
+      return string.format("%d", v)   -- integer (timestamps, color ints)
+    else
+      return string.format("%.17g", v)
+    end
+  elseif t == "string" then return string.format("%q", v)
+  elseif t == "table"  then
+    local parts = {}
+    local n = #v
+    for i = 1, n do parts[#parts + 1] = serialize(v[i]) end
+    for k, val in pairs(v) do
+      local seq = type(k) == "number" and k == math.floor(k) and k >= 1 and k <= n
+      if not seq then
+        local key = (type(k) == "string" and k:match("^[%a_][%w_]*$"))
+                    and k or ("[" .. serialize(k) .. "]")
+        parts[#parts + 1] = key .. "=" .. serialize(val)
+      end
+    end
+    return "{" .. table.concat(parts, ",") .. "}"
+  else
+    return "nil"
+  end
+end
+
+local function save_all_state()
+  local wf = {}
+  for _, f in ipairs(watched_folders) do
+    wf[#wf + 1] = { path = f.path, watch = f.watch }
+  end
+  local data = {
+    pinned        = pinned,
+    project_tags  = project_tags,
+    project_notes = project_notes,
+    last_opened   = last_opened,
+    tag_registry  = tag_registry,
+    watched_folders = wf,
+    settings      = settings,
+    project_sets  = project_sets,
+    sets_order    = sets_order,
+  }
+  local f = io.open(DATA_FILE, "w")
+  if not f then return end
+  f:write("return " .. serialize(data) .. "\n")
+  f:close()
+end
+
+-- ── ExtState layer (kept for one-time migration) ──────────────────────
 local EXT = "ReaStart"
 
 local function es_get(k)    return reaper.GetExtState(EXT, k) end
 local function es_set(k, v) reaper.SetExtState(EXT, k, v, true) end
 local function es_has(k)    return reaper.HasExtState(EXT, k) end
 
-local function load_all_state()
-  -- pinned paths
+local function load_from_extstate()
   for path in es_get("pinned"):gmatch("[^\n]+") do
     pinned[path] = true
   end
-
-  -- tags per project (keyed by filename)
   for fname in es_get("tags_index"):gmatch("[^\n]+") do
     local ts = es_get("tags/" .. fname)
     if ts ~= "" then
@@ -286,43 +340,27 @@ local function load_all_state()
       end
     end
   end
-
-  -- notes per project
   for fname in es_get("notes_index"):gmatch("[^\n]+") do
     local n = es_get("notes/" .. fname)
     if n ~= "" then project_notes[fname] = n end
   end
-
-  -- last_opened timestamps
   for line in es_get("last_opened"):gmatch("[^\n]+") do
     local path, t = line:match("^(.*)\t(%d+)$")
     if path and t then last_opened[path] = tonumber(t) end
   end
-
-  -- watched folders
   for line in es_get("watched_folders"):gmatch("[^\n]+") do
     watched_folders[#watched_folders + 1] = { path = line, watch = true }
   end
-
-  -- settings
-  if es_has("settings/density")   then settings.density   = es_get("settings/density") end
-  if es_has("settings/show_path") then settings.show_path = es_get("settings/show_path") == "1" end
-  if es_has("settings/show_tags") then settings.show_tags = es_get("settings/show_tags") == "1" end
-  if es_has("settings/startup")    then settings.open_at_startup = es_get("settings/startup")    == "1" end
-  if es_has("settings/close_on_open") then settings.close_on_open = es_get("settings/close_on_open") == "1" end
-  if es_has("settings/accent")    then settings.accent    = es_get("settings/accent") end
-
-  -- tag registry (name → color int)
+  if es_has("settings/density")      then settings.density         = es_get("settings/density") end
+  if es_has("settings/show_path")    then settings.show_path       = es_get("settings/show_path") == "1" end
+  if es_has("settings/show_tags")    then settings.show_tags       = es_get("settings/show_tags") == "1" end
+  if es_has("settings/startup")      then settings.open_at_startup = es_get("settings/startup") == "1" end
+  if es_has("settings/close_on_open") then settings.close_on_open  = es_get("settings/close_on_open") == "1" end
+  if es_has("settings/accent")       then settings.accent          = es_get("settings/accent") end
   for line in es_get("tag_registry"):gmatch("[^\n]+") do
     local name, hex = line:match("^(.+)\t([0-9a-fA-F]+)$")
     if name and hex then tag_registry[name] = tonumber(hex, 16) end
   end
-  -- seed built-in palette for any tag name not yet in the registry
-  for name, col in pairs(TAG_COLORS) do
-    if not tag_registry[name] then tag_registry[name] = col end
-  end
-
-  -- project sets
   for id in es_get("sets_index"):gmatch("[^\n]+") do
     local name = es_get("sets/" .. id .. "/name")
     local paths = {}
@@ -336,65 +374,48 @@ local function load_all_state()
   end
 end
 
-local function save_settings()
-  es_set("settings/density",   settings.density)
-  es_set("settings/show_path", settings.show_path  and "1" or "0")
-  es_set("settings/show_tags", settings.show_tags  and "1" or "0")
-  es_set("settings/startup",      settings.open_at_startup and "1" or "0")
-  es_set("settings/close_on_open", settings.close_on_open  and "1" or "0")
-  es_set("settings/accent",    settings.accent)
-end
-
-local function save_pinned()
-  local parts = {}
-  for path in pairs(pinned) do parts[#parts + 1] = path end
-  es_set("pinned", table.concat(parts, "\n"))
-end
-
-local function save_project_data(path)
-  local k = path_key(path)
-  es_set("tags/" .. k, table.concat(project_tags[k] or {}, ","))
-  es_set("notes/" .. k, project_notes[k] or "")
-  -- rebuild indices
-  local ti, ni = {}, {}
-  for key in pairs(project_tags)  do ti[#ti+1] = key end
-  for key in pairs(project_notes) do ni[#ni+1] = key end
-  es_set("tags_index",  table.concat(ti, "\n"))
-  es_set("notes_index", table.concat(ni, "\n"))
-end
-
-local function save_last_opened_state()
-  local lines = {}
-  for p, t in pairs(last_opened) do
-    lines[#lines + 1] = p .. "\t" .. tostring(t)
+local function load_all_state()
+  -- Try data file first
+  local chunk = loadfile(DATA_FILE)
+  if chunk then
+    local ok, data = pcall(chunk)
+    if ok and type(data) == "table" then
+      for k, v in pairs(data.pinned        or {}) do pinned[k]        = v end
+      for k, v in pairs(data.project_tags  or {}) do project_tags[k]  = v end
+      for k, v in pairs(data.project_notes or {}) do project_notes[k] = v end
+      for k, v in pairs(data.last_opened   or {}) do last_opened[k]   = v end
+      for k, v in pairs(data.tag_registry  or {}) do tag_registry[k]  = v end
+      for _, f in ipairs(data.watched_folders or {}) do
+        watched_folders[#watched_folders + 1] = f
+      end
+      for k, v in pairs(data.settings or {}) do settings[k] = v end
+      for k, v in pairs(data.project_sets or {}) do project_sets[k] = v end
+      for _, id in ipairs(data.sets_order or {}) do
+        sets_order[#sets_order + 1] = id
+      end
+      -- Seed built-in tag palette for any tag not yet in registry
+      for name, col in pairs(TAG_COLORS) do
+        if not tag_registry[name] then tag_registry[name] = col end
+      end
+      return  -- loaded from file, done
+    end
   end
-  es_set("last_opened", table.concat(lines, "\n"))
+
+  -- No data file found — migrate from ExtState (first run after update)
+  load_from_extstate()
+  for name, col in pairs(TAG_COLORS) do
+    if not tag_registry[name] then tag_registry[name] = col end
+  end
+  save_all_state()  -- write the data file so future runs load from it
 end
 
-local function save_watched_folders()
-  local parts = {}
-  for _, f in ipairs(watched_folders) do
-    if f.watch then parts[#parts + 1] = f.path end
-  end
-  es_set("watched_folders", table.concat(parts, "\n"))
-end
-
-local function save_tag_registry()
-  local parts = {}
-  for name, col in pairs(tag_registry) do
-    parts[#parts + 1] = name .. "\t" .. string.format("%08x", col)
-  end
-  es_set("tag_registry", table.concat(parts, "\n"))
-end
-
-local function save_sets()
-  es_set("sets_index", table.concat(sets_order, "\n"))
-  for _, id in ipairs(sets_order) do
-    local s = project_sets[id]
-    es_set("sets/" .. id .. "/name",  s.name)
-    es_set("sets/" .. id .. "/paths", table.concat(s.paths, "\n"))
-  end
-end
+local function save_settings()        save_all_state() end
+local function save_pinned()          save_all_state() end
+local function save_project_data(_)   save_all_state() end
+local function save_last_opened_state() save_all_state() end
+local function save_watched_folders() save_all_state() end
+local function save_tag_registry()    save_all_state() end
+local function save_sets()            save_all_state() end
 
 -- ── Data layer ────────────────────────────────────────────────────────
 
@@ -2544,12 +2565,13 @@ templates = get_templates()
 build_project_list()
 
 reaper.atexit(function()
-  -- Flush live notes buffers
+  -- Flush live notes buffers then write data file once
+  local dirty = false
   for path, buf in pairs(notes_buf) do
-    local k = path_key(path)
-    project_notes[k] = buf
-    save_project_data(path)
+    project_notes[path_key(path)] = buf
+    dirty = true
   end
+  if dirty then save_all_state() end
 end)
 
 reaper.defer(loop)
