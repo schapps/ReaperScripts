@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="27b356b0efac253a52cfb62a773279fbb7548f8d">
+<index version="1" name="SPS Scripts" commit="0127d70a0c3afe8b756511a55e99311278ddc2cf">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -319,6 +319,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T18:24:59Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3b33dc54d14e1ac3796c90bfeebda8fca99221e4/Items/Show%20Sequence%20Delay%20Times%20for%20Selected%20Items.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Smart Export Selected Items (GUI).lua" type="script" desc="Smart Export Selected Items (GUI)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI render-template dialog for Smart Export Selected Items. Supports multiple named render templates (tabs), normalization controls, and folder browsing. Run the companion headless script to re-export using the last-active template without the GUI appearing. SWS extension is required.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-05-29T21:05:30Z">
+        <changelog><![CDATA[05/28/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0127d70a0c3afe8b756511a55e99311278ddc2cf/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
@@ -5162,6 +5178,9 @@
       </version>
       <version name="0.2.0" author="Stephen Schappler" time="2026-05-29T16:23:34Z">
         <source main="main">https://github.com/schapps/ReaperScripts/raw/27b356b0efac253a52cfb62a773279fbb7548f8d/ReaStart/ReaStart.lua</source>
+      </version>
+      <version name="0.2.1" author="Stephen Schappler" time="2026-05-29T21:05:30Z">
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0127d70a0c3afe8b756511a55e99311278ddc2cf/ReaStart/ReaStart.lua</source>
       </version>
     </reapack>
   </category>
