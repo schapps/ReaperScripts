@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.2.3
+-- @version 0.2.4
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -52,16 +52,8 @@ local C = {
 
 local TAG_COLORS = {
   mix        = 0xc78a4aff,
-  master     = 0xb079a3ff,
-  album      = 0x9b8fc4ff,
-  live       = 0x6b8db8ff,
+  source     = 0xb079a3ff,
   sounddesign= 0x5fb09eff,
-  scoring    = 0xc89a4aff,
-  drums      = 0xc78a4aff,
-  vocal      = 0xb079a3ff,
-  podcast    = 0x6b8db8ff,
-  client     = 0x9b8fc4ff,
-  sketch     = 0x6c6c6cff,
   archive    = 0x4a4a4aff,
 }
 
@@ -141,14 +133,16 @@ local project_sets  = {}   -- set_id → { id, name, paths={} }
 local sets_order    = {}   -- array of set_ids in insertion order
 
 local tag_popup = {
-  open        = false,
-  skip_close  = false,
-  proj_key    = nil,
-  proj_path   = nil,
-  creating    = false,
-  focus_input = false,
-  new_name    = "",
-  new_color   = 0x9b8fc4ff,
+  open           = false,
+  skip_close     = false,
+  proj_key       = nil,
+  proj_path      = nil,
+  creating       = false,
+  editing        = false,
+  edit_orig_name = "",
+  focus_input    = false,
+  new_name       = "",
+  new_color      = 0x9b8fc4ff,
 }
 
 local set_popup = {
@@ -397,10 +391,6 @@ local function load_all_state()
       for k, v in pairs(data.project_sets or {}) do project_sets[k] = v end
       for _, id in ipairs(data.sets_order or {}) do
         sets_order[#sets_order + 1] = id
-      end
-      -- Seed built-in tag palette for any tag not yet in registry
-      for name, col in pairs(TAG_COLORS) do
-        if not tag_registry[name] then tag_registry[name] = col end
       end
       return  -- loaded from file, done
     end
@@ -1896,10 +1886,10 @@ local function render_detail_pane()
   if not notes_buf[nbuf_key] then
     notes_buf[nbuf_key] = project_notes[proj.key] or ""
   end
-  local _, note_h_avail = ImGui.GetContentRegionAvail(ctx)
+  local note_w_avail, note_h_avail = ImGui.GetContentRegionAvail(ctx)
   local note_h = math.max(48, note_h_avail - 6)
   local note_chg, new_note = ImGui.InputTextMultiline(ctx, "##notes_" .. proj.key,
-    notes_buf[nbuf_key], 0, note_h)
+    notes_buf[nbuf_key], note_w_avail, note_h)
   if note_chg then
     notes_buf[nbuf_key] = new_note
     project_notes[proj.key] = new_note
@@ -1914,7 +1904,7 @@ local function render_tag_popup()
   if not tag_popup.open then return end
 
   local pw     = 320
-  local ph     = tag_popup.creating and 640 or 320
+  local ph     = (tag_popup.creating or tag_popup.editing) and 640 or 320
   local cx     = ui.win_x + math.floor((ui.win_w - pw) / 2)
   local cy     = ui.win_y + math.floor((ui.win_h - ph) / 2)
   ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
@@ -1945,7 +1935,7 @@ local function render_tag_popup()
     push_btn(0x00000000, C.panel3, C.border)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     if ImGui.SmallButton(ctx, "x##tp_close") then
-      tag_popup.open = false; tag_popup.creating = false
+      tag_popup.open = false; tag_popup.creating = false; tag_popup.editing = false
     end
     ImGui.PopStyleColor(ctx)
     pop_btn()
@@ -1953,7 +1943,7 @@ local function render_tag_popup()
     ImGui.Dummy(ctx, 0, 2)
 
     -- ── Scrollable tag list ──────────────────────────────────────────
-    local list_h = tag_popup.creating and 148 or (ph - 96)
+    local list_h = (tag_popup.creating or tag_popup.editing) and 148 or (ph - 96)
     if ImGui.BeginChild(ctx, "##tplist", 0, list_h, 0) then
       local sorted = {}
       for name in pairs(tag_registry) do sorted[#sorted+1] = name end
@@ -2004,13 +1994,28 @@ local function render_tag_popup()
             ImGui.Text(ctx, tag_name)
             ImGui.PopStyleColor(ctx)
             if is_on then
-              ImGui.SetCursorPos(ctx, row_right - 42, ly + 6)
+              ImGui.SetCursorPos(ctx, row_right - 64, ly + 6)
               ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
               ImGui.Text(ctx, "✓")
               ImGui.PopStyleColor(ctx)
             end
+            -- Edit button
+            ImGui.SetCursorPos(ctx, row_right - 44, ly + 4)
+            push_btn(0x00000000, 0x00000000, 0x00000000)
+            ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+            if ImGui.SmallButton(ctx, "\xe2\x9c\x8e##tpedit_"..tag_name) then
+              tag_popup.editing        = true
+              tag_popup.creating       = false
+              tag_popup.edit_orig_name = tag_name
+              tag_popup.new_name       = tag_name
+              tag_popup.new_color      = get_tag_color(tag_name)
+              tag_popup.focus_input    = true
+              tag_popup.skip_close     = true
+            end
+            ImGui.PopStyleColor(ctx)
+            pop_btn()
             -- Delete button
-            ImGui.SetCursorPos(ctx, row_right - 24, ly + 4)
+            ImGui.SetCursorPos(ctx, row_right - 22, ly + 4)
             push_btn(0x00000000, 0x00000000, 0x00000000)
             ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
             if ImGui.SmallButton(ctx, "×##tpdel_"..tag_name) then
@@ -2049,8 +2054,8 @@ local function render_tag_popup()
     ImGui.Separator(ctx)
     ImGui.Dummy(ctx, 0, 6)
 
-    -- ── Create new tag form ──────────────────────────────────────────
-    if not tag_popup.creating then
+    -- ── Create / Edit tag form ───────────────────────────────────────
+    if not tag_popup.creating and not tag_popup.editing then
       push_btn(0x00000000, C.panel3, C.border)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
       if ImGui.Button(ctx, "+ Create new tag…##tp_new", -1, 24) then
@@ -2064,7 +2069,7 @@ local function render_tag_popup()
       pop_btn()
     else
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
-      ImGui.Text(ctx, "NEW TAG")
+      ImGui.Text(ctx, tag_popup.editing and "EDIT TAG" or "NEW TAG")
       ImGui.PopStyleColor(ctx)
       ImGui.Dummy(ctx, 0, 4)
 
@@ -2095,27 +2100,64 @@ local function render_tag_popup()
 
       ImGui.Dummy(ctx, 0, 8)
 
-      -- Create / Cancel
-      local can_save = tag_popup.new_name ~= "" and not tag_registry[tag_popup.new_name]
-      push_btn(can_save and C.accent2 or C.panel3,
-               can_save and C.accent  or C.panel3, C.border)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, can_save and 0xffffffff or C.text4)
-      local created = ImGui.Button(ctx, "Create##tp_create", -1, 26)
-      ImGui.PopStyleColor(ctx)
-      pop_btn()
-      if created and can_save then
-        tag_registry[tag_popup.new_name] = tag_popup.new_color
-        save_tag_registry()
-        tag_popup.creating   = false
-        tag_popup.skip_close = true
-        tag_popup.new_name   = ""
+      if tag_popup.editing then
+        -- Save (rename + recolor)
+        local name_taken = tag_popup.new_name ~= tag_popup.edit_orig_name
+                           and tag_registry[tag_popup.new_name] ~= nil
+        local can_save   = tag_popup.new_name ~= "" and not name_taken
+        push_btn(can_save and C.accent2 or C.panel3,
+                 can_save and C.accent  or C.panel3, C.border)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, can_save and 0xffffffff or C.text4)
+        local saved = ImGui.Button(ctx, "Save##tp_save", -1, 26)
+        ImGui.PopStyleColor(ctx)
+        pop_btn()
+        if saved and can_save then
+          local orig = tag_popup.edit_orig_name
+          local new  = tag_popup.new_name
+          if new ~= orig then
+            tag_registry[new]  = tag_popup.new_color
+            tag_registry[orig] = nil
+            for _, tags in pairs(project_tags) do
+              for i, t in ipairs(tags) do
+                if t == orig then tags[i] = new end
+              end
+            end
+            for _, p in ipairs(projects) do p.tags = project_tags[p.key] or {} end
+          else
+            tag_registry[orig] = tag_popup.new_color
+          end
+          save_tag_registry()
+          rebuild_all_tags()
+          tag_popup.editing        = false
+          tag_popup.edit_orig_name = ""
+          tag_popup.skip_close     = true
+        end
+      else
+        -- Create
+        local can_save = tag_popup.new_name ~= "" and not tag_registry[tag_popup.new_name]
+        push_btn(can_save and C.accent2 or C.panel3,
+                 can_save and C.accent  or C.panel3, C.border)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, can_save and 0xffffffff or C.text4)
+        local created = ImGui.Button(ctx, "Create##tp_create", -1, 26)
+        ImGui.PopStyleColor(ctx)
+        pop_btn()
+        if created and can_save then
+          tag_registry[tag_popup.new_name] = tag_popup.new_color
+          save_tag_registry()
+          tag_popup.creating   = false
+          tag_popup.skip_close = true
+          tag_popup.new_name   = ""
+        end
       end
+
       ImGui.Dummy(ctx, 0, 2)
       push_btn(0x00000000, C.panel3, C.border)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
       if ImGui.Button(ctx, "Cancel##tp_cancel", -1, 24) then
-        tag_popup.creating   = false
-        tag_popup.skip_close = true
+        tag_popup.creating       = false
+        tag_popup.editing        = false
+        tag_popup.edit_orig_name = ""
+        tag_popup.skip_close     = true
       end
       ImGui.PopStyleColor(ctx)
       pop_btn()
@@ -2131,13 +2173,18 @@ local function render_tag_popup()
     elseif ImGui.IsMouseReleased(ctx, 0) then
       local mx, my = ImGui.GetMousePos(ctx)
       if mx < wpx or mx > wpx + wpw or my < wpy or my > wpy + wph then
-        tag_popup.open = false; tag_popup.creating = false
+        tag_popup.open = false; tag_popup.creating = false; tag_popup.editing = false
       end
     end
-    -- Escape closes creation form (or popup if form not open)
+    -- Escape closes edit/create form first, then popup
     if KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
-      if tag_popup.creating then tag_popup.creating = false
-      else tag_popup.open = false end
+      if tag_popup.creating then
+        tag_popup.creating = false
+      elseif tag_popup.editing then
+        tag_popup.editing = false; tag_popup.edit_orig_name = ""
+      else
+        tag_popup.open = false
+      end
     end
   end
   ImGui.End(ctx)
