@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.2.6
+-- @version 0.3.0
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -113,6 +113,7 @@ local ui = {
 }
 
 local projects        = {}
+local folder_projects = {}
 local templates       = {}
 local watched_folders = {}
 local meta_cache      = {}
@@ -120,13 +121,14 @@ local all_tags        = {}
 local notes_buf       = {}   -- full_path → live edit string
 
 local settings = {
-  density           = "comfort",
-  show_path         = true,
-  show_tags         = true,
-  open_at_startup   = false,
-  close_on_open     = true,
-  open_in_new_tab   = false,
-  accent            = "#9b8fc4",
+  density            = "comfort",
+  show_path          = true,
+  show_tags          = true,
+  open_at_startup    = false,
+  close_on_open      = true,
+  open_in_new_tab    = false,
+  accent             = "#9b8fc4",
+  ignore_subprojects = false,
 }
 
 local pinned        = {}   -- full_path → true
@@ -305,7 +307,7 @@ end
 local function save_all_state()
   local wf = {}
   for _, f in ipairs(watched_folders) do
-    wf[#wf + 1] = { path = f.path, watch = f.watch }
+    wf[#wf + 1] = { path = f.path }
   end
   local data = {
     pinned        = pinned,
@@ -499,17 +501,27 @@ local function get_templates()
   return result
 end
 
-local function get_folder_files(dir)
+local function get_folder_files_recursive(root)
   local result = {}
-  local i = 0
-  repeat
-    local f = reaper.EnumerateFiles(dir, i)
-    if f and f ~= "" then
-      local ext = (f:match("%.([^.]+)$") or ""):lower()
-      if ext == "rpp" then result[#result + 1] = dir .. "/" .. f end
-    end
-    i = i + 1
-  until not f or f == "" or i > 1000
+  local function scan(dir)
+    local i = 0
+    repeat
+      local f = reaper.EnumerateFiles(dir, i)
+      if f and f ~= "" then
+        if (f:match("%.([^.]+)$") or ""):lower() == "rpp" then
+          result[#result + 1] = dir .. "/" .. f
+        end
+      end
+      i = i + 1
+    until not f or f == "" or i > 1000
+    i = 0
+    repeat
+      local sub = reaper.EnumerateSubdirectories(dir, i)
+      if sub and sub ~= "" then scan(dir .. "/" .. sub) end
+      i = i + 1
+    until not sub or sub == "" or i > 200
+  end
+  scan(root)
   return result
 end
 
@@ -570,6 +582,15 @@ local function rank_group(rank)
   return "Earlier"
 end
 
+local function rebuild_all_tags()
+  local tag_set = {}
+  for _, p in ipairs(projects)        do for _, t in ipairs(p.tags) do tag_set[t] = true end end
+  for _, p in ipairs(folder_projects) do for _, t in ipairs(p.tags) do tag_set[t] = true end end
+  all_tags = {}
+  for t in pairs(tag_set) do all_tags[#all_tags + 1] = t end
+  table.sort(all_tags)
+end
+
 local function build_project_list()
   local seen   = {}
   local result = {}
@@ -598,32 +619,6 @@ local function build_project_list()
     end
   end
 
-  for _, folder in ipairs(watched_folders) do
-    if folder.watch then
-      for _, path in ipairs(get_folder_files(folder.path)) do
-        if not seen[path] then
-          seen[path] = true
-          local k = path_key(path)
-          local t = last_opened[path] or (os.time() - 86400 * 60)
-          local sz = file_size(path)
-          result[#result + 1] = {
-            name     = path_name(path),
-            path     = path,
-            key      = k,
-            pinned   = pinned[path] or false,
-            tags     = project_tags[k] or {},
-            notes    = project_notes[k] or "",
-            last_t   = t,
-            last_str = fmt_ago(t),
-            size_b   = sz,
-            size_str = fmt_size(sz),
-            group    = pinned[path] and "Pinned" or group_of(t),
-          }
-        end
-      end
-    end
-  end
-
   -- Sort: pinned first, then by Reaper's recent-list rank (position = truth for recency)
   table.sort(result, function(a, b)
     if a.pinned ~= b.pinned then return a.pinned end
@@ -631,14 +626,46 @@ local function build_project_list()
   end)
 
   projects = result
+  rebuild_all_tags()
+end
 
-  local tag_set = {}
-  for _, p in ipairs(projects) do
-    for _, t in ipairs(p.tags) do tag_set[t] = true end
+local function build_folder_projects()
+  local result = {}
+  local seen   = {}
+  for _, folder in ipairs(watched_folders) do
+    local root  = folder.path
+    local label = root:match("[^\\/]+$") or root
+    local files = get_folder_files_recursive(root)
+    table.sort(files)
+    for _, path in ipairs(files) do
+      if not seen[path] then
+        seen[path] = true
+        local k  = path_key(path)
+        local t  = last_opened[path]
+        local sz = file_size(path)
+        result[#result + 1] = {
+          name     = path_name(path),
+          path     = path,
+          key      = k,
+          pinned   = pinned[path] or false,
+          tags     = project_tags[k] or {},
+          notes    = project_notes[k] or "",
+          last_t   = t,
+          last_str = t and fmt_ago(t) or "—",
+          size_b   = sz,
+          size_str = fmt_size(sz),
+          group    = label,
+        }
+      end
+    end
   end
-  all_tags = {}
-  for t in pairs(tag_set) do all_tags[#all_tags + 1] = t end
-  table.sort(all_tags)
+  table.sort(result, function(a, b)
+    if a.group ~= b.group then return a.group < b.group end
+    if a.pinned ~= b.pinned then return a.pinned end
+    return a.name:lower() < b.name:lower()
+  end)
+  folder_projects = result
+  rebuild_all_tags()
 end
 
 -- ── Open project ──────────────────────────────────────────────────────
@@ -1127,7 +1154,7 @@ local function render_project_table(list)
     end
 
     -- Subtle separator between rows (push full-width clip rect to escape column 0 bounds)
-    ImGui.DrawList_PushClipRect(dl, win_sx, sy, win_sx + win_sw, sy + row_h, false)
+    ImGui.DrawList_PushClipRect(dl, win_sx, sy, win_sx + win_sw, sy + row_h, true)
     ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
     ImGui.DrawList_PopClipRect(dl)
 
@@ -1170,6 +1197,7 @@ local function render_project_table(list)
       end
       save_pinned()
       build_project_list()
+      build_folder_projects()
     end
     ImGui.Separator(ctx)
     if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
@@ -1249,24 +1277,6 @@ local function render_recent_panel()
   ImGui.Dummy(ctx, 0, 2)
 
   render_project_table(list)
-end
-
--- ── Render: pinned panel ───────────────────────────────────────────────
-local function render_pinned_panel()
-  local pinned_src = {}
-  for _, p in ipairs(projects) do
-    if p.pinned then pinned_src[#pinned_src + 1] = p end
-  end
-
-  if #pinned_src == 0 then
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
-    ImGui.SetCursorPos(ctx, 10, 10)
-    ImGui.TextWrapped(ctx, "No pinned projects. Click the ★ icon on any project row to pin it.")
-    ImGui.PopStyleColor(ctx)
-    return
-  end
-
-  render_project_table(filtered_projects(pinned_src))
 end
 
 -- ── Render: project sets panel ────────────────────────────────────────
@@ -1440,26 +1450,24 @@ end
 
 -- ── Render: folders panel ──────────────────────────────────────────────
 local function render_folders_panel()
-  ImGui.SetCursorPos(ctx, 10, 10)
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 6, 6)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 6, 4)
 
-  local remove_idx = nil
-  for fi, folder in ipairs(watched_folders) do
-    ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel2)
-    local fcv = ImGui.BeginChild(ctx, "##fld_" .. fi, 0, 30, CHILD_BORDER)
-    if fcv then
-      ImGui.SetCursorPos(ctx, 8, 7)
+  -- ── Folder management strip ──────────────────────────────────────────
+  ImGui.SetCursorPos(ctx, 10, 10)
+
+  if #watched_folders == 0 then
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.Text(ctx, "No folders configured. Add a folder to browse its projects.")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Dummy(ctx, 0, 6)
+  else
+    local remove_idx = nil
+    push_mono()
+    for fi, folder in ipairs(watched_folders) do
+      ImGui.SetCursorPosX(ctx, 10)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text2)
       ImGui.Text(ctx, folder.path)
       ImGui.PopStyleColor(ctx)
-      ImGui.SameLine(ctx)
-      -- Watch toggle
-      local changed, new_watch = ImGui.Checkbox(ctx, "Watch##fw_" .. fi, folder.watch)
-      if changed then
-        folder.watch = new_watch
-        save_watched_folders()
-        build_project_list()
-      end
       ImGui.SameLine(ctx)
       push_btn(0x00000000, C.panel3, C.border)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
@@ -1468,30 +1476,76 @@ local function render_folders_panel()
       end
       ImGui.PopStyleColor(ctx)
       pop_btn()
-      ImGui.EndChild(ctx)
     end
-    ImGui.PopStyleColor(ctx)
+    pop_mono()
+    if remove_idx then
+      table.remove(watched_folders, remove_idx)
+      save_watched_folders()
+      build_folder_projects()
+    end
+    ImGui.Dummy(ctx, 0, 4)
   end
 
-  if remove_idx then
-    table.remove(watched_folders, remove_idx)
-    save_watched_folders()
-    build_project_list()
-  end
-
-  ImGui.Dummy(ctx, 0, 4)
+  ImGui.SetCursorPosX(ctx, 10)
   push_btn(C.panel2, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.Button(ctx, "+ Add Folder…", 0, 0) then
-    local ok, user_input = reaper.GetUserInputs("Add Watched Folder", 1, "Folder path:", "")
+    local ok, user_input = reaper.GetUserInputs("Add Folder", 1, "Folder path:", "")
     if ok and user_input ~= "" then
-      watched_folders[#watched_folders + 1] = { path = user_input, watch = true }
+      watched_folders[#watched_folders + 1] = { path = user_input }
       save_watched_folders()
-      build_project_list()
+      build_folder_projects()
     end
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
+
+  -- Separator
+  ImGui.Dummy(ctx, 0, 8)
+  do
+    local dl = ImGui.GetWindowDrawList(ctx)
+    local sx, sy = ImGui.GetCursorScreenPos(ctx)
+    local ww     = ImGui.GetWindowWidth(ctx)
+    ImGui.DrawList_AddLine(dl, sx, sy, sx + ww, sy, C.border, 1)
+  end
+  ImGui.Dummy(ctx, 0, 4)
+
+  render_tag_bar()
+
+  -- ── Project list ─────────────────────────────────────────────────────
+  if #watched_folders > 0 and #folder_projects == 0 then
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.SetCursorPosX(ctx, 10)
+    ImGui.Text(ctx, "No .rpp files found in configured folders.")
+    ImGui.PopStyleColor(ctx)
+  else
+    ImGui.SetCursorPosX(ctx, 10)
+    local chg, new_val = ImGui.Checkbox(ctx, "Ignore Subprojects", settings.ignore_subprojects)
+    if chg then
+      settings.ignore_subprojects = new_val
+      save_settings()
+    end
+    ImGui.Dummy(ctx, 0, 4)
+
+    local list = filtered_projects(folder_projects)
+    if settings.ignore_subprojects then
+      local out = {}
+      for _, p in ipairs(list) do
+        if not p.path:lower():find("[/\\]media[/\\]") then
+          out[#out + 1] = p
+        end
+      end
+      list = out
+    end
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.SetCursorPosX(ctx, 10)
+    push_mono()
+    ImGui.Text(ctx, #list .. " / " .. #folder_projects .. " projects")
+    pop_mono()
+    ImGui.PopStyleColor(ctx)
+    ImGui.Dummy(ctx, 0, 2)
+    render_project_table(list)
+  end
 
   ImGui.PopStyleVar(ctx)
 end
@@ -2418,15 +2472,11 @@ end
 
 -- ── Render: custom tab bar ────────────────────────────────────────────
 local function render_tabbar()
-  local n_pinned = 0
-  for _, p in ipairs(projects) do if p.pinned then n_pinned = n_pinned + 1 end end
-
   local tab_defs = {
     { id = "recent",    label = "Recent",    count = #projects        },
-    { id = "pinned",    label = "Pinned",    count = n_pinned         },
+    { id = "folders",   label = "Folders",   count = #folder_projects },
     { id = "sets",      label = "Sets",      count = #sets_order      },
     { id = "templates", label = "Templates", count = #templates       },
-    { id = "folders",   label = "Folders",   count = #watched_folders },
     { id = "settings",  label = "Settings",  count = nil              },
   }
 
@@ -2548,17 +2598,16 @@ local function loop()
 
     -- Body
     local avail_w, avail_h = ImGui.GetContentRegionAvail(ctx)
-    local show_detail = (ui.tab == "recent" or ui.tab == "pinned" or ui.tab == "sets")
+    local show_detail = (ui.tab == "recent" or ui.tab == "sets" or ui.tab == "folders")
     local detail_w    = show_detail and 290 or 0
     local list_w      = show_detail and (avail_w - detail_w - 1) or -1
 
     ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
     if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - 24, 0, WIN_NO_NAV) then
       if     ui.tab == "recent"    then render_recent_panel()
-      elseif ui.tab == "pinned"    then render_pinned_panel()
+      elseif ui.tab == "folders"   then render_folders_panel()
       elseif ui.tab == "sets"      then render_sets_panel()
       elseif ui.tab == "templates" then render_templates_panel()
-      elseif ui.tab == "folders"   then render_folders_panel()
       elseif ui.tab == "settings"  then render_settings_panel()
       end
     end
@@ -2628,22 +2677,14 @@ local function loop()
 
   -- Arrow key navigation + Enter to open (works even when search is focused)
   if not ui.palette_open and not tag_popup.open and not set_popup.open then
-    if ui.tab == "recent" or ui.tab == "pinned" then
+    if ui.tab == "recent" or ui.tab == "folders" then
       if KEY_ENTER and ImGui.IsKeyPressed(ctx, KEY_ENTER) and ui.selected_path then
         open_project(ui.selected_path)
       end
       local nav_down = KEY_DOWN and ImGui.IsKeyPressed(ctx, KEY_DOWN)
       local nav_up   = KEY_UP   and ImGui.IsKeyPressed(ctx, KEY_UP)
       if nav_down or nav_up then
-        local src
-        if ui.tab == "recent" then
-          src = projects
-        else
-          src = {}
-          for _, p in ipairs(projects) do
-            if p.pinned then src[#src + 1] = p end
-          end
-        end
+        local src = ui.tab == "folders" and folder_projects or projects
         local list = filtered_projects(src)
         if #list > 0 then
           local cur_idx
@@ -2674,6 +2715,7 @@ end
 load_all_state()
 templates = get_templates()
 build_project_list()
+build_folder_projects()
 
 reaper.atexit(function()
   -- Flush live notes buffers then write data file once
