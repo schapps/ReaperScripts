@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.0
+-- @version 0.3.1
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -1700,6 +1700,9 @@ end
 local function get_selected()
   if not ui.selected_path then return nil end
   for _, p in ipairs(projects) do
+    if p.path == ui.selected_path then return p end
+  end
+  for _, p in ipairs(folder_projects) do
     if p.path == ui.selected_path then return p end
   end
   return nil
