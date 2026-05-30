@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.2.1
+-- @version 0.2.3
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -598,7 +598,7 @@ local function build_project_list()
         last_str = fmt_ago(display_t),
         size_b   = sz,
         size_str = fmt_size(sz),
-        group    = real_t and group_of(real_t) or rank_group(i),
+        group    = pinned[path] and "Pinned" or (real_t and group_of(real_t) or rank_group(i)),
       }
     end
   end
@@ -622,7 +622,7 @@ local function build_project_list()
             last_str = fmt_ago(t),
             size_b   = sz,
             size_str = fmt_size(sz),
-            group    = group_of(t),
+            group    = pinned[path] and "Pinned" or group_of(t),
           }
         end
       end
@@ -721,11 +721,14 @@ local function open_project_set(set_id)
 end
 
 local function reveal_path(path)
-  if reaper.CF_ShellExecute then
-    reaper.CF_ShellExecute(path)
+  local os_name = reaper.GetOS()
+  if os_name:find("Win") then
+    os.execute('explorer /select,"' .. path:gsub("/", "\\") .. '"')
+  elseif os_name:find("OSX") or os_name:find("macOS") then
+    os.execute('open -R "' .. path .. '"')
   else
     local dir = path:match("^(.*[/\\])") or path
-    os.execute('explorer "' .. dir:gsub("/", "\\") .. '"')
+    os.execute('xdg-open "' .. dir .. '"')
   end
 end
 
@@ -972,14 +975,12 @@ local function render_project_table(list)
     row_h = math.max(row_h, DENSITY_H[settings.density] or 32)
   end
 
-  local tbl_flags = ImGui.TableFlags_BordersInnerV
-                  | (rawget(ImGui, "TableFlags_NoPadOuterX") or 0)
+  local tbl_flags = (rawget(ImGui, "TableFlags_NoPadOuterX") or 0)
 
-  if not ImGui.BeginTable(ctx, "##projtbl", 3, tbl_flags) then return end
+  if not ImGui.BeginTable(ctx, "##projtbl", 2, tbl_flags) then return end
 
   ImGui.TableSetupColumn(ctx, "##name", ImGui.TableColumnFlags_WidthStretch)
   ImGui.TableSetupColumn(ctx, "##last", ImGui.TableColumnFlags_WidthFixed, 72)
-  ImGui.TableSetupColumn(ctx, "##act",  ImGui.TableColumnFlags_WidthFixed, 72)
 
   local dl         = ImGui.GetWindowDrawList(ctx)
   local win_sx, _  = ImGui.GetWindowPos(ctx)
@@ -1009,12 +1010,7 @@ local function render_project_table(list)
       push_mono()
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       ImGui.Text(ctx, label)
-      -- Get right edge of label text via SameLine trick
-      ImGui.SameLine(ctx, 0, 0)
-      local tx, ty = ImGui.GetCursorScreenPos(ctx)
-      local wx0, _ = ImGui.GetWindowPos(ctx)
-      local right_x = wx0 + ImGui.GetWindowWidth(ctx) - 8
-      ImGui.DrawList_AddLine(dl, tx + 5, ty + 7, right_x - 24, ty + 7, C.border2, 1)
+      ImGui.SameLine(ctx)
       ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - 26)
       ImGui.Text(ctx, cnt)
       ImGui.PopStyleColor(ctx)
@@ -1069,7 +1065,7 @@ local function render_project_table(list)
         ui.anchor_path    = proj.path
       end
     end
-    local row_hovered = ImGui.IsItemHovered(ctx)
+    local row_hovered = ImGui.IsMouseHoveringRect(ctx, win_sx, sy, win_sx + win_sw, sy + row_h)
     if row_hovered and ImGui.IsMouseDoubleClicked(ctx, 0) then
       open_project(proj.path)
     end
@@ -1129,8 +1125,10 @@ local function render_project_table(list)
       ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + 3, sy + row_h, stripe_c)
     end
 
-    -- Subtle separator between rows
+    -- Subtle separator between rows (push full-width clip rect to escape column 0 bounds)
+    ImGui.DrawList_PushClipRect(dl, win_sx, sy, win_sx + win_sw, sy + row_h, false)
     ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
+    ImGui.DrawList_PopClipRect(dl)
 
     -- Last opened column
     ImGui.TableSetColumnIndex(ctx, 1)
@@ -1140,34 +1138,6 @@ local function render_project_table(list)
     ImGui.PopStyleColor(ctx)
     pop_mono()
 
-    -- Actions column (reveal when row is hovered or selected)
-    ImGui.TableSetColumnIndex(ctx, 2)
-    if row_hovered or is_sel then
-      ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 2, 0)
-      push_btn(0x00000000, C.panel3, C.border)
-      ImGui.SetCursorPosY(ctx, cy + math.max(2, math.floor((row_h - 16) * 0.5)))
-
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, proj.pinned and C.accent or C.text3)
-      if ImGui.SmallButton(ctx, (proj.pinned and "★" or "☆") .. "##pin_" .. proj.path) then
-        if pinned[proj.path] then pinned[proj.path] = nil; proj.pinned = false
-        else                      pinned[proj.path] = true; proj.pinned = true end
-        save_pinned()
-      end
-      ImGui.PopStyleColor(ctx)
-      ImGui.SameLine(ctx)
-
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
-      if ImGui.SmallButton(ctx, "⇱##rv_" .. proj.path) then reveal_path(proj.path) end
-      ImGui.PopStyleColor(ctx)
-      ImGui.SameLine(ctx)
-
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
-      if ImGui.SmallButton(ctx, "▶##op_" .. proj.path) then open_project(proj.path) end
-      ImGui.PopStyleColor(ctx)
-
-      pop_btn()
-      ImGui.PopStyleVar(ctx)
-    end
   end
 
   ImGui.EndTable(ctx)
@@ -1177,11 +1147,29 @@ local function render_project_table(list)
     ImGui.OpenPopup(ctx, "##proj_ctx")
     ui.ctx_menu_open = false
   end
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_PopupRounding, 6)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 8)
   if ImGui.BeginPopup(ctx, "##proj_ctx") then
     local n = selection_count()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.Text(ctx, n .. " project" .. (n ~= 1 and "s" or "") .. " selected")
     ImGui.PopStyleColor(ctx)
+    ImGui.Separator(ctx)
+    local primary_pinned = ui.selected_path and pinned[ui.selected_path]
+    local pin_label = primary_pinned
+      and ("Unpin project" .. (n > 1 and "s" or ""))
+      or  ("Pin project"   .. (n > 1 and "s" or ""))
+    if ImGui.MenuItem(ctx, pin_label) then
+      for path in pairs(ui.selected_paths) do
+        if primary_pinned then pinned[path] = nil
+        else                   pinned[path] = true end
+        for _, p in ipairs(projects) do
+          if p.path == path then p.pinned = not primary_pinned end
+        end
+      end
+      save_pinned()
+      build_project_list()
+    end
     ImGui.Separator(ctx)
     if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
       set_popup.open        = true
@@ -1210,6 +1198,7 @@ local function render_project_table(list)
     end
     ImGui.EndPopup(ctx)
   end
+  ImGui.PopStyleVar(ctx, 2)
 end
 
 -- ── Render: filtered project list ─────────────────────────────────────
@@ -1658,27 +1647,6 @@ local function get_selected()
   return nil
 end
 
-local function render_mini_wave(seed)
-  local dl = ImGui.GetWindowDrawList(ctx)
-  local ox, oy = ImGui.GetCursorScreenPos(ctx)
-  local w  = ImGui.GetContentRegionAvail(ctx)
-  local bw, gap = 3, 1
-  local nb = math.floor(w / (bw + gap))
-  local rng = function(i)
-    local x = math.sin(seed * 9001 + i * 17.3) * 1000
-    return x - math.floor(x)
-  end
-  for i = 0, nb - 1 do
-    local v  = (math.sin(i / 4) * 0.5 + 0.5) * (0.4 + rng(i) * 0.6)
-    local bh = math.max(3, v * 22)
-    local bx = ox + i * (bw + gap)
-    local by = oy + 11 - bh / 2
-    local al = math.floor((0.3 + v * 0.65) * 255)
-    ImGui.DrawList_AddRectFilled(dl, bx, by, bx + bw, by + bh,
-      (C.accent & 0xffffff00) | al)
-  end
-  ImGui.Dummy(ctx, w, 22)
-end
 
 local function render_set_detail_pane()
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing,    6,  4)
@@ -1829,23 +1797,7 @@ local function render_detail_pane()
   ImGui.SameLine(ctx)
   push_btn(C.panel2, C.panel3, C.border)
   if ImGui.Button(ctx, "⇱##d_rev", 24, 22) then reveal_path(proj.path) end
-  ImGui.SameLine(ctx)
-  if ImGui.Button(ctx, (proj.pinned and "★" or "☆") .. "##d_pin", 24, 22) then
-    if pinned[proj.path] then
-      pinned[proj.path] = nil; proj.pinned = false
-    else
-      pinned[proj.path] = true; proj.pinned = true
-    end
-    save_pinned()
-  end
   pop_btn()
-
-  ImGui.Dummy(ctx, 0, 6)
-
-  -- Mini waveform
-  local seed = 0
-  for c in proj.name:gmatch(".") do seed = seed + string.byte(c) end
-  render_mini_wave(seed)
 
   ImGui.Dummy(ctx, 0, 6)
 
@@ -1947,7 +1899,7 @@ local function render_detail_pane()
   local _, note_h_avail = ImGui.GetContentRegionAvail(ctx)
   local note_h = math.max(48, note_h_avail - 6)
   local note_chg, new_note = ImGui.InputTextMultiline(ctx, "##notes_" .. proj.key,
-    notes_buf[nbuf_key], 4096, -1, note_h)
+    notes_buf[nbuf_key], 0, note_h)
   if note_chg then
     notes_buf[nbuf_key] = new_note
     project_notes[proj.key] = new_note
@@ -2558,18 +2510,9 @@ local function loop()
       local dx, dy = ImGui.GetCursorScreenPos(ctx)
       ImGui.DrawList_AddLine(dl, dx, dy, dx, dy + avail_h, C.border, 1)
       ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
-      ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
+      ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
       if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - 24, 0) then
-        local pad = 10
-        local ox, oy = ImGui.GetCursorPos(ctx)
-        ImGui.SetCursorPos(ctx, ox + pad, oy + pad)
-        local cw, ch = ImGui.GetContentRegionAvail(ctx)
-        ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
-        if ImGui.BeginChild(ctx, "##detail_inner", cw - pad, ch - pad, 0) then
-          render_detail_pane()
-        end
-        ImGui.EndChild(ctx)
-        ImGui.PopStyleVar(ctx)
+        render_detail_pane()
       end
       ImGui.EndChild(ctx)
       ImGui.PopStyleVar(ctx)
