@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.2.4
+-- @version 0.2.6
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -69,6 +69,8 @@ local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
 local CHILD_BORDER = rawget(ImGui, "ChildFlags_Borders")
                   or rawget(ImGui, "ChildFlags_Border") or 1
 
+local WIN_NO_NAV = rawget(ImGui, "WindowFlags_NoNavInputs") or 0
+
 -- ── ImGui constants (version-safe) ───────────────────────────────────
 local SEL_SPAN = (rawget(ImGui, "SelectableFlags_SpanAllColumns") or 0)
                | (rawget(ImGui, "SelectableFlags_AllowOverlap")
@@ -80,6 +82,7 @@ local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
 local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
 local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
 local KEY_ENTER  = rawget(ImGui, "Key_Enter")
+local KEY_F      = rawget(ImGui, "Key_F")
 local KEY_K      = rawget(ImGui, "Key_K")
 local KEY_UP     = rawget(ImGui, "Key_UpArrow")
 local KEY_DOWN   = rawget(ImGui, "Key_DownArrow")
@@ -96,6 +99,7 @@ local ui = {
   anchor_path     = nil,  -- shift-click range anchor (last plain click)
   selected_set_id = nil,  -- active set in Sets tab
   ctx_menu_open   = false,
+  search_focus    = false,
   palette_open    = false,
   palette_q       = "",
   palette_sel     = 1,
@@ -116,12 +120,13 @@ local all_tags        = {}
 local notes_buf       = {}   -- full_path → live edit string
 
 local settings = {
-  density         = "comfort",
-  show_path       = true,
-  show_tags       = true,
-  open_at_startup  = false,
-  close_on_open    = true,
-  accent          = "#9b8fc4",
+  density           = "comfort",
+  show_path         = true,
+  show_tags         = true,
+  open_at_startup   = false,
+  close_on_open     = true,
+  open_in_new_tab   = false,
+  accent            = "#9b8fc4",
 }
 
 local pinned        = {}   -- full_path → true
@@ -664,7 +669,12 @@ local function open_project(path)
     ui.flash_t   = os.time()
     return
   end
-  reaper.Main_openProject(path)
+  if settings.open_in_new_tab then
+    reaper.Main_OnCommand(40859, 0)
+    reaper.Main_openProject("noprompt:" .. path)
+  else
+    reaper.Main_openProject(path)
+  end
   last_opened[path] = os.time()
   save_last_opened_state()
   ui.flash_msg = "Opened  " .. path_name(path)
@@ -750,6 +760,8 @@ local function push_rs_theme()
     { ImGui.Col_ScrollbarGrabHovered, C.border2 },
     { ImGui.Col_Separator,       C.border },
   }
+  local nav_hl = rawget(ImGui, "Col_NavHighlight") or rawget(ImGui, "Col_NavCursor")
+  if nav_hl then colors[#colors + 1] = { nav_hl, 0x00000000 } end
   local tab_names = {
     "Col_Tab", "Col_TabHovered", "Col_TabActive",
     "Col_TabUnfocused", "Col_TabUnfocusedActive",
@@ -810,6 +822,10 @@ local function render_topbar()
     ImGui.SetNextItemWidth(ctx, avail - 4)
     ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg, C.bg)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text,    C.text2)
+    if ui.search_focus then
+      ImGui.SetKeyboardFocusHere(ctx)
+      ui.search_focus = false
+    end
     local changed, new_s = ImGui.InputText(ctx, "##search", ui.search, 256)
     if changed then ui.search = new_s end
     ImGui.PopStyleColor(ctx, 2)
@@ -839,15 +855,10 @@ local function render_tag_bar()
     for _, tag in ipairs(all_tags) do
       local tc     = get_tag_color(tag)
       local active = (ui.tag_filter == tag)
-      if active then
-        push_btn(C.accentbg, C.accentbg, C.sel)
-        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
-      else
-        push_btn(0x00000000, C.panel2, C.panel3)
-        ImGui.PushStyleColor(ctx, ImGui.Col_Text, tc)
-      end
+      push_btn(active and C.panel3 or 0x00000000, active and C.border2 or C.panel2, C.panel3)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, tc)
       if ImGui.SmallButton(ctx, "● " .. tag .. "##t_" .. tag) then
-        ui.tag_filter = (ui.tag_filter == tag) and nil or tag
+        ui.tag_filter = ui.tag_filter ~= tag and tag or nil
       end
       ImGui.PopStyleColor(ctx, 4)
       ImGui.SameLine(ctx)
@@ -1218,6 +1229,8 @@ end
 local function render_recent_panel()
   local list = filtered_projects(projects)
 
+  render_tag_bar()
+
   -- Resume card (with 10px left margin matching the project rows)
   if #projects > 0 and ui.search == "" and not ui.tag_filter then
     ImGui.Dummy(ctx, 0, 6)
@@ -1225,8 +1238,6 @@ local function render_recent_panel()
     render_resume_card(projects[1])
     ImGui.Dummy(ctx, 0, 4)
   end
-
-  render_tag_bar()
 
   ImGui.Dummy(ctx, 0, 2)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
@@ -1555,6 +1566,9 @@ local function render_settings_panel()
   setting_tog("Close on project load",
     "Automatically close ReaStart after opening a project",
     settings.close_on_open, "close_on_open")
+  setting_tog("Always open in new tab",
+    "Open projects in a new Reaper tab instead of the current one",
+    settings.open_in_new_tab, "open_in_new_tab")
 
   ImGui.Dummy(ctx, 0, 10)
   section("DISPLAY")
@@ -2504,7 +2518,7 @@ local function render_statusbar()
       ImGui.PopStyleColor(ctx)
     end
     -- Keyboard hint (right side)
-    local hint = "Ctrl+K  quick open"
+    local hint = "Ctrl+F  search   Ctrl+K  quick open"
     ImGui.SetCursorPos(ctx, ImGui.GetWindowWidth(ctx) - (#hint * 6.5) - pad_x, oy + pad_y)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.Text(ctx, hint)
@@ -2539,7 +2553,7 @@ local function loop()
     local list_w      = show_detail and (avail_w - detail_w - 1) or -1
 
     ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
-    if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - 24, 0) then
+    if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - 24, 0, WIN_NO_NAV) then
       if     ui.tab == "recent"    then render_recent_panel()
       elseif ui.tab == "pinned"    then render_pinned_panel()
       elseif ui.tab == "sets"      then render_sets_panel()
@@ -2594,10 +2608,13 @@ local function loop()
     pop_rs_theme()
   end
 
-  -- Global keyboard: Ctrl+K, Escape
+  -- Global keyboard: Ctrl+F, Ctrl+K, Escape
   if not ImGui.IsAnyItemActive(ctx) then
     local ctrl = (KEY_LCTRL and ImGui.IsKeyDown(ctx, KEY_LCTRL))
               or (KEY_RCTRL and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+    if ctrl and KEY_F and ImGui.IsKeyPressed(ctx, KEY_F) then
+      ui.search_focus = true
+    end
     if ctrl and KEY_K and ImGui.IsKeyPressed(ctx, KEY_K) then
       ui.palette_open  = true
       ui.palette_q     = ""
@@ -2606,6 +2623,47 @@ local function loop()
     end
     if not ui.palette_open and KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
       -- Could close window if desired
+    end
+  end
+
+  -- Arrow key navigation + Enter to open (works even when search is focused)
+  if not ui.palette_open and not tag_popup.open and not set_popup.open then
+    if ui.tab == "recent" or ui.tab == "pinned" then
+      if KEY_ENTER and ImGui.IsKeyPressed(ctx, KEY_ENTER) and ui.selected_path then
+        open_project(ui.selected_path)
+      end
+      local nav_down = KEY_DOWN and ImGui.IsKeyPressed(ctx, KEY_DOWN)
+      local nav_up   = KEY_UP   and ImGui.IsKeyPressed(ctx, KEY_UP)
+      if nav_down or nav_up then
+        local src
+        if ui.tab == "recent" then
+          src = projects
+        else
+          src = {}
+          for _, p in ipairs(projects) do
+            if p.pinned then src[#src + 1] = p end
+          end
+        end
+        local list = filtered_projects(src)
+        if #list > 0 then
+          local cur_idx
+          for i, p in ipairs(list) do
+            if p.path == ui.selected_path then cur_idx = i; break end
+          end
+          local new_idx
+          if nav_down then
+            new_idx = cur_idx and math.min(#list, cur_idx + 1) or 1
+          else
+            new_idx = cur_idx and math.max(1, cur_idx - 1) or #list
+          end
+          local proj = list[new_idx]
+          if proj then
+            ui.selected_paths = { [proj.path] = true }
+            ui.selected_path  = proj.path
+            ui.anchor_path    = proj.path
+          end
+        end
+      end
     end
   end
 
