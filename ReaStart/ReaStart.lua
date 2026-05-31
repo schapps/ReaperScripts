@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.5.1
+-- @version 0.5.2
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.5.2 Right-click Tag selection submenu for bulk tagging
 --   05/31/26 v0.5.1 Time-sliced incremental folder scanner; window always appears instantly
 --   05/31/26 v0.5.0 Fast startup: lazy file sizes + folder path cache + background rescan
 --   05/31/26 v0.4.4 Tag delete confirmation; no accidental deletions
@@ -1309,6 +1310,51 @@ local function render_project_table(list)
       build_templates()
     end
     ImGui.Separator(ctx)
+    -- Tag selection flyout ─────────────────────────────────────────────
+    if next(tag_registry) then
+      if ImGui.BeginMenu(ctx, "Tag selection") then
+        local sorted_ctx_tags = {}
+        for name in pairs(tag_registry) do sorted_ctx_tags[#sorted_ctx_tags + 1] = name end
+        table.sort(sorted_ctx_tags)
+
+        for _, tag_name in ipairs(sorted_ctx_tags) do
+          -- Count how many selected projects already carry this tag
+          local have_count, sel_total = 0, 0
+          for path in pairs(ui.selected_paths) do
+            sel_total = sel_total + 1
+            if has_tag(path_key(path), tag_name) then have_count = have_count + 1 end
+          end
+          local all_have = (sel_total > 0 and have_count == sel_total)
+
+          ImGui.PushStyleColor(ctx, ImGui.Col_Text, get_tag_color(tag_name))
+          local tag_clicked = ImGui.MenuItem(ctx, "\xe2\x97\x8f " .. tag_name .. "##ctx_tag_" .. tag_name, nil, all_have)
+          ImGui.PopStyleColor(ctx)
+
+          if tag_clicked then
+            for path in pairs(ui.selected_paths) do
+              local k = path_key(path)
+              if all_have then
+                remove_project_tag(k, tag_name)
+              elseif not has_tag(k, tag_name) then
+                local t = project_tags[k] or {}
+                t[#t + 1] = tag_name
+                project_tags[k] = t
+              end
+            end
+            -- Sync all in-memory project objects
+            for _, lst in ipairs({ projects, folder_projects, templates }) do
+              for _, p in ipairs(lst) do
+                p.tags = project_tags[p.key] or {}
+              end
+            end
+            save_project_data(nil)
+            rebuild_all_tags()
+          end
+        end
+        ImGui.EndMenu(ctx)
+      end
+    end
+    ImGui.Separator(ctx)
     if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
       set_popup.open        = true
       set_popup.name_buf    = ""
@@ -2172,22 +2218,27 @@ local function render_tag_popup()
             end
 
             -- Overlay: dot + name + checkmark + delete button
+            -- Vertically centre everything relative to the 26px row height.
+            local lh2 = ImGui.GetTextLineHeight(ctx)
+            local ty  = ly + math.floor((26 - lh2) * 0.5)
+
             ImGui.SameLine(ctx)
-            ImGui.SetCursorPos(ctx, lx + 8, ly + 6)
+            ImGui.SetCursorPos(ctx, lx + 8, ty)
             local dx, dy = ImGui.GetCursorScreenPos(ctx)
-            ImGui.DrawList_AddCircleFilled(dl2, dx + 4, dy + 5, 5, tag_col)
-            ImGui.SetCursorPos(ctx, lx + 24, ly + 6)
+            -- Circle centre aligned with text centre
+            ImGui.DrawList_AddCircleFilled(dl2, dx + 4, dy + math.floor(lh2 * 0.5), 5, tag_col)
+            ImGui.SetCursorPos(ctx, lx + 24, ty)
             ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
             ImGui.Text(ctx, tag_name)
             ImGui.PopStyleColor(ctx)
             if is_on then
-              ImGui.SetCursorPos(ctx, row_right - 64, ly + 6)
+              ImGui.SetCursorPos(ctx, row_right - 64, ty)
               ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
               ImGui.Text(ctx, "✓")
               ImGui.PopStyleColor(ctx)
             end
             -- Edit button
-            ImGui.SetCursorPos(ctx, row_right - 44, ly + 4)
+            ImGui.SetCursorPos(ctx, row_right - 44, ty)
             push_btn(0x00000000, 0x00000000, 0x00000000)
             ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
             if ImGui.SmallButton(ctx, "\xe2\x9c\x8e##tpedit_"..tag_name) then
@@ -2202,7 +2253,7 @@ local function render_tag_popup()
             ImGui.PopStyleColor(ctx)
             pop_btn()
             -- Delete button (arms confirmation; turns red when this tag is pending)
-            ImGui.SetCursorPos(ctx, row_right - 22, ly + 4)
+            ImGui.SetCursorPos(ctx, row_right - 22, ty)
             local is_pending = (tag_popup.confirm_delete == tag_name)
             push_btn(0x00000000, is_pending and 0x5a1a1aff or 0x00000000, 0x00000000)
             ImGui.PushStyleColor(ctx, ImGui.Col_Text, is_pending and C.danger or C.text3)
