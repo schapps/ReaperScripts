@@ -2749,7 +2749,7 @@ local function loop()
       ui.palette_focus = true
     end
     if not ui.palette_open and KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
-      -- Could close window if desired
+      ui.close_requested = true
     end
   end
 
