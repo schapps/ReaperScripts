@@ -34,6 +34,7 @@ local C = {
   hover    = 0x323232ff,
   row_hover= 0x343a40ff,
   border   = 0x3a3f45ff,
+  row_div  = 0x3a3f4540,
   border2  = 0x4a545cff,
   text     = 0xe6e6e6ff,
   text2    = 0xb8b8b8ff,
@@ -1073,9 +1074,21 @@ local function render_project_table(list)
     local cx, cy = ImGui.GetCursorPos(ctx)
     local sx, sy = ImGui.GetCursorScreenPos(ctx)
 
-    -- Selectable hit area; is_sel drives Col_Header highlight
+    -- Draw selection/hover bg via DrawList so it aligns exactly with separator lines
+    local row_hovered = ImGui.IsMouseHoveringRect(ctx, win_sx, sy, win_sx + win_sw, sy + row_h)
+    if is_sel then
+      ImGui.DrawList_AddRectFilled(dl, win_sx, sy, win_sx + win_sw, sy + row_h, C.sel)
+    elseif row_hovered then
+      ImGui.DrawList_AddRectFilled(dl, win_sx, sy, win_sx + win_sw, sy + row_h, C.row_hover)
+    end
+
+    -- Selectable hit area only; colours transparent since we drew our own bg above
+    ImGui.PushStyleColor(ctx, ImGui.Col_Header,        0x00000000)
+    ImGui.PushStyleColor(ctx, ImGui.Col_HeaderHovered, 0x00000000)
+    ImGui.PushStyleColor(ctx, ImGui.Col_HeaderActive,  0x00000000)
     ImGui.SetCursorPos(ctx, cx + 4, cy)
     local clicked = ImGui.Selectable(ctx, "##row_" .. proj.path, is_sel, SEL_SPAN, 0, row_h)
+    ImGui.PopStyleColor(ctx, 3)
     if clicked then
       local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
                  or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
@@ -1112,7 +1125,6 @@ local function render_project_table(list)
         ui.anchor_path    = proj.path
       end
     end
-    local row_hovered = ImGui.IsMouseHoveringRect(ctx, win_sx, sy, win_sx + win_sw, sy + row_h)
     if row_hovered and ImGui.IsMouseDoubleClicked(ctx, 0) then
       open_project(proj.path)
     end
@@ -1172,7 +1184,7 @@ local function render_project_table(list)
 
     -- Subtle separator between rows (push full-width clip rect to escape column 0 bounds)
     ImGui.DrawList_PushClipRect(dl, win_sx, sy, win_sx + win_sw, sy + row_h, true)
-    ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
+    ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.row_div, 1)
     ImGui.DrawList_PopClipRect(dl)
 
     -- Last opened column
@@ -1352,7 +1364,7 @@ local function render_sets_panel()
     ImGui.Text(ctx, s.name)
     ImGui.PopStyleColor(ctx)
 
-    ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
+    ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.row_div, 1)
 
     ImGui.TableSetColumnIndex(ctx, 1)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
