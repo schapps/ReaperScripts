@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.5
+-- @version 0.3.6an
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -168,6 +168,10 @@ local set_popup = {
 }
 
 local DENSITY_H = { compact = 22, comfort = 32, detail = 48 }
+
+-- Internal padding for the right-hand detail pane. Every detail tab shares this
+-- single source so left/right/top insets stay consistent across panes.
+local DETAIL_PAD_X, DETAIL_PAD_Y = 14, 12
 
 -- ── Formatters ────────────────────────────────────────────────────────
 local function fmt_ago(t)
@@ -1632,6 +1636,7 @@ local function render_settings_panel()
 
   ImGui.SetCursorPosX(ctx, 14)
   local pick_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
+  ImGui.SetNextItemWidth(ctx, 200)
   local col_chg, new_col = ImGui.ColorPicker4(ctx, "##accent_color", settings.accent, pick_flags)
   if col_chg then
     settings.accent = (new_col & 0xFFFFFF00) | 0xFF
@@ -1710,6 +1715,9 @@ local function render_set_detail_pane()
   ImGui.Dummy(ctx, 0, 2)
 
   local avail_h = select(2, ImGui.GetContentRegionAvail(ctx)) - 34
+  -- Nested child inherits the pane's WindowPadding; zero it so rows align with
+  -- the section headers above instead of getting a second inset.
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
   if ImGui.BeginChild(ctx, "##sdprojlist", 0, math.max(avail_h, 0), 0) then
     local to_remove = nil
     for i, path in ipairs(s.paths) do
@@ -1743,6 +1751,7 @@ local function render_set_detail_pane()
     end
     ImGui.EndChild(ctx)
   end
+  ImGui.PopStyleVar(ctx, 1)
 
   ImGui.Dummy(ctx, 0, 4)
   local aw = select(1, ImGui.GetContentRegionAvail(ctx))
@@ -1841,7 +1850,9 @@ local function render_detail_pane()
   ImGui.Text(ctx, "TAGS")
   ImGui.PopStyleColor(ctx)
   ImGui.SameLine(ctx)
-  ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - 94)
+  -- Right-align to the inner content edge (SmallButton = text + 2*FramePadding.x)
+  local ae_w = ImGui.CalcTextSize(ctx, "+ Add / Edit") + 12
+  ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - ae_w)
   push_btn(0x00000000, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.SmallButton(ctx, "+ Add / Edit##open_tp") then
@@ -2564,12 +2575,22 @@ local function loop()
       local dx, dy = ImGui.GetCursorScreenPos(ctx)
       ImGui.DrawList_AddLine(dl, dx, dy, dx, dy + avail_h, C.border, 1)
       ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
-      ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 10, 10)
       if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - 24, 0) then
-        render_detail_pane()
+        -- ImGui insets a child's left edge by WindowPadding but only pulls the right
+        -- edge in when a scrollbar is present — so full-width content runs flush to the
+        -- right on tabs short enough not to scroll (Sets/Templates). Render into an
+        -- inner child that is DETAIL_PAD_X narrower than the pane so the right margin
+        -- always matches the left, no scrollbar required. The reserved strip on the
+        -- right shows the same panel background, so there's no visible seam.
+        ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, DETAIL_PAD_X, DETAIL_PAD_Y)
+        local inner_flags = rawget(ImGui, "WindowFlags_NoScrollbar") or 0
+        if ImGui.BeginChild(ctx, "##detail_content", detail_w - DETAIL_PAD_X, 0, 0, inner_flags) then
+          render_detail_pane()
+        end
+        ImGui.EndChild(ctx)
+        ImGui.PopStyleVar(ctx)
       end
       ImGui.EndChild(ctx)
-      ImGui.PopStyleVar(ctx)
       ImGui.PopStyleColor(ctx)
     end
 
