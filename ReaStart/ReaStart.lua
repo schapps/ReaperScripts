@@ -1,9 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.7
+-- @version 0.3.8
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
+-- @link https://www.stephenschappler.com
+-- @changelog 
+--   05/31/26 v0.3.8 Making tag filtering additive
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
@@ -102,7 +105,7 @@ local TABLE_ROW_BG_TARGET = rawget(ImGui, "TableBgTarget_RowBg0") or 1
 local ui = {
   tab             = "recent",
   search          = "",
-  tag_filter      = nil,
+  tag_filter      = {},
   selected_path   = nil,
   selected_paths  = {},   -- path -> true (multi-select)
   anchor_path     = nil,  -- shift-click range anchor (last plain click)
@@ -905,19 +908,19 @@ local function render_tag_bar()
     ImGui.SameLine(ctx)
     for _, tag in ipairs(all_tags) do
       local tc     = get_tag_color(tag)
-      local active = (ui.tag_filter == tag)
+      local active = (ui.tag_filter[tag] == true)
       push_btn(active and C.panel3 or 0x00000000, active and C.border2 or C.panel2, C.panel3)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, tc)
       if ImGui.SmallButton(ctx, "● " .. tag .. "##t_" .. tag) then
-        ui.tag_filter = ui.tag_filter ~= tag and tag or nil
+        if active then ui.tag_filter[tag] = nil else ui.tag_filter[tag] = true end
       end
       ImGui.PopStyleColor(ctx, 4)
       ImGui.SameLine(ctx)
     end
-    if ui.tag_filter then
+    if next(ui.tag_filter) then
       push_btn(0x00000000, C.panel2, C.panel3)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
-      if ImGui.SmallButton(ctx, "✕ clear##tagclear") then ui.tag_filter = nil end
+      if ImGui.SmallButton(ctx, "✕ clear##tagclear") then ui.tag_filter = {} end
       ImGui.PopStyleColor(ctx, 4)
     end
     ImGui.EndChild(ctx)
@@ -1266,15 +1269,16 @@ local function filtered_projects(source)
     local name_match = q == "" or p.name:lower():find(q, 1, true)
     local path_match = q == "" or p.path:lower():find(q, 1, true)
     if (name_match or path_match) then
-      if not ui.tag_filter then
+      if not next(ui.tag_filter) then
         result[#result + 1] = p
       else
-        for _, t in ipairs(p.tags) do
-          if t == ui.tag_filter then
-            result[#result + 1] = p
-            break
-          end
+        local proj_tags = {}
+        for _, t in ipairs(p.tags) do proj_tags[t] = true end
+        local match = true
+        for tag in pairs(ui.tag_filter) do
+          if not proj_tags[tag] then match = false; break end
         end
+        if match then result[#result + 1] = p end
       end
     end
   end
@@ -1288,7 +1292,7 @@ local function render_recent_panel()
   render_tag_bar()
 
   -- Resume card (with 10px left margin matching the project rows)
-  if #projects > 0 and ui.search == "" and not ui.tag_filter then
+  if #projects > 0 and ui.search == "" and not next(ui.tag_filter) then
     ImGui.Dummy(ctx, 0, 6)
     ImGui.SetCursorPosX(ctx, 10)
     render_resume_card(projects[1])
