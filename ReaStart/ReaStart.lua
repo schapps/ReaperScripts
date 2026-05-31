@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.8
+-- @version 0.3.9
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
--- @changelog 
+-- @changelog
+--   05/31/26 v0.3.9 Font size slider
 --   05/31/26 v0.3.8 Making tag filtering additive
 
 if not reaper.ImGui_GetBuiltinPath then
@@ -74,6 +75,8 @@ local TAG_COLORS = {
 -- ── Context ───────────────────────────────────────────────────────────
 local ctx = ImGui.CreateContext("ReaStart")
 
+local FONT_DEFAULT = 13
+
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
                 | ImGui.WindowFlags_NoScrollbar
                 | ImGui.WindowFlags_NoScrollWithMouse
@@ -140,7 +143,14 @@ local settings = {
   open_in_new_tab    = false,
   accent             = 0x9b8fc4ff,
   ignore_subprojects = false,
+  font_size          = 13,
 }
+
+-- Returns v scaled proportionally to the current font size.
+-- Defined here so both settings and FONT_DEFAULT are in scope as upvalues.
+local function sc(v)
+  return math.floor(v * (settings.font_size or FONT_DEFAULT) / FONT_DEFAULT)
+end
 
 local pinned        = {}   -- full_path → true
 local project_tags  = {}   -- filename_key → {tag,...}
@@ -874,7 +884,7 @@ local function pop_btn() ImGui.PopStyleColor(ctx, 3) end
 local function render_topbar()
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 8, 0)
-  if ImGui.BeginChild(ctx, "##topbar", 0, 36, 0) then
+  if ImGui.BeginChild(ctx, "##topbar", 0, sc(36), 0) then
     ImGui.SetCursorPos(ctx, 8, 8)
     local avail = ImGui.GetContentRegionAvail(ctx)
     ImGui.SetNextItemWidth(ctx, avail - 4)
@@ -899,7 +909,7 @@ local function render_tag_bar()
   if #all_tags == 0 then return end
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 4, 0)
-  local tbv = ImGui.BeginChild(ctx, "##tagbar", 0, 26, 0)
+  local tbv = ImGui.BeginChild(ctx, "##tagbar", 0, sc(26), 0)
   if tbv then
     ImGui.SetCursorPos(ctx, 8, 5)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
@@ -932,7 +942,7 @@ end
 -- ── Render: resume card ────────────────────────────────────────────────
 local function render_resume_card(proj)
   if not proj then return end
-  local card_h = 72
+  local card_h = sc(72)
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel2)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
   local cv = ImGui.BeginChild(ctx, "##resume", 0, card_h, CHILD_BORDER)
@@ -947,7 +957,7 @@ local function render_resume_card(proj)
     ImGui.DrawList_AddRectFilled(dl, wx, wy, wx + 3, wy + card_h, C.accent)
 
     -- Eyebrow: pulsing dot + label
-    ImGui.SetCursorPos(ctx, 14, 10)
+    ImGui.SetCursorPos(ctx, 14, sc(10))
     local pulse = 0.55 + 0.45 * math.abs(math.sin(ImGui.GetTime(ctx) * math.pi))
     local dot_c = (C.teal & 0xffffff00) | math.floor(pulse * 255)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, dot_c)
@@ -959,13 +969,13 @@ local function render_resume_card(proj)
     ImGui.PopStyleColor(ctx)
 
     -- Project name
-    ImGui.SetCursorPos(ctx, 14, 29)
+    ImGui.SetCursorPos(ctx, 14, sc(29))
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
     ImGui.Text(ctx, proj.name)
     ImGui.PopStyleColor(ctx)
 
     -- Meta row: last_str · tracks · bpm
-    ImGui.SetCursorPos(ctx, 14, 50)
+    ImGui.SetCursorPos(ctx, 14, sc(50))
     local meta  = parse_rpp(proj.path) or {}
     local parts = { proj.last_str }
     if meta.tracks and meta.tracks > 0 then
@@ -979,7 +989,7 @@ local function render_resume_card(proj)
     ImGui.PopStyleColor(ctx)
 
     -- Resume button (right-aligned, vertically centred)
-    local btn_w, btn_h = 76, 26
+    local btn_w, btn_h = sc(76), sc(26)
     ImGui.SetCursorPos(ctx, ww - btn_w - 10, math.floor((card_h - btn_h) * 0.5))
     push_btn(C.accent2, C.accent, C.accent2)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
@@ -1022,10 +1032,10 @@ local function render_project_table(list)
   if settings.density == "detail"  and settings.show_tags then n_sub = n_sub + 1 end
   local row_h
   if settings.density == "compact" then
-    row_h = DENSITY_H.compact  -- 22px, single line centered
+    row_h = sc(DENSITY_H.compact)
   else
     row_h = math.ceil(5 + (1 + n_sub) * lh_sp + 4)
-    row_h = math.max(row_h, DENSITY_H[settings.density] or 32)
+    row_h = math.max(row_h, sc(DENSITY_H[settings.density] or 32))
   end
 
   local tbl_flags = (rawget(ImGui, "TableFlags_NoPadOuterX") or 0)
@@ -1325,7 +1335,7 @@ local function render_sets_panel()
     return
   end
 
-  local row_h    = 36
+  local row_h    = sc(36)
   local tbl_flags = (rawget(ImGui, "TableFlags_BordersInnerV") or 0)
   if not ImGui.BeginTable(ctx, "##setstbl", 3, tbl_flags) then return end
   ImGui.TableSetupColumn(ctx, "##sname", ImGui.TableColumnFlags_WidthStretch)
@@ -1560,25 +1570,25 @@ local function render_settings_panel()
     local sx, sy = ImGui.GetCursorScreenPos(ctx)
     local rw_avail, _ = ImGui.GetContentRegionAvail(ctx)
     local rw   = rw_avail - 4
-    local row_h = desc ~= "" and 46 or 32
+    local row_h = desc ~= "" and sc(46) or sc(32)
 
     ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + rw, sy + row_h, C.panel)
     ImGui.DrawList_AddLine(dl, sx, sy + row_h, sx + rw, sy + row_h, C.border, 1)
 
-    ImGui.SetCursorPos(ctx, lx + 10, ly + 8)
+    ImGui.SetCursorPos(ctx, lx + 10, ly + sc(8))
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
     ImGui.Text(ctx, name)
     ImGui.PopStyleColor(ctx)
 
     if desc ~= "" then
-      ImGui.SetCursorPos(ctx, lx + 10, ly + 26)
+      ImGui.SetCursorPos(ctx, lx + 10, ly + sc(26))
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
       ImGui.Text(ctx, desc)
       ImGui.PopStyleColor(ctx)
     end
 
-    -- Pill toggle (32×18)
-    local tw, th = 32, 18
+    -- Pill toggle (32×18 at default, scaled)
+    local tw, th = sc(32), sc(18)
     local tog_lx = lx + rw - tw - 10
     local tog_ly = ly + math.floor((row_h - th) * 0.5)
     ImGui.SetCursorPos(ctx, tog_lx, tog_ly)
@@ -1591,7 +1601,7 @@ local function render_settings_panel()
     local knob_x = val and (tsx + tw - th * 0.5 - 2) or (tsx + th * 0.5 + 2)
     ImGui.DrawList_AddCircleFilled(dl, knob_x, tsy + th * 0.5, th * 0.5 - 2, 0xffffffff)
 
-    ImGui.SetCursorPos(ctx, lx, ly + row_h + 4)
+    ImGui.SetCursorPos(ctx, lx, ly + row_h + sc(4))
 
     if toggled then
       settings[key] = not val
@@ -1607,7 +1617,7 @@ local function render_settings_panel()
     "Open projects in a new Reaper tab instead of the current one",
     settings.open_in_new_tab, "open_in_new_tab")
 
-  ImGui.Dummy(ctx, 0, 10)
+  ImGui.Dummy(ctx, 0, sc(10))
   section("DISPLAY")
 
   -- Density row (combo instead of toggle)
@@ -1616,16 +1626,16 @@ local function render_settings_panel()
     local lx, ly = ImGui.GetCursorPos(ctx)
     local sx, sy = ImGui.GetCursorScreenPos(ctx)
     local rw_avail, _ = ImGui.GetContentRegionAvail(ctx)
-    local rw, row_h = rw_avail - 4, 46
+    local rw, row_h = rw_avail - 4, sc(46)
     ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + rw, sy + row_h, C.panel)
     ImGui.DrawList_AddLine(dl, sx, sy + row_h, sx + rw, sy + row_h, C.border, 1)
 
-    ImGui.SetCursorPos(ctx, lx + 10, ly + 8)
+    ImGui.SetCursorPos(ctx, lx + 10, ly + sc(8))
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
     ImGui.Text(ctx, "Row density")
     ImGui.PopStyleColor(ctx)
 
-    ImGui.SetCursorPos(ctx, lx + 10, ly + 26)
+    ImGui.SetCursorPos(ctx, lx + 10, ly + sc(26))
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.Text(ctx, "Compact, comfort, or detail view")
     ImGui.PopStyleColor(ctx)
@@ -1633,26 +1643,62 @@ local function render_settings_panel()
     local density_opts = { "compact", "comfort", "detail" }
     local cur_idx = 0
     for i, d in ipairs(density_opts) do if d == settings.density then cur_idx = i - 1 end end
-    local combo_w = 90
-    ImGui.SetCursorPos(ctx, lx + rw - combo_w - 10, ly + math.floor((row_h - 22) * 0.5))
+    local combo_w = sc(90)
+    local fh = ImGui.GetFrameHeight(ctx)
+    ImGui.SetCursorPos(ctx, lx + rw - combo_w - 10, ly + math.floor((row_h - fh) * 0.5))
     ImGui.SetNextItemWidth(ctx, combo_w)
     local combo_chg, new_idx = ImGui.Combo(ctx, "##density", cur_idx, "compact\0comfort\0detail\0")
     if combo_chg then
       settings.density = density_opts[new_idx + 1]
       save_settings()
     end
-    ImGui.SetCursorPos(ctx, lx, ly + row_h + 4)
+    ImGui.SetCursorPos(ctx, lx, ly + row_h + sc(4))
   end
 
   setting_tog("Show file path",  "Display full path below project name", settings.show_path, "show_path")
   setting_tog("Show tag badges", "Show tag chips in detail density mode", settings.show_tags, "show_tags")
 
-  ImGui.Dummy(ctx, 0, 10)
+  ImGui.Dummy(ctx, 0, sc(10))
+  section("FONT SIZE")
+
+  -- Font size slider row
+  do
+    ImGui.SetCursorPosX(ctx, 14)
+    local lx, ly = ImGui.GetCursorPos(ctx)
+    local sx, sy = ImGui.GetCursorScreenPos(ctx)
+    local rw_avail, _ = ImGui.GetContentRegionAvail(ctx)
+    local rw, row_h = rw_avail - 4, sc(46)
+    ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + rw, sy + row_h, C.panel)
+    ImGui.DrawList_AddLine(dl, sx, sy + row_h, sx + rw, sy + row_h, C.border, 1)
+
+    ImGui.SetCursorPos(ctx, lx + 10, ly + sc(8))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
+    ImGui.Text(ctx, "Font size")
+    ImGui.PopStyleColor(ctx)
+
+    ImGui.SetCursorPos(ctx, lx + 10, ly + sc(26))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, tostring(settings.font_size) .. "px")
+    ImGui.PopStyleColor(ctx)
+
+    local slider_w = sc(120)
+    local fh = ImGui.GetFrameHeight(ctx)
+    ImGui.SetCursorPos(ctx, lx + rw - slider_w - 10, ly + math.floor((row_h - fh) * 0.5))
+    ImGui.SetNextItemWidth(ctx, slider_w)
+    local fs_chg, new_fs = ImGui.SliderInt(ctx, "##font_size", settings.font_size, 10, 20)
+    if fs_chg then
+      settings.font_size = new_fs
+      save_settings()
+    end
+    ImGui.SetCursorPos(ctx, lx, ly + row_h + sc(4))
+  end
+
+  ImGui.Dummy(ctx, 0, sc(10))
   section("ACCENT COLOR")
 
   ImGui.SetCursorPosX(ctx, 14)
   local pick_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
-  ImGui.SetNextItemWidth(ctx, 200)
+  ImGui.SetNextItemWidth(ctx, sc(200))
   local col_chg, new_col = ImGui.ColorPicker4(ctx, "##accent_color", settings.accent, pick_flags)
   if col_chg then
     settings.accent = (new_col & 0xFFFFFF00) | 0xFF
@@ -1711,7 +1757,7 @@ local function render_set_detail_pane()
     local aw = select(1, ImGui.GetContentRegionAvail(ctx))
     push_btn(C.accent2, C.accent, C.accent2)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
-    if ImGui.Button(ctx, "\xe2\x96\xb6  Open Set##sd_open", aw, 24) then
+    if ImGui.Button(ctx, "\xe2\x96\xb6  Open Set##sd_open", aw, sc(24)) then
       open_project_set(s.id)
     end
     ImGui.PopStyleColor(ctx)
@@ -1773,7 +1819,7 @@ local function render_set_detail_pane()
   local aw = select(1, ImGui.GetContentRegionAvail(ctx))
   push_btn(0x00000000, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
-  if ImGui.Button(ctx, "Delete Set##sd_delete", aw, 26) then
+  if ImGui.Button(ctx, "Delete Set##sd_delete", aw, sc(26)) then
     local del_id = s.id
     for i, id in ipairs(sets_order) do
       if id == del_id then table.remove(sets_order, i); break end
@@ -1821,13 +1867,13 @@ local function render_detail_pane()
   -- Action buttons
   local aw = ImGui.GetContentRegionAvail(ctx)
   push_btn(C.accent2, C.accent, C.accent2)
-  if ImGui.Button(ctx, "▶  Open##d_open", aw - 60, 22) then
+  if ImGui.Button(ctx, "▶  Open##d_open", aw - sc(60), sc(22)) then
     open_project(proj.path)
   end
   pop_btn()
   ImGui.SameLine(ctx)
   push_btn(C.panel2, C.panel3, C.border)
-  if ImGui.Button(ctx, "⇱##d_rev", 24, 22) then reveal_path(proj.path) end
+  if ImGui.Button(ctx, "⇱##d_rev", sc(24), sc(22)) then reveal_path(proj.path) end
   pop_btn()
 
   ImGui.Dummy(ctx, 0, 6)
@@ -2453,7 +2499,7 @@ local function render_tabbar()
     { id = "settings",  label = "Settings",  count = nil              },
   }
 
-  local bar_h = 34
+  local bar_h = sc(34)
   local pad_x = 14   -- horizontal padding each side of label
   local lh    = ImGui.GetTextLineHeight(ctx)
 
@@ -2525,7 +2571,7 @@ local function render_statusbar()
   local pad_x, pad_y = 10, 4
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
-  if ImGui.BeginChild(ctx, "##statusbar", 0, 22, 0) then
+  if ImGui.BeginChild(ctx, "##statusbar", 0, sc(22), 0) then
     local ox, oy = ImGui.GetCursorPos(ctx)
     local now = os.time()
     ImGui.SetCursorPos(ctx, ox + pad_x, oy + pad_y)
@@ -2553,6 +2599,8 @@ end
 
 -- ── Main loop ─────────────────────────────────────────────────────────
 local function loop()
+  ImGui.PushFont(ctx, nil, settings.font_size or FONT_DEFAULT)
+
   local base_nc, base_nv = theme.Push(ctx)
   push_rs_theme()
 
@@ -2574,7 +2622,7 @@ local function loop()
     local list_w      = show_detail and (avail_w - detail_w - 1) or -1
 
     ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
-    if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - 24, 0, WIN_NO_NAV) then
+    if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - sc(24), 0, WIN_NO_NAV) then
       if     ui.tab == "recent"    then render_recent_panel()
       elseif ui.tab == "folders"   then render_folders_panel()
       elseif ui.tab == "sets"      then render_sets_panel()
@@ -2591,7 +2639,7 @@ local function loop()
       local dx, dy = ImGui.GetCursorScreenPos(ctx)
       ImGui.DrawList_AddLine(dl, dx, dy, dx, dy + avail_h, C.border, 1)
       ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
-      if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - 24, 0) then
+      if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - sc(24), 0) then
         -- ImGui insets a child's left edge by WindowPadding but only pulls the right
         -- edge in when a scrollbar is present — so full-width content runs flush to the
         -- right on tabs short enough not to scroll (Sets/Templates). Render into an
@@ -2689,6 +2737,7 @@ local function loop()
     end
   end
 
+  ImGui.PopFont(ctx)
   if open and not ui.close_requested then reaper.defer(loop) end
 end
 
