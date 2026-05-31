@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.5.0
+-- @version 0.5.1
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.5.1 Time-sliced incremental folder scanner; window always appears instantly
 --   05/31/26 v0.5.0 Fast startup: lazy file sizes + folder path cache + background rescan
 --   05/31/26 v0.4.4 Tag delete confirmation; no accidental deletions
 --   05/31/26 v0.4.3 macOS Cmd+click and Shift+click multi-select support
@@ -169,10 +170,16 @@ local file_size_cache = {}   -- path → bytes (lazy, persisted)
 local all_tags        = {}
 local notes_buf       = {}   -- full_path → live edit string
 
--- Set to true by load_all_state() when folder_projects was restored from the
--- path cache; triggers a background rescan on the first rendered frame so
--- new/removed files are picked up without blocking startup.
-local folder_scan_pending = false
+-- Incremental folder scanner.  Work is time-sliced across render frames so
+-- the UI stays responsive even on slow/network drives with thousands of files.
+local bg_scan = {
+  active          = false,
+  results         = {},   -- accumulating project entries
+  seen            = {},   -- dedup: path → true
+  dir_queue       = {},   -- directories still to enumerate
+  pending_folders = {},   -- watched folders not yet seeded into dir_queue
+  MAX_MS          = 10,   -- max milliseconds of scan work per frame
+}
 
 local settings = {
   density            = "comfort",
@@ -497,7 +504,6 @@ local function load_all_state()
           if a.pinned ~= b.pinned then return a.pinned end
           return a.name:lower() < b.name:lower()
         end)
-        folder_scan_pending = true   -- refresh in background after window appears
       end
 
       return  -- loaded from file, done
@@ -741,43 +747,25 @@ local function build_project_list()
   rebuild_all_tags()
 end
 
-local function build_folder_projects()
-  local result = {}
-  local seen   = {}
+-- Initialise a fresh incremental folder scan.  Processing is time-sliced in
+-- loop() so the UI stays responsive; folder_projects is updated on completion.
+local function begin_folder_scan()
+  bg_scan.active          = true
+  bg_scan.results         = {}
+  bg_scan.seen            = {}
+  bg_scan.dir_queue       = {}
+  bg_scan.pending_folders = {}
   for _, folder in ipairs(watched_folders) do
-    local root  = folder.path
-    local label = root:match("[^\\/]+$") or root
-    local files = get_folder_files_recursive(root)
-    table.sort(files)
-    for _, path in ipairs(files) do
-      if not seen[path] then
-        seen[path] = true
-        local k         = path_key(path)
-        local t         = last_opened[path]
-        local cached_sz = file_size_cache[path]
-        result[#result + 1] = {
-          name     = path_name(path),
-          path     = path,
-          key      = k,
-          pinned   = pinned[path] or false,
-          tags     = project_tags[k] or {},
-          notes    = project_notes[k] or "",
-          last_t   = t,
-          last_str = t and fmt_ago(t) or "—",
-          size_b   = cached_sz,
-          size_str = cached_sz and fmt_size(cached_sz) or "—",
-          group    = label,
-        }
-      end
-    end
+    local label = folder.path:match("[^\\/]+$") or folder.path
+    bg_scan.pending_folders[#bg_scan.pending_folders + 1] = {
+      root = folder.path, label = label,
+    }
   end
-  table.sort(result, function(a, b)
-    if a.group ~= b.group then return a.group < b.group end
-    if a.pinned ~= b.pinned then return a.pinned end
-    return a.name:lower() < b.name:lower()
-  end)
-  folder_projects = result
-  rebuild_all_tags()
+end
+
+-- Kept for call-site compatibility; all callers now get the async scanner.
+local function build_folder_projects()
+  begin_folder_scan()
 end
 
 local function build_templates()
@@ -1572,8 +1560,7 @@ local function render_folders_panel()
     if path and path ~= "" then
       watched_folders[#watched_folders + 1] = { path = path }
       save_watched_folders()
-      build_folder_projects()
-      save_all_state()
+      build_folder_projects()   -- starts async scan
     end
   end
   ImGui.PopStyleColor(ctx)
@@ -1582,8 +1569,7 @@ local function render_folders_panel()
   push_btn(C.panel2, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
   if ImGui.Button(ctx, "↺ Refresh##refresh_folders", 0, 0) then
-    build_folder_projects()
-    save_all_state()
+    build_folder_projects()   -- starts async scan
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
@@ -1597,6 +1583,21 @@ local function render_folders_panel()
     ImGui.DrawList_AddLine(dl, sx, sy, sx + ww, sy, C.border, 1)
   end
   ImGui.Dummy(ctx, 0, 4)
+
+  -- Scan progress indicator
+  if bg_scan.active then
+    ImGui.SetCursorPosX(ctx, 10)
+    local pulse = 0.4 + 0.6 * math.abs(math.sin(ImGui.GetTime(ctx) * 2))
+    local dot_c = (C.accent & 0xffffff00) | math.floor(pulse * 255)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, dot_c)
+    ImGui.Text(ctx, "●")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx, 0, 4)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "Scanning… " .. #bg_scan.results .. " found")
+    ImGui.PopStyleColor(ctx)
+    ImGui.Dummy(ctx, 0, 4)
+  end
 
   render_tag_bar()
 
@@ -2880,13 +2881,83 @@ local function loop()
     end
   end
 
-  -- Background folder rescan: runs once on the first frame after startup when
-  -- folder_projects was loaded from the path cache.  Without file_size() calls
-  -- the full directory enumeration completes in milliseconds.
-  if folder_scan_pending then
-    folder_scan_pending = false
-    build_folder_projects()
-    save_all_state()
+  -- ── Incremental folder scanner ────────────────────────────────────────
+  -- Processes directories for at most bg_scan.MAX_MS per frame so the UI
+  -- stays fully responsive regardless of drive speed or folder size.
+  if bg_scan.active then
+    -- Seed the directory queue from the next pending watched folder when empty
+    while #bg_scan.dir_queue == 0 and #bg_scan.pending_folders > 0 do
+      local f = table.remove(bg_scan.pending_folders, 1)
+      bg_scan.dir_queue[#bg_scan.dir_queue + 1] = { path = f.root, label = f.label }
+    end
+
+    local t0 = reaper.time_precise()
+    while #bg_scan.dir_queue > 0 and (reaper.time_precise() - t0) * 1000 < bg_scan.MAX_MS do
+      local entry = table.remove(bg_scan.dir_queue, 1)
+      local dir, label = entry.path, entry.label
+
+      -- Enumerate .rpp files in this directory
+      local fi = 0
+      repeat
+        local f = reaper.EnumerateFiles(dir, fi)
+        if f and f ~= "" then
+          if (f:match("%.([^.]+)$") or ""):lower() == "rpp" then
+            local p = dir .. "/" .. f
+            if not bg_scan.seen[p] then
+              bg_scan.seen[p] = true
+              local k   = path_key(p)
+              local t   = last_opened[p]
+              local csz = file_size_cache[p]
+              bg_scan.results[#bg_scan.results + 1] = {
+                name     = path_name(p),
+                path     = p,
+                key      = k,
+                pinned   = pinned[p] or false,
+                tags     = project_tags[k] or {},
+                notes    = project_notes[k] or "",
+                last_t   = t,
+                last_str = t and fmt_ago(t) or "—",
+                size_b   = csz,
+                size_str = csz and fmt_size(csz) or "—",
+                group    = label,
+              }
+            end
+          end
+        end
+        fi = fi + 1
+      until not f or f == "" or fi > 1000
+
+      -- Queue subdirectories for later frames
+      fi = 0
+      repeat
+        local sub = reaper.EnumerateSubdirectories(dir, fi)
+        if sub and sub ~= "" then
+          bg_scan.dir_queue[#bg_scan.dir_queue + 1] = { path = dir .. "/" .. sub, label = label }
+        end
+        fi = fi + 1
+      until not sub or sub == "" or fi > 200
+
+      -- Seed next pending folder if the queue just ran dry mid-budget
+      if #bg_scan.dir_queue == 0 and #bg_scan.pending_folders > 0 then
+        local nf = table.remove(bg_scan.pending_folders, 1)
+        bg_scan.dir_queue[#bg_scan.dir_queue + 1] = { path = nf.root, label = nf.label }
+      end
+    end
+
+    -- Scan complete when both queues are empty
+    if #bg_scan.dir_queue == 0 and #bg_scan.pending_folders == 0 then
+      table.sort(bg_scan.results, function(a, b)
+        if a.group ~= b.group then return a.group < b.group end
+        if a.pinned ~= b.pinned then return a.pinned end
+        return a.name:lower() < b.name:lower()
+      end)
+      folder_projects = bg_scan.results
+      rebuild_all_tags()
+      save_all_state()
+      bg_scan.active  = false
+      bg_scan.results = {}
+      bg_scan.seen    = {}
+    end
   end
 
   ImGui.PopFont(ctx)
@@ -2894,15 +2965,10 @@ local function loop()
 end
 
 -- ── Init ──────────────────────────────────────────────────────────────
-load_all_state()
-build_project_list()
--- folder_projects is populated from the path cache inside load_all_state().
--- folder_scan_pending=true queues a background rescan on the first rendered
--- frame.  On first ever run (no cache) we fall through to the full scan here.
-if not folder_scan_pending then
-  build_folder_projects()
-end
-build_templates()
+load_all_state()        -- fast: reads DATA_FILE; populates folder_projects from cache
+build_project_list()    -- fast: no file I/O
+build_folder_projects() -- async: starts bg_scan, processes across frames in loop()
+build_templates()       -- fast: no file I/O
 
 reaper.atexit(function()
   -- Flush live notes buffers then write data file once
