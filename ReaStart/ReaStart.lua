@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.3
+-- @version 0.3.5
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -1467,16 +1467,6 @@ local function render_folders_panel()
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
-  ImGui.SameLine(ctx)
-  local cb_text_w = ImGui.CalcTextSize(ctx, "Ignore Subprojects")
-  local cur_x  = ImGui.GetCursorPosX(ctx)
-  local avail_x = select(1, ImGui.GetContentRegionAvail(ctx))
-  ImGui.SetCursorPosX(ctx, cur_x + avail_x - cb_text_w - 24)
-  local chg_ig, new_ig = ImGui.Checkbox(ctx, "Ignore Subprojects", settings.ignore_subprojects)
-  if chg_ig then
-    settings.ignore_subprojects = new_ig
-    save_settings()
-  end
 
   -- Separator
   ImGui.Dummy(ctx, 0, 8)
@@ -1497,6 +1487,14 @@ local function render_folders_panel()
     ImGui.Text(ctx, "No .rpp files found in configured folders.")
     ImGui.PopStyleColor(ctx)
   else
+    ImGui.SetCursorPosX(ctx, 10)
+    local chg, new_val = ImGui.Checkbox(ctx, "Ignore Subprojects", settings.ignore_subprojects)
+    if chg then
+      settings.ignore_subprojects = new_val
+      save_settings()
+    end
+    ImGui.Dummy(ctx, 0, 4)
+
     local list = filtered_projects(folder_projects)
     if settings.ignore_subprojects then
       local out = {}
