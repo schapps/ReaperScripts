@@ -132,7 +132,6 @@ local settings = {
   density            = "comfort",
   show_path          = true,
   show_tags          = true,
-  open_at_startup    = false,
   close_on_open      = true,
   open_in_new_tab    = false,
   accent             = 0x9b8fc4ff,
@@ -357,7 +356,6 @@ local function load_from_extstate()
   if es_has("settings/density")      then settings.density         = es_get("settings/density") end
   if es_has("settings/show_path")    then settings.show_path       = es_get("settings/show_path") == "1" end
   if es_has("settings/show_tags")    then settings.show_tags       = es_get("settings/show_tags") == "1" end
-  if es_has("settings/startup")      then settings.open_at_startup = es_get("settings/startup") == "1" end
   if es_has("settings/close_on_open") then settings.close_on_open  = es_get("settings/close_on_open") == "1" end
   if es_has("settings/accent")       then settings.accent          = es_get("settings/accent") end
   for line in es_get("tag_registry"):gmatch("[^\n]+") do
@@ -1452,15 +1450,33 @@ local function render_folders_panel()
   push_btn(C.panel2, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.Button(ctx, "+ Add Folder…", 0, 0) then
-    local ok, user_input = reaper.GetUserInputs("Add Folder", 1, "Folder path:", "")
-    if ok and user_input ~= "" then
-      watched_folders[#watched_folders + 1] = { path = user_input }
+    local path
+    if reaper.JS_Dialog_BrowseForFolder then
+      local start_dir = #watched_folders > 0 and watched_folders[#watched_folders].path or ""
+      local ok, folder = reaper.JS_Dialog_BrowseForFolder("Select Project Folder", start_dir)
+      if ok == 1 then path = folder end
+    else
+      local ok, user_input = reaper.GetUserInputs("Add Folder", 1, "Folder path:", "")
+      if ok and user_input ~= "" then path = user_input end
+    end
+    if path and path ~= "" then
+      watched_folders[#watched_folders + 1] = { path = path }
       save_watched_folders()
       build_folder_projects()
     end
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
+  ImGui.SameLine(ctx)
+  local cb_text_w = ImGui.CalcTextSize(ctx, "Ignore Subprojects")
+  local cur_x  = ImGui.GetCursorPosX(ctx)
+  local avail_x = select(1, ImGui.GetContentRegionAvail(ctx))
+  ImGui.SetCursorPosX(ctx, cur_x + avail_x - cb_text_w - 24)
+  local chg_ig, new_ig = ImGui.Checkbox(ctx, "Ignore Subprojects", settings.ignore_subprojects)
+  if chg_ig then
+    settings.ignore_subprojects = new_ig
+    save_settings()
+  end
 
   -- Separator
   ImGui.Dummy(ctx, 0, 8)
@@ -1481,14 +1497,6 @@ local function render_folders_panel()
     ImGui.Text(ctx, "No .rpp files found in configured folders.")
     ImGui.PopStyleColor(ctx)
   else
-    ImGui.SetCursorPosX(ctx, 10)
-    local chg, new_val = ImGui.Checkbox(ctx, "Ignore Subprojects", settings.ignore_subprojects)
-    if chg then
-      settings.ignore_subprojects = new_val
-      save_settings()
-    end
-    ImGui.Dummy(ctx, 0, 4)
-
     local list = filtered_projects(folder_projects)
     if settings.ignore_subprojects then
       local out = {}
@@ -1574,9 +1582,6 @@ local function render_settings_panel()
   end
 
   section("BEHAVIOR")
-  setting_tog("Open at startup",
-    "Add this script to Options › Startup Actions in Reaper",
-    settings.open_at_startup, "open_at_startup")
   setting_tog("Close on project load",
     "Automatically close ReaStart after opening a project",
     settings.close_on_open, "close_on_open")
