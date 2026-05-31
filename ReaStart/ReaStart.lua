@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.4.2
+-- @version 0.4.3
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.4.3 macOS Cmd+click and Shift+click multi-select support
 --   05/31/26 v0.4.2 Detail pane Open button matches Resume height and white text
 --   05/31/26 v0.4.1 Status bar height tracks font size; no scrollbar
 --   05/31/26 v0.4.0 Draggable list/detail divider (persisted across sessions)
@@ -98,6 +99,11 @@ local KEY_LCTRL  = rawget(ImGui, "Key_LeftCtrl")
 local KEY_RCTRL  = rawget(ImGui, "Key_RightCtrl")
 local KEY_LSHIFT = rawget(ImGui, "Key_LeftShift")
 local KEY_RSHIFT = rawget(ImGui, "Key_RightShift")
+-- macOS Cmd key (Super) + unified modifier constants (ImGui 1.89+, ReaImGui 0.9+)
+local KEY_LSUPER    = rawget(ImGui, "Key_LeftSuper")
+local KEY_RSUPER    = rawget(ImGui, "Key_RightSuper")
+local KEY_MOD_CTRL  = rawget(ImGui, "Mod_Ctrl")
+local KEY_MOD_SHIFT = rawget(ImGui, "Mod_Shift")
 local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
 local KEY_ENTER  = rawget(ImGui, "Key_Enter")
 local KEY_F      = rawget(ImGui, "Key_F")
@@ -107,6 +113,27 @@ local KEY_DOWN   = rawget(ImGui, "Key_DownArrow")
 
 local TABLE_ROW_BG_TARGET = rawget(ImGui, "TableBgTarget_RowBg0") or 1
 local MOUSE_CURSOR_EW     = rawget(ImGui, "MouseCursor_ResizeEW")
+
+-- Cross-platform modifier helpers.
+-- On macOS users press Cmd (Super) where Windows/Linux users press Ctrl.
+-- Mod_Ctrl/Mod_Shift are the unified ImGui 1.89+ constants and already map
+-- Cmd→Ctrl on macOS when ConfigMacOSXBehaviors is enabled in the backend.
+-- Falling back to individual L/R keys and Super covers older ReaImGui builds.
+local function is_ctrl_down()
+  return (KEY_MOD_CTRL and ImGui.IsKeyDown(ctx, KEY_MOD_CTRL))
+      or (KEY_LCTRL    and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+      or (KEY_RCTRL    and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+      or (KEY_LSUPER   and ImGui.IsKeyDown(ctx, KEY_LSUPER))
+      or (KEY_RSUPER   and ImGui.IsKeyDown(ctx, KEY_RSUPER))
+      or false
+end
+
+local function is_shift_down()
+  return (KEY_MOD_SHIFT and ImGui.IsKeyDown(ctx, KEY_MOD_SHIFT))
+      or (KEY_LSHIFT    and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
+      or (KEY_RSHIFT    and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
+      or false
+end
 
 -- ── State ─────────────────────────────────────────────────────────────
 local ui = {
@@ -1108,10 +1135,8 @@ local function render_project_table(list)
     local clicked = ImGui.Selectable(ctx, "##row_" .. proj.path, is_sel, SEL_SPAN, 0, row_h)
     ImGui.PopStyleColor(ctx, 3)
     if clicked then
-      local ctrl  = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
-                 or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
-      local shift = (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
-                 or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
+      local ctrl  = is_ctrl_down()
+      local shift = is_shift_down()
 
       if shift and ui.anchor_path then
         -- Range-select: find anchor and target in the current list, select all between
@@ -2713,8 +2738,7 @@ local function loop()
 
   -- Global keyboard: Ctrl+F, Ctrl+K, Escape
   if not ImGui.IsAnyItemActive(ctx) then
-    local ctrl = (KEY_LCTRL and ImGui.IsKeyDown(ctx, KEY_LCTRL))
-              or (KEY_RCTRL and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+    local ctrl = is_ctrl_down()
     if ctrl and KEY_F and ImGui.IsKeyPressed(ctx, KEY_F) then
       ui.search_focus = true
     end
