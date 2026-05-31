@@ -1,11 +1,13 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.4.3
+-- @version 0.5.0
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.5.0 Fast startup: lazy file sizes + folder path cache + background rescan
+--   05/31/26 v0.4.4 Tag delete confirmation; no accidental deletions
 --   05/31/26 v0.4.3 macOS Cmd+click and Shift+click multi-select support
 --   05/31/26 v0.4.2 Detail pane Open button matches Resume height and white text
 --   05/31/26 v0.4.1 Status bar height tracks font size; no scrollbar
@@ -163,8 +165,14 @@ local folder_projects = {}
 local templates       = {}
 local watched_folders = {}
 local meta_cache      = {}
+local file_size_cache = {}   -- path → bytes (lazy, persisted)
 local all_tags        = {}
 local notes_buf       = {}   -- full_path → live edit string
+
+-- Set to true by load_all_state() when folder_projects was restored from the
+-- path cache; triggers a background rescan on the first rendered frame so
+-- new/removed files are picked up without blocking startup.
+local folder_scan_pending = false
 
 local settings = {
   density            = "comfort",
@@ -203,6 +211,7 @@ local tag_popup = {
   focus_input    = false,
   new_name       = "",
   new_color      = 0x9b8fc4ff,
+  confirm_delete = nil,
 }
 
 local set_popup = {
@@ -355,16 +364,23 @@ local function save_all_state()
   for _, f in ipairs(watched_folders) do
     wf[#wf + 1] = { path = f.path }
   end
+  -- Snapshot current folder scan results so next startup can skip the scan
+  local fpp = {}
+  for _, p in ipairs(folder_projects) do
+    fpp[#fpp + 1] = { path = p.path, group = p.group }
+  end
   local data = {
-    pinned        = pinned,
-    project_tags  = project_tags,
-    project_notes = project_notes,
-    last_opened   = last_opened,
-    tag_registry  = tag_registry,
-    watched_folders = wf,
-    settings      = settings,
-    project_sets  = project_sets,
-    sets_order    = sets_order,
+    pinned               = pinned,
+    project_tags         = project_tags,
+    project_notes        = project_notes,
+    last_opened          = last_opened,
+    tag_registry         = tag_registry,
+    watched_folders      = wf,
+    settings             = settings,
+    project_sets         = project_sets,
+    sets_order           = sets_order,
+    folder_project_paths = fpp,
+    file_size_cache      = file_size_cache,
   }
   local f = io.open(DATA_FILE, "w")
   if not f then return end
@@ -444,6 +460,7 @@ local function load_all_state()
       for _, id in ipairs(data.sets_order or {}) do
         sets_order[#sets_order + 1] = id
       end
+      for k, v in pairs(data.file_size_cache or {}) do file_size_cache[k] = v end
       if type(settings.accent) == "string" then
         local hex = settings.accent:gsub("#", "")
         local r = tonumber(hex:sub(1,2), 16) or 0x9b
@@ -452,6 +469,37 @@ local function load_all_state()
         settings.accent = (r << 24) | (g << 16) | (b << 8) | 0xFF
       end
       apply_accent(settings.accent)
+
+      -- Restore folder_projects from cached paths so startup is instant.
+      -- A background rescan is queued to pick up any changes since last run.
+      local cached_paths = data.folder_project_paths or {}
+      if #cached_paths > 0 then
+        for _, entry in ipairs(cached_paths) do
+          local k         = path_key(entry.path)
+          local t         = last_opened[entry.path]
+          local cached_sz = file_size_cache[entry.path]
+          folder_projects[#folder_projects + 1] = {
+            name     = path_name(entry.path),
+            path     = entry.path,
+            key      = k,
+            pinned   = pinned[entry.path] or false,
+            tags     = project_tags[k] or {},
+            notes    = project_notes[k] or "",
+            last_t   = t,
+            last_str = t and fmt_ago(t) or "—",
+            size_b   = cached_sz,
+            size_str = cached_sz and fmt_size(cached_sz) or "—",
+            group    = entry.group,
+          }
+        end
+        table.sort(folder_projects, function(a, b)
+          if a.group ~= b.group then return a.group < b.group end
+          if a.pinned ~= b.pinned then return a.pinned end
+          return a.name:lower() < b.name:lower()
+        end)
+        folder_scan_pending = true   -- refresh in background after window appears
+      end
+
       return  -- loaded from file, done
     end
   end
@@ -587,10 +635,12 @@ local function get_folder_files_recursive(root)
 end
 
 local function file_size(path)
+  if file_size_cache[path] then return file_size_cache[path] end
   local f = io.open(path, "rb")
   if not f then return 0 end
   local sz = f:seek("end") or 0
   f:close()
+  file_size_cache[path] = sz
   return sz
 end
 
@@ -663,7 +713,7 @@ local function build_project_list()
       local k        = path_key(path)
       local real_t   = last_opened[path]
       local display_t = real_t or recency_estimate(i)
-      local sz       = file_size(path)
+      local cached_sz = file_size_cache[path]
       result[#result + 1] = {
         name     = path_name(path),
         path     = path,
@@ -674,8 +724,8 @@ local function build_project_list()
         notes    = project_notes[k] or "",
         last_t   = display_t,
         last_str = fmt_ago(display_t),
-        size_b   = sz,
-        size_str = fmt_size(sz),
+        size_b   = cached_sz,
+        size_str = cached_sz and fmt_size(cached_sz) or "—",
         group    = pinned[path] and "Pinned" or (real_t and group_of(real_t) or rank_group(i)),
       }
     end
@@ -702,9 +752,9 @@ local function build_folder_projects()
     for _, path in ipairs(files) do
       if not seen[path] then
         seen[path] = true
-        local k  = path_key(path)
-        local t  = last_opened[path]
-        local sz = file_size(path)
+        local k         = path_key(path)
+        local t         = last_opened[path]
+        local cached_sz = file_size_cache[path]
         result[#result + 1] = {
           name     = path_name(path),
           path     = path,
@@ -714,8 +764,8 @@ local function build_folder_projects()
           notes    = project_notes[k] or "",
           last_t   = t,
           last_str = t and fmt_ago(t) or "—",
-          size_b   = sz,
-          size_str = fmt_size(sz),
+          size_b   = cached_sz,
+          size_str = cached_sz and fmt_size(cached_sz) or "—",
           group    = label,
         }
       end
@@ -733,17 +783,17 @@ end
 local function build_templates()
   local raw = get_templates()
   for _, t in ipairs(raw) do
-    local k  = path_key(t.path)
-    local sz = file_size(t.path)
-    local ot = last_opened[t.path]
+    local k         = path_key(t.path)
+    local ot        = last_opened[t.path]
+    local cached_sz = file_size_cache[t.path]
     t.key      = k
     t.pinned   = pinned[t.path] or false
     t.tags     = project_tags[k] or {}
     t.notes    = project_notes[k] or ""
     t.last_t   = ot
     t.last_str = ot and fmt_ago(ot) or "—"
-    t.size_b   = sz
-    t.size_str = fmt_size(sz)
+    t.size_b   = cached_sz
+    t.size_str = cached_sz and fmt_size(cached_sz) or "—"
     t.group    = "Templates"
   end
   table.sort(raw, function(a, b)
@@ -1523,7 +1573,17 @@ local function render_folders_panel()
       watched_folders[#watched_folders + 1] = { path = path }
       save_watched_folders()
       build_folder_projects()
+      save_all_state()
     end
+  end
+  ImGui.PopStyleColor(ctx)
+  pop_btn()
+  ImGui.SameLine(ctx)
+  push_btn(C.panel2, C.panel3, C.border)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+  if ImGui.Button(ctx, "↺ Refresh##refresh_folders", 0, 0) then
+    build_folder_projects()
+    save_all_state()
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
@@ -1910,6 +1970,12 @@ local function render_detail_pane()
 
   ImGui.Dummy(ctx, 0, 6)
 
+  -- Lazy file size: compute once when detail pane first opens for this project
+  if proj.size_b == nil and reaper.file_exists(proj.path) then
+    proj.size_b  = file_size(proj.path)   -- updates file_size_cache too
+    proj.size_str = fmt_size(proj.size_b)
+  end
+
   -- Metadata grid
   local meta = parse_rpp(proj.path) or {}
   if ImGui.BeginTable(ctx, "##meta", 2, 0) then
@@ -1950,11 +2016,12 @@ local function render_detail_pane()
   push_btn(0x00000000, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.SmallButton(ctx, "+ Add / Edit##open_tp") then
-    tag_popup.open       = true
-    tag_popup.skip_close = true
-    tag_popup.proj_key   = proj.key
-    tag_popup.proj_path  = proj.path
-    tag_popup.creating   = false
+    tag_popup.open           = true
+    tag_popup.skip_close     = true
+    tag_popup.proj_key       = proj.key
+    tag_popup.proj_path      = proj.path
+    tag_popup.creating       = false
+    tag_popup.confirm_delete = nil
   end
   ImGui.PopStyleColor(ctx)
   pop_btn()
@@ -2023,7 +2090,8 @@ local function render_tag_popup()
   if not tag_popup.open then return end
 
   local pw     = 320
-  local ph     = (tag_popup.creating or tag_popup.editing) and 640 or 320
+  local ph     = (tag_popup.creating or tag_popup.editing) and 640
+             or tag_popup.confirm_delete and 370 or 320
   local cx     = ui.win_x + math.floor((ui.win_w - pw) / 2)
   local cy     = ui.win_y + math.floor((ui.win_h - ph) / 2)
   ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
@@ -2055,6 +2123,7 @@ local function render_tag_popup()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     if ImGui.SmallButton(ctx, "x##tp_close") then
       tag_popup.open = false; tag_popup.creating = false; tag_popup.editing = false
+      tag_popup.confirm_delete = nil
     end
     ImGui.PopStyleColor(ctx)
     pop_btn()
@@ -2062,7 +2131,8 @@ local function render_tag_popup()
     ImGui.Dummy(ctx, 0, 2)
 
     -- ── Scrollable tag list ──────────────────────────────────────────
-    local list_h = (tag_popup.creating or tag_popup.editing) and 148 or (ph - 96)
+    local list_h = (tag_popup.creating or tag_popup.editing) and 148
+               or tag_popup.confirm_delete and (ph - 150) or (ph - 96)
     if ImGui.BeginChild(ctx, "##tplist", 0, list_h, 0) then
       local sorted = {}
       for name in pairs(tag_registry) do sorted[#sorted+1] = name end
@@ -2075,7 +2145,6 @@ local function render_tag_popup()
       else
         local dl2 = ImGui.GetWindowDrawList(ctx)
         local tbl_f = rawget(ImGui, "TableFlags_NoPadOuterX") or 0
-        local tag_to_delete = nil
         if ImGui.BeginTable(ctx, "##tptbl", 1, tbl_f) then
           ImGui.TableSetupColumn(ctx, "##tptc", ImGui.TableColumnFlags_WidthStretch)
           for _, tag_name in ipairs(sorted) do
@@ -2131,13 +2200,14 @@ local function render_tag_popup()
             end
             ImGui.PopStyleColor(ctx)
             pop_btn()
-            -- Delete button
+            -- Delete button (arms confirmation; turns red when this tag is pending)
             ImGui.SetCursorPos(ctx, row_right - 22, ly + 4)
-            push_btn(0x00000000, 0x00000000, 0x00000000)
-            ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+            local is_pending = (tag_popup.confirm_delete == tag_name)
+            push_btn(0x00000000, is_pending and 0x5a1a1aff or 0x00000000, 0x00000000)
+            ImGui.PushStyleColor(ctx, ImGui.Col_Text, is_pending and C.danger or C.text3)
             if ImGui.SmallButton(ctx, "×##tpdel_"..tag_name) then
-              tag_to_delete = tag_name
-              tag_popup.skip_close = true
+              tag_popup.confirm_delete = tag_name
+              tag_popup.skip_close     = true
             end
             ImGui.PopStyleColor(ctx)
             pop_btn()
@@ -2145,26 +2215,6 @@ local function render_tag_popup()
           ImGui.EndTable(ctx)
         end
 
-        -- Process deletion outside the loop so we don't mutate while iterating
-        if tag_to_delete then
-          tag_registry[tag_to_delete] = nil
-          save_tag_registry()
-          -- Strip the deleted tag from every project that carries it and persist
-          for key, tags in pairs(project_tags) do
-            for i = #tags, 1, -1 do
-              if tags[i] == tag_to_delete then table.remove(tags, i) end
-            end
-            es_set("tags/" .. key, table.concat(tags, ","))
-          end
-          local ti = {}
-          for key in pairs(project_tags) do ti[#ti+1] = key end
-          es_set("tags_index", table.concat(ti, "\n"))
-          -- Sync in-memory project objects
-          for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
-          for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
-          for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
-          rebuild_all_tags()
-        end
       end
     end
     ImGui.EndChild(ctx)
@@ -2173,16 +2223,57 @@ local function render_tag_popup()
     ImGui.Separator(ctx)
     ImGui.Dummy(ctx, 0, 6)
 
-    -- ── Create / Edit tag form ───────────────────────────────────────
-    if not tag_popup.creating and not tag_popup.editing then
+    -- ── Create / Edit tag form  (or delete confirmation) ────────────────
+    if tag_popup.confirm_delete and not tag_popup.creating and not tag_popup.editing then
+      -- ── Delete confirmation ──────────────────────────────────────────
+      local dn = tag_popup.confirm_delete
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
+      ImGui.Text(ctx, "Delete \"" .. dn .. "\"?")
+      ImGui.PopStyleColor(ctx)
+      ImGui.Dummy(ctx, 0, 2)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+      ImGui.Text(ctx, "Removes this tag from all projects.")
+      ImGui.PopStyleColor(ctx)
+      ImGui.Dummy(ctx, 0, 6)
+      local aw2    = select(1, ImGui.GetContentRegionAvail(ctx))
+      local half_w = math.floor((aw2 - 4) * 0.5)
+      push_btn(0x5a1a1aff, 0x8a2a2aff, C.danger)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
+      if ImGui.Button(ctx, "Delete##tp_do_del", half_w, sc(26)) then
+        tag_registry[dn] = nil
+        save_tag_registry()
+        for key, tags in pairs(project_tags) do
+          for i = #tags, 1, -1 do
+            if tags[i] == dn then table.remove(tags, i) end
+          end
+        end
+        for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
+        for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
+        for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
+        save_all_state()
+        rebuild_all_tags()
+        tag_popup.confirm_delete = nil
+        tag_popup.skip_close     = true
+      end
+      ImGui.PopStyleColor(ctx)
+      pop_btn()
+      ImGui.SameLine(ctx, 0, 4)
+      push_btn(C.panel2, C.panel3, C.border)
+      if ImGui.Button(ctx, "Cancel##tp_cancel_del", -1, sc(26)) then
+        tag_popup.confirm_delete = nil
+        tag_popup.skip_close     = true
+      end
+      pop_btn()
+    elseif not tag_popup.creating and not tag_popup.editing then
       push_btn(0x00000000, C.panel3, C.border)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
       if ImGui.Button(ctx, "+ Create new tag…##tp_new", -1, 24) then
         tag_popup.creating    = true
-        tag_popup.skip_close  = true   -- suppress close-check on this transition frame
+        tag_popup.skip_close  = true
         tag_popup.focus_input = true
         tag_popup.new_name    = ""
         tag_popup.new_color   = C.accent
+        tag_popup.confirm_delete = nil
       end
       ImGui.PopStyleColor(ctx)
       pop_btn()
@@ -2295,11 +2386,14 @@ local function render_tag_popup()
       local mx, my = ImGui.GetMousePos(ctx)
       if mx < wpx or mx > wpx + wpw or my < wpy or my > wpy + wph then
         tag_popup.open = false; tag_popup.creating = false; tag_popup.editing = false
+        tag_popup.confirm_delete = nil
       end
     end
-    -- Escape closes edit/create form first, then popup
+    -- Escape: dismiss confirm → edit/create form → popup
     if KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
-      if tag_popup.creating then
+      if tag_popup.confirm_delete then
+        tag_popup.confirm_delete = nil
+      elseif tag_popup.creating then
         tag_popup.creating = false
       elseif tag_popup.editing then
         tag_popup.editing = false; tag_popup.edit_orig_name = ""
@@ -2786,6 +2880,15 @@ local function loop()
     end
   end
 
+  -- Background folder rescan: runs once on the first frame after startup when
+  -- folder_projects was loaded from the path cache.  Without file_size() calls
+  -- the full directory enumeration completes in milliseconds.
+  if folder_scan_pending then
+    folder_scan_pending = false
+    build_folder_projects()
+    save_all_state()
+  end
+
   ImGui.PopFont(ctx)
   if open and not ui.close_requested then reaper.defer(loop) end
 end
@@ -2793,7 +2896,12 @@ end
 -- ── Init ──────────────────────────────────────────────────────────────
 load_all_state()
 build_project_list()
-build_folder_projects()
+-- folder_projects is populated from the path cache inside load_all_state().
+-- folder_scan_pending=true queues a background rescan on the first rendered
+-- frame.  On first ever run (no cache) we fall through to the full scan here.
+if not folder_scan_pending then
+  build_folder_projects()
+end
 build_templates()
 
 reaper.atexit(function()
