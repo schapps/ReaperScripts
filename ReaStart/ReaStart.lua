@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.1
+-- @version 0.3.2
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -50,6 +50,16 @@ local C = {
   orange   = 0xc78a4aff,
 }
 
+local function apply_accent(col)
+  local r = (col >> 24) & 0xFF
+  local g = (col >> 16) & 0xFF
+  local b = (col >>  8) & 0xFF
+  C.accent   = col
+  C.accent2  = (math.floor(r * 0.72) << 24) | (math.floor(g * 0.72) << 16) | (math.floor(b * 0.72) << 8) | 0xFF
+  C.accentbg = (r << 24) | (g << 16) | (b << 8) | 0x24
+  C.sel      = (math.floor(r * 0.38) << 24) | (math.floor(g * 0.38) << 16) | (math.floor(b * 0.38) << 8) | 0xFF
+end
+
 local TAG_COLORS = {
   mix        = 0xc78a4aff,
   source     = 0xb079a3ff,
@@ -57,10 +67,8 @@ local TAG_COLORS = {
   archive    = 0x4a4a4aff,
 }
 
--- ── Context + fonts ───────────────────────────────────────────────────
+-- ── Context ───────────────────────────────────────────────────────────
 local ctx = ImGui.CreateContext("ReaStart")
-local _mono_obj = ImGui.CreateFont("Consolas", 11)
-local FONT_MONO = _mono_obj and ImGui.Attach(ctx, _mono_obj) or nil
 
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
                 | ImGui.WindowFlags_NoScrollbar
@@ -127,7 +135,7 @@ local settings = {
   open_at_startup    = false,
   close_on_open      = true,
   open_in_new_tab    = false,
-  accent             = "#9b8fc4",
+  accent             = 0x9b8fc4ff,
   ignore_subprojects = false,
 }
 
@@ -246,17 +254,6 @@ local function remove_project_tag(key, name)
       return
     end
   end
-end
-
-local function rebuild_all_tags()
-  local seen = {}
-  all_tags = {}
-  for _, p in ipairs(projects) do
-    for _, t in ipairs(project_tags[p.key] or {}) do
-      if not seen[t] then seen[t] = true; all_tags[#all_tags+1] = t end
-    end
-  end
-  table.sort(all_tags)
 end
 
 local function group_of(t)
@@ -399,6 +396,14 @@ local function load_all_state()
       for _, id in ipairs(data.sets_order or {}) do
         sets_order[#sets_order + 1] = id
       end
+      if type(settings.accent) == "string" then
+        local hex = settings.accent:gsub("#", "")
+        local r = tonumber(hex:sub(1,2), 16) or 0x9b
+        local g = tonumber(hex:sub(3,4), 16) or 0x8f
+        local b = tonumber(hex:sub(5,6), 16) or 0xc4
+        settings.accent = (r << 24) | (g << 16) | (b << 8) | 0xFF
+      end
+      apply_accent(settings.accent)
       return  -- loaded from file, done
     end
   end
@@ -408,6 +413,14 @@ local function load_all_state()
   for name, col in pairs(TAG_COLORS) do
     if not tag_registry[name] then tag_registry[name] = col end
   end
+  if type(settings.accent) == "string" then
+    local hex = settings.accent:gsub("#", "")
+    local r = tonumber(hex:sub(1,2), 16) or 0x9b
+    local g = tonumber(hex:sub(3,4), 16) or 0x8f
+    local b = tonumber(hex:sub(5,6), 16) or 0xc4
+    settings.accent = (r << 24) | (g << 16) | (b << 8) | 0xFF
+  end
+  apply_accent(settings.accent)
   save_all_state()  -- write the data file so future runs load from it
 end
 
@@ -586,6 +599,7 @@ local function rebuild_all_tags()
   local tag_set = {}
   for _, p in ipairs(projects)        do for _, t in ipairs(p.tags) do tag_set[t] = true end end
   for _, p in ipairs(folder_projects) do for _, t in ipairs(p.tags) do tag_set[t] = true end end
+  for _, p in ipairs(templates)       do for _, t in ipairs(p.tags) do tag_set[t] = true end end
   all_tags = {}
   for t in pairs(tag_set) do all_tags[#all_tags + 1] = t end
   table.sort(all_tags)
@@ -665,6 +679,30 @@ local function build_folder_projects()
     return a.name:lower() < b.name:lower()
   end)
   folder_projects = result
+  rebuild_all_tags()
+end
+
+local function build_templates()
+  local raw = get_templates()
+  for _, t in ipairs(raw) do
+    local k  = path_key(t.path)
+    local sz = file_size(t.path)
+    local ot = last_opened[t.path]
+    t.key      = k
+    t.pinned   = pinned[t.path] or false
+    t.tags     = project_tags[k] or {}
+    t.notes    = project_notes[k] or ""
+    t.last_t   = ot
+    t.last_str = ot and fmt_ago(ot) or "—"
+    t.size_b   = sz
+    t.size_str = fmt_size(sz)
+    t.group    = "Templates"
+  end
+  table.sort(raw, function(a, b)
+    if a.pinned ~= b.pinned then return a.pinned end
+    return a.name:lower() < b.name:lower()
+  end)
+  templates = raw
   rebuild_all_tags()
 end
 
@@ -817,9 +855,6 @@ local function pop_rs_theme()
   ImGui.PopStyleVar(ctx, rs_nv)
 end
 
--- ── Font helpers (no-op if FONT_MONO failed to load) ─────────────────
-local function push_mono() if FONT_MONO then ImGui.PushFont(ctx, FONT_MONO) end end
-local function pop_mono()  if FONT_MONO then ImGui.PopFont(ctx) end end
 
 -- ── Utility: push a simple button style ──────────────────────────────
 local function push_btn(bg, hov, act)
@@ -939,7 +974,6 @@ local function render_resume_card(proj)
 
     -- Meta row: last_str · tracks · bpm
     ImGui.SetCursorPos(ctx, 14, 50)
-    push_mono()
     local meta  = parse_rpp(proj.path) or {}
     local parts = { proj.last_str }
     if meta.tracks and meta.tracks > 0 then
@@ -951,7 +985,6 @@ local function render_resume_card(proj)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.Text(ctx, table.concat(parts, "  ·  "))
     ImGui.PopStyleColor(ctx)
-    pop_mono()
 
     -- Resume button (right-aligned, vertically centred)
     local btn_w, btn_h = 76, 26
@@ -1035,15 +1068,13 @@ local function render_project_table(list)
       local cnt   = tostring(group_counts[proj.group] or 0)
 
       ImGui.SetCursorPosX(ctx, 10)
-      push_mono()
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       ImGui.Text(ctx, label)
       ImGui.SameLine(ctx)
       ImGui.SetCursorPosX(ctx, ImGui.GetWindowWidth(ctx) - 26)
       ImGui.Text(ctx, cnt)
       ImGui.PopStyleColor(ctx)
-      pop_mono()
-
+  
       ImGui.Dummy(ctx, 0, 2)
     end
 
@@ -1126,12 +1157,10 @@ local function render_project_table(list)
     -- Second line: path (explicit Y so it stays inside the Selectable's area)
     if settings.density ~= "compact" and settings.show_path then
       ImGui.SetCursorPos(ctx, cx + 14, text_y + lh_sp)
-      push_mono()
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       ImGui.Text(ctx, proj.path)
       ImGui.PopStyleColor(ctx)
-      pop_mono()
-    end
+      end
 
     -- Third line: tags (explicit Y based on how many lines precede it)
     if settings.density == "detail" and settings.show_tags and #proj.tags > 0 then
@@ -1160,11 +1189,9 @@ local function render_project_table(list)
 
     -- Last opened column
     ImGui.TableSetColumnIndex(ctx, 1)
-    push_mono()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.Text(ctx, proj.last_str)
     ImGui.PopStyleColor(ctx)
-    pop_mono()
 
   end
 
@@ -1198,6 +1225,7 @@ local function render_project_table(list)
       save_pinned()
       build_project_list()
       build_folder_projects()
+      build_templates()
     end
     ImGui.Separator(ctx)
     if ImGui.MenuItem(ctx, "Create new project set\xe2\x80\xa6") then
@@ -1270,9 +1298,7 @@ local function render_recent_panel()
   ImGui.Dummy(ctx, 0, 2)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
   ImGui.SetCursorPosX(ctx, 10)
-  push_mono()
   ImGui.Text(ctx, #list .. " / " .. #projects .. " projects")
-  pop_mono()
   ImGui.PopStyleColor(ctx)
   ImGui.Dummy(ctx, 0, 2)
 
@@ -1341,11 +1367,9 @@ local function render_sets_panel()
     ImGui.DrawList_AddLine(dl, win_sx, sy + row_h - 1, win_sx + win_sw, sy + row_h - 1, C.border, 1)
 
     ImGui.TableSetColumnIndex(ctx, 1)
-    push_mono()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.Text(ctx, tostring(#s.paths) .. " proj")
     ImGui.PopStyleColor(ctx)
-    pop_mono()
 
     ImGui.TableSetColumnIndex(ctx, 2)
     if row_hovered or is_sel then
@@ -1382,70 +1406,24 @@ end
 
 -- ── Render: templates panel ────────────────────────────────────────────
 local function render_templates_panel()
-  ImGui.SetCursorPos(ctx, 10, 10)
   if #templates == 0 then
+    ImGui.SetCursorPos(ctx, 10, 10)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     ImGui.TextWrapped(ctx, "No templates found in Reaper's ProjectTemplates folder.")
     ImGui.PopStyleColor(ctx)
     return
   end
 
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 8, 8)
-  local card_w  = 210
-  local card_h  = 100
-  local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
-  local cols    = math.max(1, math.floor((avail_w + 8) / (card_w + 8)))
-  local i = 0
+  render_tag_bar()
 
-  for _, t in ipairs(templates) do
-    if i > 0 and i % cols ~= 0 then ImGui.SameLine(ctx) end
-
-    ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel2)
-    local tcv = ImGui.BeginChild(ctx, "##tmpl_" .. t.name, card_w, card_h, CHILD_BORDER)
-    if tcv then
-      local tdl     = ImGui.GetWindowDrawList(ctx)
-      local twx, twy = ImGui.GetWindowPos(ctx)
-
-      -- 28×28 icon box (panel3 bg square)
-      ImGui.DrawList_AddRectFilled(tdl, twx + 8, twy + 8, twx + 36, twy + 36, C.panel3)
-
-      ImGui.SetCursorPos(ctx, 14, 14)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
-      ImGui.Text(ctx, "✦")
-      ImGui.PopStyleColor(ctx)
-
-      -- Name (to the right of icon box)
-      ImGui.SetCursorPos(ctx, 44, 10)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
-      ImGui.Text(ctx, t.name)
-      ImGui.PopStyleColor(ctx)
-
-      -- Filename (mono, below name)
-      ImGui.SetCursorPos(ctx, 44, 27)
-      push_mono()
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
-      ImGui.Text(ctx, t.file)
-      ImGui.PopStyleColor(ctx)
-      pop_mono()
-
-      -- "Use template" button pinned to card bottom
-      ImGui.SetCursorPos(ctx, 8, card_h - 30)
-      push_btn(C.accent2, C.accent, C.accent2)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
-      if ImGui.Button(ctx, "Use template##t_" .. t.name, card_w - 16, 22) then
-        open_project(t.path)
-      end
-      ImGui.PopStyleColor(ctx)
-      pop_btn()
-
-      ImGui.EndChild(ctx)
-    end
-    ImGui.PopStyleColor(ctx)
-
-    i = i + 1
-  end
-
-  ImGui.PopStyleVar(ctx)
+  local list = filtered_projects(templates)
+  ImGui.Dummy(ctx, 0, 2)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+  ImGui.SetCursorPosX(ctx, 10)
+  ImGui.Text(ctx, #list .. " / " .. #templates .. " templates")
+  ImGui.PopStyleColor(ctx)
+  ImGui.Dummy(ctx, 0, 2)
+  render_project_table(list)
 end
 
 -- ── Render: folders panel ──────────────────────────────────────────────
@@ -1462,7 +1440,6 @@ local function render_folders_panel()
     ImGui.Dummy(ctx, 0, 6)
   else
     local remove_idx = nil
-    push_mono()
     for fi, folder in ipairs(watched_folders) do
       ImGui.SetCursorPosX(ctx, 10)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text2)
@@ -1477,7 +1454,6 @@ local function render_folders_panel()
       ImGui.PopStyleColor(ctx)
       pop_btn()
     end
-    pop_mono()
     if remove_idx then
       table.remove(watched_folders, remove_idx)
       save_watched_folders()
@@ -1539,9 +1515,7 @@ local function render_folders_panel()
     end
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.SetCursorPosX(ctx, 10)
-    push_mono()
     ImGui.Text(ctx, #list .. " / " .. #folder_projects .. " projects")
-    pop_mono()
     ImGui.PopStyleColor(ctx)
     ImGui.Dummy(ctx, 0, 2)
     render_project_table(list)
@@ -1667,30 +1641,13 @@ local function render_settings_panel()
   ImGui.Dummy(ctx, 0, 10)
   section("ACCENT COLOR")
 
-  local accents = {
-    { "#9b8fc4", C.accent  },
-    { "#c78a4a", C.orange  },
-    { "#5fb09e", C.teal    },
-    { "#6b8db8", C.info    },
-    { "#b079a3", C.pink    },
-    { "#c89a4a", C.warning },
-  }
   ImGui.SetCursorPosX(ctx, 14)
-  local _, ly_ac = ImGui.GetCursorPos(ctx)
-  ImGui.SetCursorPos(ctx, 14, ly_ac + 4)
-  for _, opt in ipairs(accents) do
-    local ax, ay = ImGui.GetCursorScreenPos(ctx)
-    local r = 10
-    ImGui.DrawList_AddCircleFilled(dl, ax + r, ay + r, r, opt[2])
-    if settings.accent == opt[1] then
-      ImGui.DrawList_AddCircle(dl, ax + r, ay + r, r + 2, C.text2, 20, 1.5)
-    end
-    ImGui.InvisibleButton(ctx, "##ac_" .. opt[1], r * 2, r * 2)
-    if ImGui.IsItemClicked(ctx) then
-      settings.accent = opt[1]
-      save_settings()
-    end
-    ImGui.SameLine(ctx, 0, 6)
+  local pick_flags = rawget(ImGui, "ColorEditFlags_PickerHueBar") or 0
+  local col_chg, new_col = ImGui.ColorPicker4(ctx, "##accent_color", settings.accent, pick_flags)
+  if col_chg then
+    settings.accent = (new_col & 0xFFFFFF00) | 0xFF
+    apply_accent(settings.accent)
+    save_settings()
   end
 
   ImGui.PopStyleVar(ctx)
@@ -1703,6 +1660,9 @@ local function get_selected()
     if p.path == ui.selected_path then return p end
   end
   for _, p in ipairs(folder_projects) do
+    if p.path == ui.selected_path then return p end
+  end
+  for _, p in ipairs(templates) do
     if p.path == ui.selected_path then return p end
   end
   return nil
@@ -1730,11 +1690,9 @@ local function render_set_detail_pane()
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
   ImGui.TextWrapped(ctx, s.name)
   ImGui.PopStyleColor(ctx)
-  push_mono()
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
   ImGui.Text(ctx, tostring(#s.paths) .. " project" .. (#s.paths ~= 1 and "s" or ""))
   ImGui.PopStyleColor(ctx)
-  pop_mono()
 
   ImGui.Dummy(ctx, 0, 6)
 
@@ -1840,11 +1798,9 @@ local function render_detail_pane()
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
   ImGui.TextWrapped(ctx, proj.name)
   ImGui.PopStyleColor(ctx)
-  push_mono()
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
   ImGui.TextWrapped(ctx, proj.path)
   ImGui.PopStyleColor(ctx)
-  pop_mono()
 
   ImGui.Dummy(ctx, 0, 4)
 
@@ -1882,12 +1838,10 @@ local function render_detail_pane()
       ImGui.Text(ctx, row[1])
       ImGui.PopStyleColor(ctx)
       ImGui.TableSetColumnIndex(ctx, 1)
-      push_mono()
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text)
       ImGui.Text(ctx, row[2])
       ImGui.PopStyleColor(ctx)
-      pop_mono()
-    end
+      end
     ImGui.EndTable(ctx)
   end
 
@@ -1933,9 +1887,9 @@ local function render_detail_pane()
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       if ImGui.SmallButton(ctx, "x##rtag_" .. tag) then
         remove_project_tag(proj.key, tag)
-        for _, p in ipairs(projects) do
-          if p.key == proj.key then p.tags = project_tags[p.key] or {} end
-        end
+        for _, p in ipairs(projects)        do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
+        for _, p in ipairs(folder_projects) do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
+        for _, p in ipairs(templates)       do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
         save_project_data(proj.path)
         rebuild_all_tags()
       end
@@ -2046,11 +2000,9 @@ local function render_tag_popup()
 
             if clicked then
               toggle_project_tag(tag_popup.proj_key, tag_name)
-              for _, p in ipairs(projects) do
-                if p.key == tag_popup.proj_key then
-                  p.tags = project_tags[p.key] or {}
-                end
-              end
+              for _, p in ipairs(projects)        do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
+              for _, p in ipairs(folder_projects) do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
+              for _, p in ipairs(templates)       do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
               save_project_data(tag_popup.proj_path)
               rebuild_all_tags()
             end
@@ -2114,7 +2066,9 @@ local function render_tag_popup()
           for key in pairs(project_tags) do ti[#ti+1] = key end
           es_set("tags_index", table.concat(ti, "\n"))
           -- Sync in-memory project objects
-          for _, p in ipairs(projects) do p.tags = project_tags[p.key] or {} end
+          for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
+          for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
+          for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
           rebuild_all_tags()
         end
       end
@@ -2193,7 +2147,9 @@ local function render_tag_popup()
                 if t == orig then tags[i] = new end
               end
             end
-            for _, p in ipairs(projects) do p.tags = project_tags[p.key] or {} end
+            for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
+            for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
+            for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
           else
             tag_registry[orig] = tag_popup.new_color
           end
@@ -2456,12 +2412,10 @@ local function render_palette()
       ImGui.Text(ctx, p.name)
       ImGui.PopStyleColor(ctx)
       ImGui.SameLine(ctx)
-      push_mono()
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       ImGui.Text(ctx, p.last_str)
       ImGui.PopStyleColor(ctx)
-      pop_mono()
-    end
+      end
 
     -- Click outside → close
     if ImGui.IsMouseClicked(ctx, 0) and not ImGui.IsWindowHovered(ctx) then
@@ -2557,7 +2511,6 @@ local function render_statusbar()
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
   if ImGui.BeginChild(ctx, "##statusbar", 0, 22, 0) then
     local ox, oy = ImGui.GetCursorPos(ctx)
-    push_mono()
     local now = os.time()
     ImGui.SetCursorPos(ctx, ox + pad_x, oy + pad_y)
     if ui.flash_msg and os.difftime(now, ui.flash_t) < 3 then
@@ -2576,7 +2529,6 @@ local function render_statusbar()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.Text(ctx, hint)
     ImGui.PopStyleColor(ctx)
-    pop_mono()
   end
   ImGui.EndChild(ctx)
   ImGui.PopStyleVar(ctx)
@@ -2601,7 +2553,7 @@ local function loop()
 
     -- Body
     local avail_w, avail_h = ImGui.GetContentRegionAvail(ctx)
-    local show_detail = (ui.tab == "recent" or ui.tab == "sets" or ui.tab == "folders")
+    local show_detail = (ui.tab == "recent" or ui.tab == "sets" or ui.tab == "folders" or ui.tab == "templates")
     local detail_w    = show_detail and 290 or 0
     local list_w      = show_detail and (avail_w - detail_w - 1) or -1
 
@@ -2716,9 +2668,9 @@ end
 
 -- ── Init ──────────────────────────────────────────────────────────────
 load_all_state()
-templates = get_templates()
 build_project_list()
 build_folder_projects()
+build_templates()
 
 reaper.atexit(function()
   -- Flush live notes buffers then write data file once
