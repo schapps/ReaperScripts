@@ -1,6 +1,6 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.2
+-- @version 0.3.3
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
@@ -26,18 +26,18 @@ end
 
 -- ── Palette ───────────────────────────────────────────────────────────
 local C = {
-  bg       = 0x1a1a1aff,
+  bg       = 0x282828ff,
   panel    = 0x222222ff,
-  panel2   = 0x282828ff,
-  panel3   = 0x323232ff,
+  panel2   = 0x333333ff,
+  panel3   = 0x3c434aff,
   sel      = 0x3a3550ff,
-  hover    = 0x262626ff,
-  row_hover= 0x303030ff,
-  border   = 0x2c2c2cff,
-  border2  = 0x383838ff,
-  text     = 0xe2e2e2ff,
+  hover    = 0x323232ff,
+  row_hover= 0x343a40ff,
+  border   = 0x3a3f45ff,
+  border2  = 0x4a545cff,
+  text     = 0xe6e6e6ff,
   text2    = 0xb8b8b8ff,
-  text3    = 0x909090ff,
+  text3    = 0xa0a0a0ff,
   text4    = 0x6a6a6aff,
   accent   = 0x9b8fc4ff,
   accent2  = 0x6f6494ff,
@@ -813,15 +813,15 @@ local function push_rs_theme()
     { ImGui.Col_Header,          C.sel    },
     { ImGui.Col_HeaderHovered,   C.row_hover },
     { ImGui.Col_HeaderActive,    C.accent2},
-    { ImGui.Col_Button,          C.panel2 },
-    { ImGui.Col_ButtonHovered,   C.panel3 },
-    { ImGui.Col_ButtonActive,    C.border2},
+    { ImGui.Col_Button,          0x60606066 },
+    { ImGui.Col_ButtonHovered,   0x606060ff },
+    { ImGui.Col_ButtonActive,    0x808080ff },
     { ImGui.Col_Text,            C.text   },
     { ImGui.Col_TextDisabled,    C.text3  },
     { ImGui.Col_CheckMark,       C.accent },
     { ImGui.Col_SliderGrab,      C.accent },
-    { ImGui.Col_ScrollbarBg,     C.bg     },
-    { ImGui.Col_ScrollbarGrab,   C.panel3 },
+    { ImGui.Col_ScrollbarBg,     C.bg      },
+    { ImGui.Col_ScrollbarGrab,   C.border  },
     { ImGui.Col_ScrollbarGrabHovered, C.border2 },
     { ImGui.Col_Separator,       C.border },
   }
@@ -870,36 +870,22 @@ local function render_topbar()
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 8, 0)
   if ImGui.BeginChild(ctx, "##topbar", 0, 36, 0) then
     ImGui.SetCursorPos(ctx, 8, 8)
-    -- Brand
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
-    ImGui.Text(ctx, "ReaStart")
-    ImGui.PopStyleColor(ctx)
-    ImGui.SameLine(ctx)
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.border2)
-    ImGui.Text(ctx, "│")
-    ImGui.PopStyleColor(ctx)
-    ImGui.SameLine(ctx)
-    -- Search
     local avail = ImGui.GetContentRegionAvail(ctx)
     ImGui.SetNextItemWidth(ctx, avail - 4)
     ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg, C.bg)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text,    C.text2)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Border,  0x00000000)
     if ui.search_focus then
       ImGui.SetKeyboardFocusHere(ctx)
       ui.search_focus = false
     end
-    local changed, new_s = ImGui.InputText(ctx, "##search", ui.search, 256)
+    local changed, new_s = ImGui.InputTextWithHint(ctx, "##search", "Search projects...", ui.search, 256)
     if changed then ui.search = new_s end
-    ImGui.PopStyleColor(ctx, 2)
+    ImGui.PopStyleColor(ctx, 3)
   end
   ImGui.EndChild(ctx)
   ImGui.PopStyleVar(ctx)
   ImGui.PopStyleColor(ctx)
-
-  -- Hairline separator
-  local dl = ImGui.GetWindowDrawList(ctx)
-  local wx, wy = ImGui.GetWindowPos(ctx)
-  ImGui.DrawList_AddLine(dl, wx, wy + 36, wx + ImGui.GetWindowWidth(ctx), wy + 36, C.border, 1)
 end
 
 -- ── Render: tag bar ────────────────────────────────────────────────────
@@ -2541,7 +2527,7 @@ local function loop()
   push_rs_theme()
 
   ImGui.SetNextWindowSize(ctx, 900, 650, ImGui.Cond_FirstUseEver)
-  local visible, open = ImGui.Begin(ctx, "ReaStart — Project Launcher", true, WIN_FLAGS)
+  local visible, open = ImGui.Begin(ctx, "REASTART", true, WIN_FLAGS)
 
   if visible then
     -- Save window position for palette centering
