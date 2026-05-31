@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.4.1
+-- @version 0.4.2
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.4.2 Detail pane Open button matches Resume height and white text
 --   05/31/26 v0.4.1 Status bar height tracks font size; no scrollbar
 --   05/31/26 v0.4.0 Draggable list/detail divider (persisted across sessions)
 --   05/31/26 v0.3.9 Font size slider
@@ -1761,7 +1762,7 @@ local function render_set_detail_pane()
     local aw = select(1, ImGui.GetContentRegionAvail(ctx))
     push_btn(C.accent2, C.accent, C.accent2)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
-    if ImGui.Button(ctx, "\xe2\x96\xb6  Open Set##sd_open", aw, sc(24)) then
+    if ImGui.Button(ctx, "\xe2\x96\xb6  Open Set##sd_open", aw, sc(26)) then
       open_project_set(s.id)
     end
     ImGui.PopStyleColor(ctx)
@@ -1871,13 +1872,15 @@ local function render_detail_pane()
   -- Action buttons
   local aw = ImGui.GetContentRegionAvail(ctx)
   push_btn(C.accent2, C.accent, C.accent2)
-  if ImGui.Button(ctx, "▶  Open##d_open", aw - sc(60), sc(22)) then
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
+  if ImGui.Button(ctx, "▶  Open##d_open", aw - sc(62), sc(26)) then
     open_project(proj.path)
   end
+  ImGui.PopStyleColor(ctx)
   pop_btn()
   ImGui.SameLine(ctx)
   push_btn(C.panel2, C.panel3, C.border)
-  if ImGui.Button(ctx, "⇱##d_rev", sc(24), sc(22)) then reveal_path(proj.path) end
+  if ImGui.Button(ctx, "⇱##d_rev", sc(26), sc(26)) then reveal_path(proj.path) end
   pop_btn()
 
   ImGui.Dummy(ctx, 0, 6)
