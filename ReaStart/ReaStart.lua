@@ -1,11 +1,13 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.3.9
+-- @version 0.4.1
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   05/31/26 v0.4.1 Status bar height tracks font size; no scrollbar
+--   05/31/26 v0.4.0 Draggable list/detail divider (persisted across sessions)
 --   05/31/26 v0.3.9 Font size slider
 --   05/31/26 v0.3.8 Making tag filtering additive
 
@@ -103,6 +105,7 @@ local KEY_UP     = rawget(ImGui, "Key_UpArrow")
 local KEY_DOWN   = rawget(ImGui, "Key_DownArrow")
 
 local TABLE_ROW_BG_TARGET = rawget(ImGui, "TableBgTarget_RowBg0") or 1
+local MOUSE_CURSOR_EW     = rawget(ImGui, "MouseCursor_ResizeEW")
 
 -- ── State ─────────────────────────────────────────────────────────────
 local ui = {
@@ -144,6 +147,7 @@ local settings = {
   accent             = 0x9b8fc4ff,
   ignore_subprojects = false,
   font_size          = 13,
+  detail_w           = 290,
 }
 
 -- Returns v scaled proportionally to the current font size.
@@ -2569,9 +2573,11 @@ end
 -- ── Render: status bar ────────────────────────────────────────────────
 local function render_statusbar()
   local pad_x, pad_y = 10, 4
+  local bar_h     = math.ceil(ImGui.GetTextLineHeight(ctx)) + pad_y * 2
+  local no_scroll = rawget(ImGui, "WindowFlags_NoScrollbar") or 0
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
-  if ImGui.BeginChild(ctx, "##statusbar", 0, sc(22), 0) then
+  if ImGui.BeginChild(ctx, "##statusbar", 0, bar_h, 0, no_scroll) then
     local ox, oy = ImGui.GetCursorPos(ctx)
     local now = os.time()
     ImGui.SetCursorPos(ctx, ox + pad_x, oy + pad_y)
@@ -2618,11 +2624,13 @@ local function loop()
     -- Body
     local avail_w, avail_h = ImGui.GetContentRegionAvail(ctx)
     local show_detail = (ui.tab == "recent" or ui.tab == "sets" or ui.tab == "folders" or ui.tab == "templates")
-    local detail_w    = show_detail and 290 or 0
-    local list_w      = show_detail and (avail_w - detail_w - 1) or -1
+    local SPLIT_W     = show_detail and 8 or 0
+    local detail_w    = show_detail and settings.detail_w or 0
+    local pane_h      = avail_h - (math.ceil(ImGui.GetTextLineHeight(ctx)) + 8)
+    local list_w      = show_detail and (avail_w - detail_w - SPLIT_W) or -1
 
     ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
-    if ImGui.BeginChild(ctx, "##main_pane", list_w, avail_h - sc(24), 0, WIN_NO_NAV) then
+    if ImGui.BeginChild(ctx, "##main_pane", list_w, pane_h, 0, WIN_NO_NAV) then
       if     ui.tab == "recent"    then render_recent_panel()
       elseif ui.tab == "folders"   then render_folders_panel()
       elseif ui.tab == "sets"      then render_sets_panel()
@@ -2634,18 +2642,32 @@ local function loop()
     ImGui.PopStyleColor(ctx)
 
     if show_detail then
-      ImGui.SameLine(ctx)
-      local dl = ImGui.GetWindowDrawList(ctx)
-      local dx, dy = ImGui.GetCursorScreenPos(ctx)
-      ImGui.DrawList_AddLine(dl, dx, dy, dx, dy + avail_h, C.border, 1)
+      ImGui.SameLine(ctx, 0, 0)
+      local dl     = ImGui.GetWindowDrawList(ctx)
+      local sx, sy = ImGui.GetCursorScreenPos(ctx)
+
+      -- Drag handle spanning the splitter gap
+      ImGui.InvisibleButton(ctx, "##splitter", SPLIT_W, pane_h)
+      local spl_hov = ImGui.IsItemHovered(ctx)
+      local spl_act = ImGui.IsItemActive(ctx)
+      if (spl_hov or spl_act) and MOUSE_CURSOR_EW then
+        ImGui.SetMouseCursor(ctx, MOUSE_CURSOR_EW)
+      end
+      if spl_act then
+        local mdx = select(1, ImGui.GetMouseDelta(ctx))
+        if mdx ~= 0 then
+          settings.detail_w = math.max(160, math.min(math.floor(avail_w * 0.6), settings.detail_w - mdx))
+        end
+      end
+      if ImGui.IsItemDeactivated(ctx) then save_settings() end
+
+      -- Visual divider line centred in the handle
+      local mid = sx + math.floor(SPLIT_W * 0.5)
+      ImGui.DrawList_AddLine(dl, mid, sy, mid, sy + pane_h, C.border, 1)
+
+      ImGui.SameLine(ctx, 0, 0)
       ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.panel)
-      if ImGui.BeginChild(ctx, "##detail_pane", detail_w, avail_h - sc(24), 0) then
-        -- ImGui insets a child's left edge by WindowPadding but only pulls the right
-        -- edge in when a scrollbar is present — so full-width content runs flush to the
-        -- right on tabs short enough not to scroll (Sets/Templates). Render into an
-        -- inner child that is DETAIL_PAD_X narrower than the pane so the right margin
-        -- always matches the left, no scrollbar required. The reserved strip on the
-        -- right shows the same panel background, so there's no visible seam.
+      if ImGui.BeginChild(ctx, "##detail_pane", detail_w, pane_h, 0) then
         ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, DETAIL_PAD_X, DETAIL_PAD_Y)
         local inner_flags = rawget(ImGui, "WindowFlags_NoScrollbar") or 0
         if ImGui.BeginChild(ctx, "##detail_content", detail_w - DETAIL_PAD_X, 0, 0, inner_flags) then
