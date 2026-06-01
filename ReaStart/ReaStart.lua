@@ -1561,12 +1561,7 @@ local function render_folders_panel()
   -- ── Folder management strip ──────────────────────────────────────────
   ImGui.SetCursorPos(ctx, 10, 10)
 
-  if #watched_folders == 0 then
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
-    ImGui.Text(ctx, "No folders configured. Add a folder to browse its projects.")
-    ImGui.PopStyleColor(ctx)
-    ImGui.Dummy(ctx, 0, 6)
-  else
+  if #watched_folders > 0 then
     local remove_idx = nil
     for fi, folder in ipairs(watched_folders) do
       ImGui.SetCursorPosX(ctx, 10)
@@ -1629,6 +1624,16 @@ local function render_folders_panel()
     ImGui.DrawList_AddLine(dl, sx, sy, sx + ww, sy, C.border, 1)
   end
   ImGui.Dummy(ctx, 0, 4)
+
+  -- Empty state: no folders configured yet
+  if #watched_folders == 0 then
+    ImGui.SetCursorPosX(ctx, 10)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.Text(ctx, "Add a watched folder above to browse its projects.")
+    ImGui.PopStyleColor(ctx)
+    ImGui.PopStyleVar(ctx)
+    return
+  end
 
   -- Scan progress indicator
   if bg_scan.active then
