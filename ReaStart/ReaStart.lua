@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.5.3
+-- @version 0.5.4
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   06/01/26 v0.5.4 Tag bar wraps text, tab selection persistent, shortcut for Open Project (ctrl+o)
 --   05/31/26 v0.5.2 Right-click Tag selection submenu for bulk tagging
 --   05/31/26 v0.5.1 Time-sliced incremental folder scanner; window always appears instantly
 --   05/31/26 v0.5.0 Fast startup: lazy file sizes + folder path cache + background rescan
@@ -112,6 +113,7 @@ local KEY_ESCAPE = rawget(ImGui, "Key_Escape")
 local KEY_ENTER  = rawget(ImGui, "Key_Enter")
 local KEY_F      = rawget(ImGui, "Key_F")
 local KEY_K      = rawget(ImGui, "Key_K")
+local KEY_O      = rawget(ImGui, "Key_O")
 local KEY_UP     = rawget(ImGui, "Key_UpArrow")
 local KEY_DOWN   = rawget(ImGui, "Key_DownArrow")
 
@@ -707,7 +709,7 @@ local function rebuild_all_tags()
   for _, p in ipairs(templates)       do for _, t in ipairs(p.tags) do tag_set[t] = true end end
   all_tags = {}
   for t in pairs(tag_set) do all_tags[#all_tags + 1] = t end
-  table.sort(all_tags)
+  table.sort(all_tags, function(a, b) return a:lower() < b:lower() end)
 end
 
 local function build_project_list()
@@ -978,34 +980,90 @@ end
 -- ── Render: tag bar ────────────────────────────────────────────────────
 local function render_tag_bar()
   if #all_tags == 0 then return end
+
+  local MARGIN_L     = 8
+  local TAG_SPACING  = 4   -- horizontal gap between buttons
+  local ITEM_SP_Y    = 3   -- vertical gap between wrapped rows
+  local FP_X         = 6   -- FramePadding.x set by push_rs_theme
+  local PAD_V        = 5   -- top/bottom padding inside the child
+  local RIGHT_MARGIN = 4   -- guard at right edge
+
+  -- Pre-calculate number of rows needed so we can size the child window.
+  local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+  local lh      = ImGui.GetTextLineHeight(ctx)
+  local label_w = ImGui.CalcTextSize(ctx, "Tags")
+  local cur_x   = MARGIN_L + label_w + TAG_SPACING
+  local n_rows  = 1
+
+  local function sim_btn(display)
+    local w = ImGui.CalcTextSize(ctx, display) + FP_X * 2
+    if cur_x + w > avail_w - RIGHT_MARGIN then
+      n_rows = n_rows + 1
+      cur_x  = MARGIN_L
+    end
+    cur_x = cur_x + w + TAG_SPACING
+  end
+
+  for _, tag in ipairs(all_tags) do sim_btn("● " .. tag) end
+  if next(ui.tag_filter) then sim_btn("✕ clear") end
+
+  local child_h = PAD_V + n_rows * lh + math.max(0, n_rows - 1) * ITEM_SP_Y + PAD_V
+  child_h = math.max(child_h, sc(24))
+
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, C.bg)
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, 4, 0)
-  local tbv = ImGui.BeginChild(ctx, "##tagbar", 0, sc(26), 0)
-  if tbv then
-    ImGui.SetCursorPos(ctx, 8, 5)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, TAG_SPACING, ITEM_SP_Y)
+
+  if ImGui.BeginChild(ctx, "##tagbar", 0, child_h, 0) then
+    local wx        = select(1, ImGui.GetWindowPos(ctx))
+    local ww        = ImGui.GetWindowWidth(ctx)
+    local win_right = wx + ww - RIGHT_MARGIN
+
+    ImGui.SetCursorPos(ctx, MARGIN_L, PAD_V)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
     ImGui.Text(ctx, "Tags")
     ImGui.PopStyleColor(ctx)
-    ImGui.SameLine(ctx)
+
     for _, tag in ipairs(all_tags) do
-      local tc     = get_tag_color(tag)
-      local active = (ui.tag_filter[tag] == true)
+      local tc      = get_tag_color(tag)
+      local active  = (ui.tag_filter[tag] == true)
+      local display = "● " .. tag
+      local btn_w   = ImGui.CalcTextSize(ctx, display) + FP_X * 2
+      local prev_x  = select(1, ImGui.GetItemRectMax(ctx))
+
+      if prev_x + TAG_SPACING + btn_w <= win_right then
+        ImGui.SameLine(ctx)
+      else
+        ImGui.SetCursorPosX(ctx, MARGIN_L)
+      end
+
       push_btn(active and C.panel3 or 0x00000000, active and C.border2 or C.panel2, C.panel3)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, tc)
-      if ImGui.SmallButton(ctx, "● " .. tag .. "##t_" .. tag) then
+      if ImGui.SmallButton(ctx, display .. "##t_" .. tag) then
         if active then ui.tag_filter[tag] = nil else ui.tag_filter[tag] = true end
       end
       ImGui.PopStyleColor(ctx, 4)
-      ImGui.SameLine(ctx)
     end
+
     if next(ui.tag_filter) then
+      local display = "✕ clear"
+      local btn_w   = ImGui.CalcTextSize(ctx, display) + FP_X * 2
+      local prev_x  = select(1, ImGui.GetItemRectMax(ctx))
+
+      if prev_x + TAG_SPACING + btn_w <= win_right then
+        ImGui.SameLine(ctx)
+      else
+        ImGui.SetCursorPosX(ctx, MARGIN_L)
+      end
+
       push_btn(0x00000000, C.panel2, C.panel3)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
       if ImGui.SmallButton(ctx, "✕ clear##tagclear") then ui.tag_filter = {} end
       ImGui.PopStyleColor(ctx, 4)
     end
+
     ImGui.EndChild(ctx)
   end
+
   ImGui.PopStyleVar(ctx)
   ImGui.PopStyleColor(ctx)
 end
@@ -2898,6 +2956,9 @@ local function loop()
       ui.palette_q     = ""
       ui.palette_sel   = 1
       ui.palette_focus = true
+    end
+    if ctrl and KEY_O and ImGui.IsKeyPressed(ctx, KEY_O) then
+      reaper.Main_OnCommand(40025, 0)
     end
     if not ui.palette_open and KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
       ui.close_requested = true
