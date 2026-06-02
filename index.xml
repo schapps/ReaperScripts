@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="a6d997ff6c82ac5d8d821164c7cd3b62c07ee2dd">
+<index version="1" name="SPS Scripts" commit="645efb92bd114eec66be985bf6ac77a90f4a18d2">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5308,6 +5308,21 @@
 05/31/26 v0.3.9 Font size slider
 05/31/26 v0.3.8 Making tag filtering additive]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/a6d997ff6c82ac5d8d821164c7cd3b62c07ee2dd/ReaStart/ReaStart.lua</source>
+      </version>
+      <version name="0.5.5" author="Stephen Schappler" time="2026-06-02T02:34:29Z">
+        <changelog><![CDATA[06/01/26 v0.5.5 Auto-tag based on dir or name pattern
+06/01/26 v0.5.4 Tag bar wraps text, tab selection persistent, shortcut for Open Project (ctrl+o)
+05/31/26 v0.5.2 Right-click Tag selection submenu for bulk tagging
+05/31/26 v0.5.1 Time-sliced incremental folder scanner; window always appears instantly
+05/31/26 v0.5.0 Fast startup: lazy file sizes + folder path cache + background rescan
+05/31/26 v0.4.4 Tag delete confirmation; no accidental deletions
+05/31/26 v0.4.3 macOS Cmd+click and Shift+click multi-select support
+05/31/26 v0.4.2 Detail pane Open button matches Resume height and white text
+05/31/26 v0.4.1 Status bar height tracks font size; no scrollbar
+05/31/26 v0.4.0 Draggable list/detail divider (persisted across sessions)
+05/31/26 v0.3.9 Font size slider
+05/31/26 v0.3.8 Making tag filtering additive]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/645efb92bd114eec66be985bf6ac77a90f4a18d2/ReaStart/ReaStart.lua</source>
       </version>
     </reapack>
   </category>
