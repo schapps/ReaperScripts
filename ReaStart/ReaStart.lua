@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.5.4
+-- @version 0.5.5
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   06/01/26 v0.5.5 Auto-tag based on dir or name pattern
 --   06/01/26 v0.5.4 Tag bar wraps text, tab selection persistent, shortcut for Open Project (ctrl+o)
 --   05/31/26 v0.5.2 Right-click Tag selection submenu for bulk tagging
 --   05/31/26 v0.5.1 Time-sliced incremental folder scanner; window always appears instantly
@@ -209,6 +210,7 @@ local last_opened   = {}   -- full_path → os.time()
 local tag_registry  = {}   -- tag_name → 0xRRGGBBAA (user-defined colors)
 local project_sets  = {}   -- set_id → { id, name, paths={} }
 local sets_order    = {}   -- array of set_ids in insertion order
+local auto_tag_rules = {}  -- array of { id, type="folder"|"name", match, tag }
 
 local tag_popup = {
   open           = false,
@@ -230,6 +232,17 @@ local set_popup = {
   name_buf    = "",
   focus_input = false,
   new_color   = 0x9b8fc4ff,
+}
+
+local auto_tag_popup = {
+  open          = false,
+  skip_close    = false,
+  focus_input   = false,
+  rule_type     = "folder",  -- "folder" or "name"
+  match_buf     = "",
+  tag_buf       = "",        -- current input for next tag to add
+  tags          = {},        -- accumulated list of tags for this rule
+  edit_rule_idx = nil,       -- non-nil when editing an existing rule
 }
 
 local DENSITY_H = { compact = 22, comfort = 32, detail = 48 }
@@ -270,6 +283,10 @@ local function new_set_id()
   return "set_" .. tostring(os.time()) .. "_" .. tostring(math.random(999))
 end
 
+local function new_rule_id()
+  return "rule_" .. tostring(os.time()) .. "_" .. tostring(math.random(999))
+end
+
 local function selection_count()
   local n = 0
   for _ in pairs(ui.selected_paths) do n = n + 1 end
@@ -286,6 +303,43 @@ local function clear_selection()
   ui.selected_paths = {}
   ui.selected_path  = nil
   ui.anchor_path    = nil
+end
+
+-- ── Auto-tag helpers ──────────────────────────────────────────────────
+local function path_under_folder(proj_path, folder_path)
+  local np = proj_path:lower():gsub("\\", "/")
+  local nf = folder_path:lower():gsub("\\", "/")
+  if nf:sub(-1) ~= "/" then nf = nf .. "/" end
+  return np:sub(1, #nf) == nf
+end
+
+local function get_auto_tags(path, name)
+  local result = {}
+  for _, rule in ipairs(auto_tag_rules) do
+    local hit = false
+    if rule.type == "folder" then
+      hit = path_under_folder(path, rule.match)
+    elseif rule.type == "name" then
+      hit = name:lower():find(rule.match:lower(), 1, true) ~= nil
+    end
+    if hit then
+      for _, t in ipairs(rule.tags or (rule.tag and { rule.tag }) or {}) do
+        result[#result + 1] = t
+      end
+    end
+  end
+  return result
+end
+
+local function effective_tags(key, path, name)
+  local seen, result = {}, {}
+  for _, t in ipairs(project_tags[key] or {}) do
+    seen[t] = true; result[#result + 1] = t
+  end
+  for _, t in ipairs(get_auto_tags(path, name)) do
+    if not seen[t] then result[#result + 1] = t end
+  end
+  return result
 end
 
 -- ── Tag utilities ─────────────────────────────────────────────────────
@@ -391,6 +445,7 @@ local function save_all_state()
     sets_order           = sets_order,
     folder_project_paths = fpp,
     file_size_cache      = file_size_cache,
+    auto_tag_rules       = auto_tag_rules,
   }
   local f = io.open(DATA_FILE, "w")
   if not f then return end
@@ -471,6 +526,7 @@ local function load_all_state()
         sets_order[#sets_order + 1] = id
       end
       for k, v in pairs(data.file_size_cache or {}) do file_size_cache[k] = v end
+      for i, v in ipairs(data.auto_tag_rules or {}) do auto_tag_rules[i] = v end
       if type(settings.accent) == "string" then
         local hex = settings.accent:gsub("#", "")
         local r = tonumber(hex:sub(1,2), 16) or 0x9b
@@ -493,7 +549,7 @@ local function load_all_state()
             path     = entry.path,
             key      = k,
             pinned   = pinned[entry.path] or false,
-            tags     = project_tags[k] or {},
+            tags     = effective_tags(k, entry.path, path_name(entry.path)),
             notes    = project_notes[k] or "",
             last_t   = t,
             last_str = t and fmt_ago(t) or "—",
@@ -536,6 +592,7 @@ local function save_last_opened_state() save_all_state() end
 local function save_watched_folders() save_all_state() end
 local function save_tag_registry()    save_all_state() end
 local function save_sets()            save_all_state() end
+local function save_auto_tag_rules()  save_all_state() end
 
 -- ── Data layer ────────────────────────────────────────────────────────
 
@@ -729,7 +786,7 @@ local function build_project_list()
         key      = k,
         rank     = i,
         pinned   = pinned[path] or false,
-        tags     = project_tags[k] or {},
+        tags     = effective_tags(k, path, path_name(path)),
         notes    = project_notes[k] or "",
         last_t   = display_t,
         last_str = fmt_ago(display_t),
@@ -779,7 +836,7 @@ local function build_templates()
     local cached_sz = file_size_cache[t.path]
     t.key      = k
     t.pinned   = pinned[t.path] or false
-    t.tags     = project_tags[k] or {}
+    t.tags     = effective_tags(k, t.path, t.name)
     t.notes    = project_notes[k] or ""
     t.last_t   = ot
     t.last_str = ot and fmt_ago(ot) or "—"
@@ -1402,7 +1459,7 @@ local function render_project_table(list)
             -- Sync all in-memory project objects
             for _, lst in ipairs({ projects, folder_projects, templates }) do
               for _, p in ipairs(lst) do
-                p.tags = project_tags[p.key] or {}
+                p.tags = effective_tags(p.key, p.path, p.name)
               end
             end
             save_project_data(nil)
@@ -1906,6 +1963,114 @@ local function render_settings_panel()
     save_settings()
   end
 
+  -- ── AUTO TAGS ──────────────────────────────────────────────────────────
+  ImGui.Dummy(ctx, 0, sc(10))
+  section("AUTO TAGS")
+
+  ImGui.SetCursorPosX(ctx, 14)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+  ImGui.TextWrapped(ctx, "Automatically tag projects matching a folder path or a name pattern.")
+  ImGui.PopStyleColor(ctx)
+  ImGui.Dummy(ctx, 0, sc(4))
+
+  -- Rule rows
+  local to_delete_rule = nil
+  local rw_avail = select(1, ImGui.GetContentRegionAvail(ctx))
+  local rw = rw_avail - 4
+  for ri, rule in ipairs(auto_tag_rules) do
+    ImGui.SetCursorPosX(ctx, 14)
+    local lx, ly = ImGui.GetCursorPos(ctx)
+    local sx, sy = ImGui.GetCursorScreenPos(ctx)
+    local row_h  = sc(32)
+
+    ImGui.DrawList_AddRectFilled(dl, sx, sy, sx + rw, sy + row_h, C.panel)
+    ImGui.DrawList_AddLine(dl, sx, sy + row_h, sx + rw, sy + row_h, C.border, 1)
+
+    -- Type pill
+    ImGui.SetCursorPos(ctx, lx + 8, ly + math.floor((row_h - sc(14)) * 0.5))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.Text(ctx, rule.type == "folder" and "folder" or "name")
+    ImGui.PopStyleColor(ctx)
+
+    -- Match string
+    ImGui.SameLine(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text2)
+    ImGui.Text(ctx, rule.match)
+    ImGui.PopStyleColor(ctx)
+
+    -- Arrow + tags
+    ImGui.SameLine(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    ImGui.Text(ctx, "→")
+    ImGui.PopStyleColor(ctx)
+    for _, rt in ipairs(rule.tags or (rule.tag and { rule.tag }) or {}) do
+      ImGui.SameLine(ctx)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, get_tag_color(rt))
+      ImGui.Text(ctx, "● " .. rt)
+      ImGui.PopStyleColor(ctx)
+    end
+
+    -- Edit + Delete buttons (right-aligned)
+    local btn_w = sc(18)
+    local btn_y = ly + math.floor((row_h - sc(16)) * 0.5)
+
+    ImGui.SetCursorPos(ctx, lx + rw - btn_w * 2 - 10, btn_y)
+    push_btn(0x00000000, C.panel3, C.border)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    if ImGui.SmallButton(ctx, "\xe2\x9c\x8e##atedit_" .. ri) then
+      auto_tag_popup.open          = true
+      auto_tag_popup.edit_rule_idx = ri
+      auto_tag_popup.rule_type     = rule.type
+      auto_tag_popup.match_buf     = rule.match
+      auto_tag_popup.tag_buf       = ""
+      auto_tag_popup.tags          = {}
+      local src = rule.tags or (rule.tag and { rule.tag }) or {}
+      for i, t in ipairs(src) do auto_tag_popup.tags[i] = t end
+      auto_tag_popup.focus_input   = true
+      auto_tag_popup.skip_close    = true
+    end
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    ImGui.SetCursorPos(ctx, lx + rw - btn_w - 6, btn_y)
+    push_btn(0x00000000, C.panel3, C.border)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.danger)
+    if ImGui.SmallButton(ctx, "\xe2\x9c\x95##atdel_" .. ri) then
+      to_delete_rule = ri
+    end
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    ImGui.SetCursorPos(ctx, lx, ly + row_h + sc(2))
+  end
+
+  if to_delete_rule then
+    table.remove(auto_tag_rules, to_delete_rule)
+    for _, lst in ipairs({ projects, folder_projects, templates }) do
+      for _, p in ipairs(lst) do p.tags = effective_tags(p.key, p.path, p.name) end
+    end
+    rebuild_all_tags()
+    save_auto_tag_rules()
+  end
+
+  -- Add Rule button
+  ImGui.Dummy(ctx, 0, sc(2))
+  ImGui.SetCursorPosX(ctx, 14)
+  push_btn(C.panel2, C.panel3, C.border)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
+  if ImGui.Button(ctx, "+ Add Auto Tag Rule\xe2\x80\xa6##at_add", 0, 0) then
+    auto_tag_popup.open          = true
+    auto_tag_popup.edit_rule_idx = nil
+    auto_tag_popup.rule_type     = "folder"
+    auto_tag_popup.match_buf     = ""
+    auto_tag_popup.tag_buf       = ""
+    auto_tag_popup.tags          = {}
+    auto_tag_popup.focus_input   = true
+    auto_tag_popup.skip_close    = true
+  end
+  ImGui.PopStyleColor(ctx)
+  pop_btn()
+
   ImGui.PopStyleVar(ctx)
 end
 
@@ -2158,9 +2323,9 @@ local function render_detail_pane()
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
       if ImGui.SmallButton(ctx, "x##rtag_" .. tag) then
         remove_project_tag(proj.key, tag)
-        for _, p in ipairs(projects)        do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
-        for _, p in ipairs(folder_projects) do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
-        for _, p in ipairs(templates)       do if p.key == proj.key then p.tags = project_tags[p.key] or {} end end
+        for _, p in ipairs(projects)        do if p.key == proj.key then p.tags = effective_tags(p.key, p.path, p.name) end end
+        for _, p in ipairs(folder_projects) do if p.key == proj.key then p.tags = effective_tags(p.key, p.path, p.name) end end
+        for _, p in ipairs(templates)       do if p.key == proj.key then p.tags = effective_tags(p.key, p.path, p.name) end end
         save_project_data(proj.path)
         rebuild_all_tags()
       end
@@ -2273,9 +2438,9 @@ local function render_tag_popup()
 
             if clicked then
               toggle_project_tag(tag_popup.proj_key, tag_name)
-              for _, p in ipairs(projects)        do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
-              for _, p in ipairs(folder_projects) do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
-              for _, p in ipairs(templates)       do if p.key == tag_popup.proj_key then p.tags = project_tags[p.key] or {} end end
+              for _, p in ipairs(projects)        do if p.key == tag_popup.proj_key then p.tags = effective_tags(p.key, p.path, p.name) end end
+              for _, p in ipairs(folder_projects) do if p.key == tag_popup.proj_key then p.tags = effective_tags(p.key, p.path, p.name) end end
+              for _, p in ipairs(templates)       do if p.key == tag_popup.proj_key then p.tags = effective_tags(p.key, p.path, p.name) end end
               save_project_data(tag_popup.proj_path)
               rebuild_all_tags()
             end
@@ -2362,9 +2527,9 @@ local function render_tag_popup()
             if tags[i] == dn then table.remove(tags, i) end
           end
         end
-        for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
-        for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
-        for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
+        for _, p in ipairs(projects)        do p.tags = effective_tags(p.key, p.path, p.name) end
+        for _, p in ipairs(folder_projects) do p.tags = effective_tags(p.key, p.path, p.name) end
+        for _, p in ipairs(templates)       do p.tags = effective_tags(p.key, p.path, p.name) end
         save_all_state()
         rebuild_all_tags()
         tag_popup.confirm_delete = nil
@@ -2447,9 +2612,9 @@ local function render_tag_popup()
                 if t == orig then tags[i] = new end
               end
             end
-            for _, p in ipairs(projects)        do p.tags = project_tags[p.key] or {} end
-            for _, p in ipairs(folder_projects) do p.tags = project_tags[p.key] or {} end
-            for _, p in ipairs(templates)       do p.tags = project_tags[p.key] or {} end
+            for _, p in ipairs(projects)        do p.tags = effective_tags(p.key, p.path, p.name) end
+            for _, p in ipairs(folder_projects) do p.tags = effective_tags(p.key, p.path, p.name) end
+            for _, p in ipairs(templates)       do p.tags = effective_tags(p.key, p.path, p.name) end
           else
             tag_registry[orig] = tag_popup.new_color
           end
@@ -2523,6 +2688,265 @@ local function render_tag_popup()
 end
 
 -- ── Render: set creation popup ───────────────────────────────────────
+local function render_auto_tag_popup()
+  if not auto_tag_popup.open then return end
+
+  local pw, ph = 420, 400
+  local cx = ui.win_x + math.floor((ui.win_w - pw) / 2)
+  local cy = ui.win_y + math.floor((ui.win_h - ph) / 2)
+  ImGui.SetNextWindowPos(ctx, cx, cy, ImGui.Cond_Always)
+  ImGui.SetNextWindowSize(ctx, pw, ph, ImGui.Cond_Always)
+
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg, C.panel2)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Border,   C.border2)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding,  12, 10)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowRounding,  4)
+
+  local pop_flags = ImGui.WindowFlags_NoCollapse
+                  | ImGui.WindowFlags_NoResize
+                  | ImGui.WindowFlags_NoTitleBar
+                  | ImGui.WindowFlags_NoScrollbar
+  local visible = ImGui.Begin(ctx, "##atpopup", true, pop_flags)
+  if visible then
+    local wpx, wpy = ImGui.GetWindowPos(ctx)
+    local wpw      = ImGui.GetWindowWidth(ctx)
+    local wph      = ImGui.GetWindowHeight(ctx)
+
+    -- Header
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, auto_tag_popup.edit_rule_idx and "EDIT AUTO TAG RULE" or "NEW AUTO TAG RULE")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx)
+    ImGui.SetCursorPosX(ctx, wpw - 22)
+    push_btn(0x00000000, C.panel3, C.border)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    if ImGui.SmallButton(ctx, "x##at_close") then
+      auto_tag_popup.open          = false
+      auto_tag_popup.edit_rule_idx = nil
+      auto_tag_popup.tags          = {}
+      auto_tag_popup.skip_close    = true
+    end
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    ImGui.Separator(ctx)
+    ImGui.Dummy(ctx, 0, 4)
+
+    -- Type selector
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "Rule type")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx, 0, 10)
+
+    local types = { { id = "folder", label = "Folder path" }, { id = "name", label = "Name pattern" } }
+    for _, t in ipairs(types) do
+      local sel = (auto_tag_popup.rule_type == t.id)
+      push_btn(sel and C.accent2 or C.panel2, sel and C.accent or C.panel3, sel and C.accent2 or C.border)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, sel and 0xffffffff or C.text2)
+      if ImGui.SmallButton(ctx, t.label .. "##atype_" .. t.id) then
+        auto_tag_popup.rule_type = t.id
+      end
+      ImGui.PopStyleColor(ctx, 4)
+      ImGui.SameLine(ctx, 0, 4)
+    end
+    ImGui.NewLine(ctx)
+
+    ImGui.Dummy(ctx, 0, 4)
+
+    -- Match input
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    if auto_tag_popup.rule_type == "folder" then
+      ImGui.Text(ctx, "Folder path")
+    else
+      ImGui.Text(ctx, "Name contains")
+    end
+    ImGui.PopStyleColor(ctx)
+
+    if auto_tag_popup.focus_input then
+      ImGui.SetKeyboardFocusHere(ctx)
+      auto_tag_popup.focus_input = false
+    end
+
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg,        C.bg)
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered, C.panel)
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgActive,  C.panel)
+    if auto_tag_popup.rule_type == "folder" then
+      local browse_w = sc(64)
+      ImGui.SetNextItemWidth(ctx, wpw - 24 - browse_w - 4)
+      local mc, mv = ImGui.InputText(ctx, "##at_match", auto_tag_popup.match_buf)
+      if mc then auto_tag_popup.match_buf = mv end
+      ImGui.SameLine(ctx, 0, 4)
+      push_btn(C.panel2, C.panel3, C.border)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text2)
+      if ImGui.Button(ctx, "Browse\xe2\x80\xa6##at_browse", browse_w, 0) then
+        if reaper.JS_Dialog_BrowseForFolder then
+          local ok, folder = reaper.JS_Dialog_BrowseForFolder("Select Project Folder", auto_tag_popup.match_buf)
+          if ok == 1 then auto_tag_popup.match_buf = folder end
+        end
+      end
+      ImGui.PopStyleColor(ctx)
+      pop_btn()
+    else
+      ImGui.SetNextItemWidth(ctx, -1)
+      local mc, mv = ImGui.InputTextWithHint(ctx, "##at_match", "e.g. WPN_", auto_tag_popup.match_buf)
+      if mc then auto_tag_popup.match_buf = mv end
+    end
+    ImGui.PopStyleColor(ctx, 3)
+
+    ImGui.Dummy(ctx, 0, 4)
+
+    -- Tags section
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
+    ImGui.Text(ctx, "Tags")
+    ImGui.PopStyleColor(ctx)
+
+    -- Added tags as removable pills
+    local to_remove_tag = nil
+    for ti, tag in ipairs(auto_tag_popup.tags) do
+      local display = "● " .. tag .. " \xc3\x97"
+      local tw = ImGui.CalcTextSize(ctx, display) + sc(12)
+      local prev_x = select(1, ImGui.GetItemRectMax(ctx))
+      if prev_x + 4 + tw <= wpw - 12 then ImGui.SameLine(ctx, 0, 4) end
+      push_btn(C.panel3, C.border2, C.border)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, get_tag_color(tag))
+      if ImGui.SmallButton(ctx, display .. "##atag_" .. ti) then to_remove_tag = ti end
+      ImGui.PopStyleColor(ctx, 4)
+    end
+    if to_remove_tag then table.remove(auto_tag_popup.tags, to_remove_tag) end
+    if #auto_tag_popup.tags > 0 then ImGui.NewLine(ctx) end
+
+    -- Tag input + Add button
+    local add_btn_w = sc(50)
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg,        C.bg)
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered, C.panel)
+    ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgActive,  C.panel)
+    ImGui.SetNextItemWidth(ctx, wpw - 24 - add_btn_w - 4)
+    local tc, tv = ImGui.InputTextWithHint(ctx, "##at_tag", "Add a tag\xe2\x80\xa6", auto_tag_popup.tag_buf)
+    if tc then auto_tag_popup.tag_buf = tv end
+    ImGui.PopStyleColor(ctx, 3)
+    ImGui.SameLine(ctx, 0, 4)
+    push_btn(C.panel2, C.panel3, C.border)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, auto_tag_popup.tag_buf ~= "" and C.accent or C.text4)
+    local do_add_tag = ImGui.Button(ctx, "+ Add##at_addtag", add_btn_w, 0) and auto_tag_popup.tag_buf ~= ""
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    -- Enter in the tag input adds the tag
+    if KEY_ENTER and ImGui.IsKeyPressed(ctx, KEY_ENTER) and auto_tag_popup.tag_buf ~= "" then
+      do_add_tag = true
+    end
+    if do_add_tag then
+      local nt = auto_tag_popup.tag_buf:match("^%s*(.-)%s*$")
+      if nt ~= "" then
+        local dup = false
+        for _, t in ipairs(auto_tag_popup.tags) do if t == nt then dup = true; break end end
+        if not dup then auto_tag_popup.tags[#auto_tag_popup.tags + 1] = nt end
+      end
+      auto_tag_popup.tag_buf = ""
+    end
+
+    -- Existing tag suggestions (hide already-added ones)
+    if #all_tags > 0 then
+      ImGui.Dummy(ctx, 0, 2)
+      for _, tag in ipairs(all_tags) do
+        local already = false
+        for _, t in ipairs(auto_tag_popup.tags) do if t == tag then already = true; break end end
+        if not already then
+          local tw = ImGui.CalcTextSize(ctx, "● " .. tag) + sc(12)
+          local prev_x = select(1, ImGui.GetItemRectMax(ctx))
+          if prev_x + 4 + tw <= wpw - 12 then ImGui.SameLine(ctx, 0, 4) end
+          push_btn(C.panel2, C.panel3, C.border)
+          ImGui.PushStyleColor(ctx, ImGui.Col_Text, get_tag_color(tag))
+          if ImGui.SmallButton(ctx, "● " .. tag .. "##atsug_" .. tag) then
+            local dup = false
+            for _, t in ipairs(auto_tag_popup.tags) do if t == tag then dup = true; break end end
+            if not dup then auto_tag_popup.tags[#auto_tag_popup.tags + 1] = tag end
+          end
+          ImGui.PopStyleColor(ctx, 4)
+        end
+      end
+      ImGui.NewLine(ctx)
+    end
+
+    ImGui.Dummy(ctx, 0, 4)
+
+    -- Create / Save button
+    local pending_tag = auto_tag_popup.tag_buf:match("^%s*(.-)%s*$")
+    local can_create  = auto_tag_popup.match_buf ~= "" and (#auto_tag_popup.tags > 0 or pending_tag ~= "")
+    if can_create then
+      push_btn(C.accent2, C.accent, C.accent2)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xffffffff)
+    else
+      push_btn(C.panel3, C.panel3, C.panel3)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text4)
+    end
+    local btn_label = auto_tag_popup.edit_rule_idx and "Save Rule##at_ok" or "Create Rule##at_ok"
+    local do_create = ImGui.Button(ctx, btn_label, -1, sc(26)) and can_create
+    ImGui.PopStyleColor(ctx)
+    pop_btn()
+
+    -- Enter creates rule only when tag input is empty
+    if KEY_ENTER and ImGui.IsKeyPressed(ctx, KEY_ENTER) and auto_tag_popup.tag_buf == "" and can_create then
+      do_create = true
+    end
+
+    if do_create then
+      -- Flush any unsaved tag_buf content
+      local pending = auto_tag_popup.tag_buf:match("^%s*(.-)%s*$")
+      if pending ~= "" then
+        local dup = false
+        for _, t in ipairs(auto_tag_popup.tags) do if t == pending then dup = true; break end end
+        if not dup then auto_tag_popup.tags[#auto_tag_popup.tags + 1] = pending end
+      end
+      for _, tag_name in ipairs(auto_tag_popup.tags) do
+        if not tag_registry[tag_name] then tag_registry[tag_name] = C.accent end
+      end
+      local saved_tags = {}
+      for i, t in ipairs(auto_tag_popup.tags) do saved_tags[i] = t end
+      local new_rule = {
+        id    = (auto_tag_popup.edit_rule_idx and auto_tag_rules[auto_tag_popup.edit_rule_idx].id) or new_rule_id(),
+        type  = auto_tag_popup.rule_type,
+        match = auto_tag_popup.match_buf,
+        tags  = saved_tags,
+      }
+      if auto_tag_popup.edit_rule_idx then
+        auto_tag_rules[auto_tag_popup.edit_rule_idx] = new_rule
+      else
+        auto_tag_rules[#auto_tag_rules + 1] = new_rule
+      end
+      for _, lst in ipairs({ projects, folder_projects, templates }) do
+        for _, p in ipairs(lst) do p.tags = effective_tags(p.key, p.path, p.name) end
+      end
+      rebuild_all_tags()
+      save_auto_tag_rules()
+      auto_tag_popup.open          = false
+      auto_tag_popup.edit_rule_idx = nil
+      auto_tag_popup.tags          = {}
+      auto_tag_popup.skip_close    = true
+    end
+
+    -- Click-outside / Escape to close
+    if auto_tag_popup.skip_close then
+      auto_tag_popup.skip_close = false
+    elseif ImGui.IsMouseReleased(ctx, 0) then
+      local mx, my = ImGui.GetMousePos(ctx)
+      if mx < wpx or mx > wpx + wpw or my < wpy or my > wpy + wph then
+        auto_tag_popup.open          = false
+        auto_tag_popup.edit_rule_idx = nil
+        auto_tag_popup.tags          = {}
+      end
+    end
+    if KEY_ESCAPE and ImGui.IsKeyPressed(ctx, KEY_ESCAPE) then
+      auto_tag_popup.open          = false
+      auto_tag_popup.edit_rule_idx = nil
+      auto_tag_popup.tags          = {}
+    end
+  end
+  ImGui.End(ctx)
+  ImGui.PopStyleVar(ctx, 2)
+  ImGui.PopStyleColor(ctx, 2)
+end
+
 local function render_set_popup()
   if not set_popup.open then return end
 
@@ -2945,6 +3369,13 @@ local function loop()
     pop_rs_theme()
   end
 
+  -- Auto tag rule popup overlay
+  if auto_tag_popup.open then
+    push_rs_theme()
+    render_auto_tag_popup()
+    pop_rs_theme()
+  end
+
   -- Global keyboard: Ctrl+F, Ctrl+K, Escape
   if not ImGui.IsAnyItemActive(ctx) then
     local ctrl = is_ctrl_down()
@@ -3030,7 +3461,7 @@ local function loop()
                 path     = p,
                 key      = k,
                 pinned   = pinned[p] or false,
-                tags     = project_tags[k] or {},
+                tags     = effective_tags(k, p, path_name(p)),
                 notes    = project_notes[k] or "",
                 last_t   = t,
                 last_str = t and fmt_ago(t) or "—",
