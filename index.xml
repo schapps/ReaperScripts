@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d5405faf4362eb5dc2d66858bad2f0033666be14">
+<index version="1" name="SPS Scripts" commit="70ec77cbddf27ed1395b6b4efcdc5fce51daf081">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5339,6 +5339,25 @@
 05/31/26 v0.3.9 Font size slider
 05/31/26 v0.3.8 Making tag filtering additive]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/d5405faf4362eb5dc2d66858bad2f0033666be14/ReaStart/ReaStart.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaStartDashboard">
+    <reapack name="ReaStart_Dashboard.data" type="data" desc="ReaStart Dashboard">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 ReaStart Dashboard\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A project launcher and organizer for Reaper\par}
+}
+]]></description>
+      </metadata>
+      <version name="0.01" author="Stephen Schappler" time="2026-06-17T05:36:59Z">
+        <changelog><![CDATA[Initial Add - test]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/70ec77cbddf27ed1395b6b4efcdc5fce51daf081/ReaStartDashboard/reaper_reastart.dll</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/70ec77cbddf27ed1395b6b4efcdc5fce51daf081/ReaStartDashboard/fa-solid-900.ttf</source>
       </version>
     </reapack>
   </category>
