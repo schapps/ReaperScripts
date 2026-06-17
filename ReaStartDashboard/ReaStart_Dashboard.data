@@ -1,8 +1,10 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.02
+-- @version 0.03
 -- @changelog
---    Initial Add - test
+--    Removed debug ReaConsole text on startup.
+--    Removed ReaStart Dashboard automatically opening its window on startup by default.
+--    Moved resources path to inside UserPlugins directory.
 -- @provides
 --    [extension windows] reaper_reastart.dll
 --    [extension] fa-solid-900.ttf > ReaStart/
