@@ -1,11 +1,12 @@
 -- @description ReaStart — Project Launcher
 -- @author Stephen Schappler
--- @version 0.5.5
+-- @version 0.5.6
 -- @about
 --   Reaper project launcher: browse recent projects, pinned work, templates,
 --   and watched folders. Requires ReaImGui 0.9+.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   06/02/26 v0.5.6 Bug fixes
 --   06/01/26 v0.5.5 Auto-tag based on dir or name pattern
 --   06/01/26 v0.5.4 Tag bar wraps text, tab selection persistent, shortcut for Open Project (ctrl+o)
 --   05/31/26 v0.5.2 Right-click Tag selection submenu for bulk tagging
@@ -764,6 +765,7 @@ local function rebuild_all_tags()
   for _, p in ipairs(projects)        do for _, t in ipairs(p.tags) do tag_set[t] = true end end
   for _, p in ipairs(folder_projects) do for _, t in ipairs(p.tags) do tag_set[t] = true end end
   for _, p in ipairs(templates)       do for _, t in ipairs(p.tags) do tag_set[t] = true end end
+  for name in pairs(tag_registry)     do tag_set[name] = true end
   all_tags = {}
   for t in pairs(tag_set) do all_tags[#all_tags + 1] = t end
   table.sort(all_tags, function(a, b) return a:lower() < b:lower() end)
@@ -2018,6 +2020,7 @@ local function render_settings_panel()
     push_btn(0x00000000, C.panel3, C.border)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.text3)
     if ImGui.SmallButton(ctx, "\xe2\x9c\x8e##atedit_" .. ri) then
+      rebuild_all_tags()
       auto_tag_popup.open          = true
       auto_tag_popup.edit_rule_idx = ri
       auto_tag_popup.rule_type     = rule.type
@@ -2059,6 +2062,7 @@ local function render_settings_panel()
   push_btn(C.panel2, C.panel3, C.border)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, C.accent)
   if ImGui.Button(ctx, "+ Add Auto Tag Rule\xe2\x80\xa6##at_add", 0, 0) then
+    rebuild_all_tags()
     auto_tag_popup.open          = true
     auto_tag_popup.edit_rule_idx = nil
     auto_tag_popup.rule_type     = "folder"

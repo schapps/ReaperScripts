@@ -1,0 +1,11 @@
+-- @description ReaStart Dashboard
+-- @author Stephen Schappler
+-- @version 0.01
+-- @changelog
+--    Initial Add - test
+-- @provides
+--    [windows] reaper_restart.dll
+--    [ext] fa-solid-900.ttf > ReaStart/
+-- @about
+--    # ReaStart Dashboard
+--    A project launcher and organizer for Reaper
