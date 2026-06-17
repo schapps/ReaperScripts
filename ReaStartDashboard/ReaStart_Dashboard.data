@@ -4,7 +4,7 @@
 -- @changelog
 --    Initial Add - test
 -- @provides
---    [extenion windows] reaper_reastart.dll
+--    [extension windows] reaper_reastart.dll
 --    [extension] fa-solid-900.ttf > ReaStart/
 -- @about
 --    # ReaStart Dashboard
