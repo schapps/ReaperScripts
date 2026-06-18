@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.16
+-- @version 1.17
 -- @changelog
---    Adding toolbar icons for Subproject Manager
+--    Adding toolbar icons for ReaStart Dashboard
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
