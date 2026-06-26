@@ -1,11 +1,11 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.07
+-- @version 0.08
 -- @changelog
 --    v0.06 Fixing text focus bugs
 -- @provides
---    [windows] reaper_reastart.dll
---    [darwin] reaper_reastart.dylib
+--    [windows extension] reaper_reastart.dll
+--    [darwin extension] reaper_reastart.dylib
 --    [extension] fa-solid-900.ttf > ReaStart/
 -- @about
 --    # ReaStart Dashboard
