@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="2a6f0b33194ac571879d29d817e535f98fff0f50">
+<index version="1" name="SPS Scripts" commit="75103afebffc4ac984ffeb67e67f32ee555e7bae">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5591,6 +5591,12 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/2a6f0b33194ac571879d29d817e535f98fff0f50/ReaStartDashboard/reaper_reastart.dll</source>
         <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/2a6f0b33194ac571879d29d817e535f98fff0f50/ReaStartDashboard/reaper_reastart.dylib</source>
         <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/2a6f0b33194ac571879d29d817e535f98fff0f50/ReaStartDashboard/fa-solid-900.ttf</source>
+      </version>
+      <version name="0.07" author="Stephen Schappler" time="2026-06-26T17:15:24Z">
+        <changelog><![CDATA[v0.06 Fixing text focus bugs]]></changelog>
+        <source platform="windows" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/75103afebffc4ac984ffeb67e67f32ee555e7bae/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/75103afebffc4ac984ffeb67e67f32ee555e7bae/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/75103afebffc4ac984ffeb67e67f32ee555e7bae/ReaStartDashboard/fa-solid-900.ttf</source>
       </version>
     </reapack>
   </category>
