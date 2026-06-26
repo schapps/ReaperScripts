@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.08
+-- @version 0.09
 -- @changelog
---    v0.06 Fixing text focus bugs
+--    v0.09 Fixing mac error causing crash on boot
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
