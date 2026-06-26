@@ -1,12 +1,11 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.05
+-- @version 0.06
 -- @changelog
---    Adding support for Track Templates and Project Templates.
---    Fixing a lot of mac bugs
+--    v0.06 Fixing text focus bugs
 -- @provides
 --    [extension windows] reaper_reastart.dll
---    [extension mac] reaper_reastart.dylib
+--    [extension darwin] reaper_reastart.dylib
 --    [extension] fa-solid-900.ttf > ReaStart/
 -- @about
 --    # ReaStart Dashboard
