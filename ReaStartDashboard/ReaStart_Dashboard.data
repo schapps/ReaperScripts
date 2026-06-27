@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.09
+-- @version 0.10
 -- @changelog
---    v0.09 Fixing mac error causing crash on boot
+--    v0.10 Finally fixing window behavior on boot. Defaults to not opening on launch and floating.
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
