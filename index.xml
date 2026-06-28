@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="1c46bfb952c438dbb023d0e9868c14c8adbc8b76">
+<index version="1" name="SPS Scripts" commit="132c0f20e1125ea9a6114759e5e733543dad47c1">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5609,6 +5609,12 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/1c46bfb952c438dbb023d0e9868c14c8adbc8b76/ReaStartDashboard/reaper_reastart.dll</source>
         <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/1c46bfb952c438dbb023d0e9868c14c8adbc8b76/ReaStartDashboard/reaper_reastart.dylib</source>
         <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/1c46bfb952c438dbb023d0e9868c14c8adbc8b76/ReaStartDashboard/fa-solid-900.ttf</source>
+      </version>
+      <version name="0.10" author="Stephen Schappler" time="2026-06-27T16:48:42Z">
+        <changelog><![CDATA[v0.10 Finally fixing window behavior on boot. Defaults to not opening on launch and floating.]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/fa-solid-900.ttf</source>
       </version>
     </reapack>
   </category>
