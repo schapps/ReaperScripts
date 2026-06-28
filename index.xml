@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="132c0f20e1125ea9a6114759e5e733543dad47c1">
+<index version="1" name="SPS Scripts" commit="92ad7a9935f528900a38a10ebad9abf0ff8461ad">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -67,11 +67,11 @@
     </reapack>
     <reapack name="Find and Select All Items Based on Color.lua" type="script" desc="Find and Select All Items Based on Color">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Define the color to match (example: green) Colors in Reaper are in BGR format (0xRRGGBB)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI interface for finding and selecting all items in the project that match a chosen color. Use the color picker to set a target color, or capture it directly from a selected item. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -79,6 +79,13 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T04:15:24Z">
         <changelog><![CDATA[7/29/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6242490c2767a2cea7ad5b78643060c7ad985a6c/Items/Find%20and%20Select%20All%20Items%20Based%20on%20Color.lua</source>
+      </version>
+      <version name="2.2" author="Stephen Schappler" time="2026-06-28T18:55:42Z">
+        <changelog><![CDATA[6/28/26 - v2.2 Add Scope dropdown (Entire Project / Selected Track(s))
+6/28/26 - v2.1 Fix window resize animation and color matching
+6/28/26 - v2.0 ReaImGUI interface with color picker and capture button
+7/29/24 - v1.0 Initial release (headless, hardcoded color)]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/92ad7a9935f528900a38a10ebad9abf0ff8461ad/Items/Find%20and%20Select%20All%20Items%20Based%20on%20Color.lua</source>
       </version>
     </reapack>
     <reapack name="Find and Select Items by Name on Selected Tracks.lua" type="script" desc="Find and Select Items by Name on Selected Tracks">
