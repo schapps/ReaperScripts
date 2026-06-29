@@ -1,14 +1,15 @@
 -- @description Find And Select Items
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   ReaImGUI interface for finding and selecting items by any combination of:
---   name, color, channel count, and subproject status.
+--   name, color, channel count, subproject status, and edit cursor position.
 --   Enabled filters are combined with AND logic. Scope can be limited to
 --   selected tracks.
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
 --   6/29/26 - v1.0 Initial release
 
 -- ============================================================
@@ -36,7 +37,7 @@ local theme = dofile(theme_path)
 -- ============================================================
 -- Context + constants
 -- ============================================================
-local script_title = "FIND ITEMS"
+local script_title = "FIND AND SELECT ITEMS"
 local ctx = ImGui.CreateContext(script_title)
 
 local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar
@@ -85,6 +86,16 @@ local ch_value      = getNum("ChValue",    2)
 -- Filter: Subproject  (combo: 0=Subproject, 1=Not Subproject)
 local subproj_enabled = getBool("SubprojEnabled", false)
 local subproj_combo   = getNum("SubprojCombo",    0)
+
+-- Filter: Playback Rate changed from default (1.0)
+local rate_enabled    = getBool("RateEnabled",  false)
+
+-- Filter: Playback Pitch changed from default (0.0)
+local pitch_enabled   = getBool("PitchEnabled", false)
+
+-- Filter: Edit Cursor position  (combo: 0=Before, 1=After)
+local cursor_enabled  = getBool("CursorEnabled", false)
+local cursor_combo    = getNum("CursorCombo",    0)
 
 local status_msg = ""
 
@@ -135,6 +146,7 @@ end
 -- ============================================================
 local function findAndSelect()
   local any = name_enabled or color_enabled or ch_enabled or subproj_enabled
+           or rate_enabled or pitch_enabled or cursor_enabled
   if not any then
     status_msg = "Enable at least one filter"
     return
@@ -146,6 +158,7 @@ local function findAndSelect()
 
   local needle     = name_enabled  and (case_sens and search_buf or search_buf:lower()) or nil
   local native_tgt = color_enabled and (imgui_to_native(target_color) & 0xFFFFFF)       or nil
+  local cursor_pos = cursor_enabled and reaper.GetCursorPosition()                       or nil
 
   local selected_tracks
   if scope == SCOPE_TRACKS then
@@ -164,6 +177,13 @@ local function findAndSelect()
     local item = reaper.GetMediaItem(0, i)
     if not selected_tracks or selected_tracks[reaper.GetMediaItem_Track(item)] then
       local ok = true
+
+      -- Edit cursor position filter
+      if ok and cursor_enabled then
+        local item_pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+        ok = cursor_combo == 0 and item_pos < cursor_pos
+          or cursor_combo == 1 and item_pos >= cursor_pos
+      end
 
       -- Color filter
       if ok and color_enabled then
@@ -190,7 +210,7 @@ local function findAndSelect()
       end
 
       -- Take-based filters
-      if ok and (name_enabled or ch_enabled) then
+      if ok and (name_enabled or ch_enabled or rate_enabled or pitch_enabled) then
         local take = reaper.GetActiveTake(item)
         if not take then
           ok = false
@@ -205,6 +225,14 @@ local function findAndSelect()
           if ok and ch_enabled then
             local src = reaper.GetMediaItemTake_Source(take)
             ok = src and reaper.GetMediaSourceNumChannels(src) == ch_value
+          end
+          -- Playback rate
+          if ok and rate_enabled then
+            ok = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE") ~= 1.0
+          end
+          -- Playback pitch
+          if ok and pitch_enabled then
+            ok = reaper.GetMediaItemTakeInfo_Value(take, "D_PITCH") ~= 0.0
           end
         end
       end
@@ -346,10 +374,60 @@ local function loop()
     end
 
     ImGui.Spacing(ctx)
+
+    -- ── Playback Rate ─────────────────────────────────────────
+    do
+      local ch, v = ImGui.Checkbox(ctx, "Playback Rate Changed", rate_enabled)
+      if ch then
+        rate_enabled = v
+        reaper.SetExtState(EXT, "RateEnabled", tostring(v), true)
+        status_msg = ""
+      end
+    end
+
+    ImGui.Spacing(ctx)
+
+    -- ── Playback Pitch ────────────────────────────────────────
+    do
+      local ch, v = ImGui.Checkbox(ctx, "Playback Pitch Changed", pitch_enabled)
+      if ch then
+        pitch_enabled = v
+        reaper.SetExtState(EXT, "PitchEnabled", tostring(v), true)
+        status_msg = ""
+      end
+    end
+
+    ImGui.Spacing(ctx)
+
+    -- ── Edit Cursor ───────────────────────────────────────────
+    do
+      local ch, v = ImGui.Checkbox(ctx, "##cursor_en", cursor_enabled)
+      if ch then
+        cursor_enabled = v
+        reaper.SetExtState(EXT, "CursorEnabled", tostring(v), true)
+        status_msg = ""
+      end
+      ImGui.SameLine(ctx)
+      ImGui.Text(ctx, "Edit Cursor:")
+      ImGui.SameLine(ctx)
+      if not cursor_enabled then ImGui.BeginDisabled(ctx, true) end
+      ImGui.SetNextItemWidth(ctx, -1)
+      local cu_ch, cv = ImGui.Combo(ctx, "##cursor_val", cursor_combo,
+        "Before Edit Cursor\0After Edit Cursor\0")
+      if cu_ch then
+        cursor_combo = cv
+        reaper.SetExtState(EXT, "CursorCombo", tostring(cv), true)
+        status_msg = ""
+      end
+      if not cursor_enabled then ImGui.EndDisabled(ctx) end
+    end
+
+    ImGui.Spacing(ctx)
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
     -- ── Scope ─────────────────────────────────────────────────
+    ImGui.Text(ctx, "Scope")
     ImGui.SetNextItemWidth(ctx, -1)
     local sc_ch, sv = ImGui.Combo(ctx, "##scope", scope,
       table.concat(SCOPE_LABELS, "\0") .. "\0")
@@ -373,6 +451,7 @@ local function loop()
 
     -- ── Find and Select ───────────────────────────────────────
     local any_active = name_enabled or color_enabled or ch_enabled or subproj_enabled
+                    or rate_enabled or pitch_enabled or cursor_enabled
     local name_empty = name_enabled and search_buf == ""
     local btn_disabled = not any_active or name_empty
 
