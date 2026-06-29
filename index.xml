@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="a592943366931714ab9e53f7970327b36b52029d">
+<index version="1" name="SPS Scripts" commit="10a9852753a64692254b05a844119b3e5c4d181d">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -125,6 +125,12 @@
         <changelog><![CDATA[6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
 6/29/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/a592943366931714ab9e53f7970327b36b52029d/Items/Find%20And%20Select%20Items.lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2026-06-29T20:19:54Z">
+        <changelog><![CDATA[6/29/26 - v1.2 Added Take FX filter
+6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
+6/29/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/10a9852753a64692254b05a844119b3e5c4d181d/Items/Find%20And%20Select%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Tracks">
