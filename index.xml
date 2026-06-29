@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="31d563776a3135e01c6a29675ef9faf569237281">
+<index version="1" name="SPS Scripts" commit="a592943366931714ab9e53f7970327b36b52029d">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -112,7 +112,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI interface for finding and selecting items by any combination of: name, color, channel count, and subproject status. Enabled filters are combined with AND logic. Scope can be limited to selected tracks. Requires: Schapps Script Resources (install from this repository first).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI interface for finding and selecting items by any combination of: name, color, channel count, subproject status, and edit cursor position. Enabled filters are combined with AND logic. Scope can be limited to selected tracks. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -120,6 +120,11 @@
       <version name="1.0" author="Stephen Schappler" time="2026-06-29T17:41:12Z">
         <changelog><![CDATA[6/29/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/31d563776a3135e01c6a29675ef9faf569237281/Items/Find%20And%20Select%20Items.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-06-29T19:24:23Z">
+        <changelog><![CDATA[6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
+6/29/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/a592943366931714ab9e53f7970327b36b52029d/Items/Find%20And%20Select%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Import Selected Items Into ReaSamplomatic on Selected Track.lua" type="script" desc="Import Selected Items Into ReaSamplomatic on Selected Tracks">
