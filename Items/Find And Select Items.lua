@@ -1,6 +1,6 @@
 -- @description Find And Select Items
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- @about
 --   ReaImGUI interface for finding and selecting items by any combination of:
 --   name, color, channel count, subproject status, and edit cursor position.
@@ -9,6 +9,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   6/29/26 - v1.2 Added Take FX filter
 --   6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
 --   6/29/26 - v1.0 Initial release
 
@@ -87,6 +88,10 @@ local ch_value      = getNum("ChValue",    2)
 local subproj_enabled = getBool("SubprojEnabled", false)
 local subproj_combo   = getNum("SubprojCombo",    0)
 
+-- Filter: Take FX  (combo: 0=Has Take FX, 1=No Take FX)
+local takefx_enabled  = getBool("TakeFXEnabled", false)
+local takefx_combo    = getNum("TakeFXCombo",    0)
+
 -- Filter: Playback Rate changed from default (1.0)
 local rate_enabled    = getBool("RateEnabled",  false)
 
@@ -146,7 +151,7 @@ end
 -- ============================================================
 local function findAndSelect()
   local any = name_enabled or color_enabled or ch_enabled or subproj_enabled
-           or rate_enabled or pitch_enabled or cursor_enabled
+           or takefx_enabled or rate_enabled or pitch_enabled or cursor_enabled
   if not any then
     status_msg = "Enable at least one filter"
     return
@@ -210,7 +215,7 @@ local function findAndSelect()
       end
 
       -- Take-based filters
-      if ok and (name_enabled or ch_enabled or rate_enabled or pitch_enabled) then
+      if ok and (name_enabled or ch_enabled or takefx_enabled or rate_enabled or pitch_enabled) then
         local take = reaper.GetActiveTake(item)
         if not take then
           ok = false
@@ -225,6 +230,11 @@ local function findAndSelect()
           if ok and ch_enabled then
             local src = reaper.GetMediaItemTake_Source(take)
             ok = src and reaper.GetMediaSourceNumChannels(src) == ch_value
+          end
+          -- Take FX
+          if ok and takefx_enabled then
+            local has_fx = reaper.TakeFX_GetCount(take) > 0
+            ok = has_fx == (takefx_combo == 0)
           end
           -- Playback rate
           if ok and rate_enabled then
@@ -375,6 +385,31 @@ local function loop()
 
     ImGui.Spacing(ctx)
 
+    -- ── Take FX ───────────────────────────────────────────────
+    do
+      local ch, v = ImGui.Checkbox(ctx, "##takefx_en", takefx_enabled)
+      if ch then
+        takefx_enabled = v
+        reaper.SetExtState(EXT, "TakeFXEnabled", tostring(v), true)
+        status_msg = ""
+      end
+      ImGui.SameLine(ctx)
+      ImGui.Text(ctx, "Take FX:")
+      ImGui.SameLine(ctx)
+      if not takefx_enabled then ImGui.BeginDisabled(ctx, true) end
+      ImGui.SetNextItemWidth(ctx, -1)
+      local fx_ch, fv = ImGui.Combo(ctx, "##takefx_val", takefx_combo,
+        "Has Take FX\0No Take FX\0")
+      if fx_ch then
+        takefx_combo = fv
+        reaper.SetExtState(EXT, "TakeFXCombo", tostring(fv), true)
+        status_msg = ""
+      end
+      if not takefx_enabled then ImGui.EndDisabled(ctx) end
+    end
+
+    ImGui.Spacing(ctx)
+
     -- ── Playback Rate ─────────────────────────────────────────
     do
       local ch, v = ImGui.Checkbox(ctx, "Playback Rate Changed", rate_enabled)
@@ -451,7 +486,7 @@ local function loop()
 
     -- ── Find and Select ───────────────────────────────────────
     local any_active = name_enabled or color_enabled or ch_enabled or subproj_enabled
-                    or rate_enabled or pitch_enabled or cursor_enabled
+                    or takefx_enabled or rate_enabled or pitch_enabled or cursor_enabled
     local name_empty = name_enabled and search_buf == ""
     local btn_disabled = not any_active or name_empty
 
