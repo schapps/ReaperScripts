@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -10,6 +10,8 @@
 --   Schemes/*.{yaml}
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
+-- @changelog 
+--   v1.1 Fixing capture issue where underscores were messing up Title case
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~ SCRIPT PATH & IMGUI ~~~~~~
@@ -1790,9 +1792,9 @@ function Capitalize(str, capitalization)
   if not capitalization or capitalization == "" then return str end
   local caps = capitalization:lower()
   if caps:find("title") then
-    return str:gsub("(%a)([%w_']*)", function(first, rest) return first:upper() .. rest:lower() end)
+    return str:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest:lower() end)
   elseif caps:find("pascal") then
-    return str:gsub("(%a)([%w_']*)", function(first, rest) return first:upper() .. rest end):gsub(" ", "")
+    return str:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end):gsub("[ _]", "")
   elseif caps:find("up") then
     return str:upper()
   elseif caps:find("low") then
