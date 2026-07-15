@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.2
+-- @version 1.3
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.3 Added a read-only Visual Editor window (node-graph view of the current scheme's field structure) via Lib/SchemeVisualizer.lua
 --   v1.2 Replaced the "+" add-item button with right-click context menus (dropdown-level "Add Item...", per-item "Move Up"/"Move Down"); split scheme-editing logic into Lib/SchemeEditor.lua + Lib/SchemeEditorGui.lua
 --   v1.1 Fixing capture issue where underscores were messing up Title case
 
@@ -555,10 +556,12 @@ local META_MKR_PREFIX = "#META"
 -- Scheme-editor modules (dofile'd once at startup, not inside Main()/defer -
 -- dofile always re-executes, no require-style memoization/caching). These
 -- can't see this script's `local acendan`, so it's injected explicitly.
-local SchemeEditor    = dofile(script_path .. "Lib" .. SEP .. "SchemeEditor.lua")
-local SchemeEditorGui = dofile(script_path .. "Lib" .. SEP .. "SchemeEditorGui.lua")
+local SchemeEditor     = dofile(script_path .. "Lib" .. SEP .. "SchemeEditor.lua")
+local SchemeEditorGui  = dofile(script_path .. "Lib" .. SEP .. "SchemeEditorGui.lua")
+local SchemeVisualizer = dofile(script_path .. "Lib" .. SEP .. "SchemeVisualizer.lua")
 SchemeEditorGui.init(SchemeEditor, acendan)
 SchemeEditor.init({ backups_dir = BACKUPS_DIR, sep = SEP, dir_exists = acendan.directoryExists, msg = acendan.msg })
+SchemeVisualizer.init(acendan)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~ FUNCTIONS ~~~~~~~~~~~
@@ -1136,6 +1139,11 @@ function TabSettings()
     end
   end, "Check the selected scheme for YAML formatting errors.")
 
+  reaper.ImGui_SameLine(ctx)
+  Button("Visual Editor", function()
+    wgt.show_visual_editor = true
+  end, "Opens a node-graph view of the current scheme's field structure (read-only).")
+
   Button("Add Shared Scheme", function()
     local shared_scheme = acendan.promptForFile("Select a shared scheme to import", "", "",
       "YAML Files (*.yaml)\0*.yaml\0\0")
@@ -1466,6 +1474,12 @@ function Main()
 
   reaper.ImGui_End(ctx)
   acendan.ImGui_PopStyles()
+
+  if wgt.show_visual_editor then
+    local editor_open = SchemeVisualizer.DrawWindow(ctx, wgt.data)
+    if not editor_open then wgt.show_visual_editor = false end
+  end
+
   if open then reaper.defer(Main) else return end
 end
 
