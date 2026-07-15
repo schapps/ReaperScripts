@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.1
+-- @version 1.2
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -10,7 +10,8 @@
 --   Schemes/*.{yaml}
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
--- @changelog 
+-- @changelog
+--   v1.2 Replaced the "+" add-item button with right-click context menus (dropdown-level "Add Item...", per-item "Move Up"/"Move Down"); split scheme-editing logic into Lib/SchemeEditor.lua + Lib/SchemeEditorGui.lua
 --   v1.1 Fixing capture issue where underscores were messing up Title case
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -487,91 +488,6 @@ function acendan.ImGui_Button(label, callback, color)
   reaper.ImGui_PopID(ctx)
 end
 
-function acendan.ImGui_ComboBox(ctx, title, items, selected)
-  local ret = nil
-  if reaper.ImGui_BeginCombo(ctx, title, items[selected]) then
-    for i, value in ipairs(items) do
-      local is_selected = selected == i
-      if reaper.ImGui_Selectable(ctx, value, is_selected) then
-        ret = { i, value }
-      end
-      if is_selected then reaper.ImGui_SetItemDefaultFocus(ctx) end
-    end
-    reaper.ImGui_EndCombo(ctx)
-  end
-  reaper.ImGui_SameLine(ctx)
-  reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
-  if reaper.ImGui_SmallButton(ctx, 'x##' .. title) then
-    ret = { 0, "" }
-  end
-  reaper.ImGui_PopItemFlag(ctx)
-  acendan.ImGui_Tooltip("Clear selection.")
-  if ret then return true, ret[1], ret[2] end
-end
-
-function acendan.ImGui_AutoFillComboBox(ctx, title, items, selected, filter)
-  assert(filter, "ImGui_AutoFillComboBox: filter is nil. Please create a filter with ImGui_TextFilter_Create()")
-  local ret = nil
-  local rv, str = reaper.ImGui_InputText(ctx, title .. "##" .. title .. "_filter",
-    reaper.ImGui_TextFilter_Get(filter), reaper.ImGui_InputTextFlags_EscapeClearsAll())
-  if rv and reaper.ImGui_IsItemActive(ctx) then reaper.ImGui_TextFilter_Set(filter, str) end
-  local tabbed = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Tab()) and
-      not reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Mod_Shift())
-  local arrowed = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_DownArrow()) or
-      reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_UpArrow())
-  local filteractive = reaper.ImGui_IsItemActive(ctx)
-  local filterfocused = reaper.ImGui_IsItemFocused(ctx)
-  local clicked = false
-  local focused = false
-  if filteractive then reaper.ImGui_OpenPopup(ctx, title .. "_popup") end
-  local visible_items = {}
-  local x_l, y_hi = reaper.ImGui_GetItemRectMin(ctx)
-  local x_r, y_lo = reaper.ImGui_GetItemRectMax(ctx)
-  reaper.ImGui_SetNextWindowPos(ctx, x_l, y_lo, reaper.ImGui_Cond_Always(), 0, 0)
-  if reaper.ImGui_BeginPopup(ctx, title .. "_popup", acendan.ImGui_AutoFillComboFlags) then
-    if not filterfocused and reaper.ImGui_IsWindowFocused(ctx) then reaper.ImGui_SetNextWindowFocus(ctx) end
-    if arrowed and not reaper.ImGui_IsAnyItemFocused(ctx) then
-      reaper.ImGui_SetWindowFocusEx(ctx, title .. "_popup")
-    end
-    if reaper.ImGui_BeginListBox(ctx, "##" .. title .. "_listbox") then
-      for i, item in ipairs(items) do
-        if reaper.ImGui_TextFilter_PassFilter(filter, item) then
-          visible_items[#visible_items + 1] = item
-          if reaper.ImGui_Selectable(ctx, item, item == items[selected]) then
-            ret = { i, item }
-            clicked = true
-          end
-          if arrowed and not focused and not reaper.ImGui_IsAnyItemFocused(ctx) and
-              reaper.ImGui_IsItemVisible(ctx) then
-            reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
-            focused = true
-          end
-        end
-      end
-      reaper.ImGui_EndListBox(ctx)
-    end
-    if tabbed or clicked then reaper.ImGui_CloseCurrentPopup(ctx) end
-    reaper.ImGui_EndPopup(ctx)
-  end
-  if tabbed and #visible_items > 0 then
-    local first_visible_item = visible_items[1]
-    ret = { acendan.tableContainsVal(items, first_visible_item), first_visible_item }
-  end
-  reaper.ImGui_SameLine(ctx)
-  reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
-  if reaper.ImGui_SmallButton(ctx, 'x##' .. title) then
-    ret = { 0, "" }
-    reaper.ImGui_TextFilter_Clear(filter)
-  end
-  reaper.ImGui_PopItemFlag(ctx)
-  acendan.ImGui_Tooltip("Clear selection.")
-  if filteractive and (tabbed or clicked) then reaper.ImGui_SetKeyboardFocusHere(ctx) end
-  if ret then
-    reaper.ImGui_TextFilter_Set(filter, ret[2])
-    return true, ret[1], ret[2]
-  end
-end
-
 -- YAML loader (uses script-relative Lib/yaml.lua)
 acendan.loadYaml = function(filename)
   local _, sep = acendan.getOS()
@@ -635,6 +551,14 @@ local BACKUPS_DIR = SCRIPT_DIR .. "Backups" .. SEP
 local META_DIR    = SCRIPT_DIR .. "Meta" .. SEP
 
 local META_MKR_PREFIX = "#META"
+
+-- Scheme-editor modules (dofile'd once at startup, not inside Main()/defer -
+-- dofile always re-executes, no require-style memoization/caching). These
+-- can't see this script's `local acendan`, so it's injected explicitly.
+local SchemeEditor    = dofile(script_path .. "Lib" .. SEP .. "SchemeEditor.lua")
+local SchemeEditorGui = dofile(script_path .. "Lib" .. SEP .. "SchemeEditorGui.lua")
+SchemeEditorGui.init(SchemeEditor, acendan)
+SchemeEditor.init({ backups_dir = BACKUPS_DIR, sep = SEP, dir_exists = acendan.directoryExists, msg = acendan.msg })
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~ FUNCTIONS ~~~~~~~~~~~
@@ -719,15 +643,19 @@ function LoadField(field)
       field.filter = reaper.ImGui_CreateTextFilter(field.value[field.selected] or "")
       reaper.ImGui_Attach(ctx, field.filter)
     end
-    local rv, rownum, rowtext
+    local source_path = meta and wgt.meta.__scheme_path or wgt.data.__scheme_path
+    local rv, rownum, rowtext, reload_requests
     if GetPreviousValue("opt_autofill", false) == "true" then
-      rv, rownum, rowtext = acendan.ImGui_AutoFillComboBox(ctx, field.field, field.value, field.selected, field.filter)
+      rv, rownum, rowtext, reload_requests = SchemeEditorGui.AutoFillComboBox(ctx, field, source_path, field.filter)
     else
-      rv, rownum, rowtext = acendan.ImGui_ComboBox(ctx, field.field, field.value, field.selected)
+      rv, rownum, rowtext, reload_requests = SchemeEditorGui.ComboBox(ctx, field, source_path)
     end
     if rv then
       field.selected = rownum
       AppendSerializedField(serialize, field.field, field.selected)
+    end
+    if reload_requests then
+      wgt.__pending_reload = { is_meta = meta, requests = reload_requests }
     end
     if not meta then
       value = (field.selected and field.short) and field.short[field.selected] or
@@ -782,11 +710,14 @@ function PassesIDCheck(field, parent)
   return parent.value[parent.selected] == field.id
 end
 
-function LoadFields(fields, parent)
+function LoadFields(fields, parent, path)
+  path = path or {}
   for i, field in ipairs(fields) do
     if PassesIDCheck(field, parent) then
+      field.__path = { table.unpack(path) }
+      field.__path[#field.__path + 1] = i
       LoadField(field)
-      if field.fields then LoadFields(field.fields, field) end
+      if field.fields then LoadFields(field.fields, field, field.__path) end
     end
   end
 end
@@ -1461,6 +1392,43 @@ function TabSettings()
 end
 
 function Main()
+  -- Apply a pending add/move write-back: reload the scheme/meta fresh from
+  -- disk (so the edited option list and its source-location scan take
+  -- effect) and re-select whichever field(s) need it. Done here, at the
+  -- start of the frame, rather than inside the menu/popup's own handler,
+  -- since that handler runs mid-way through this frame's LoadFields
+  -- recursion - reassigning wgt.data/wgt.meta there wouldn't affect the
+  -- fields/field locals already bound for the remainder of this frame's render.
+  if wgt.__pending_reload then
+    local p = wgt.__pending_reload
+    wgt.__pending_reload = nil
+    if p.is_meta then
+      StoreSettings("Metadata", wgt.meta.serialize)
+      wgt.meta = nil
+      ValidateMeta()
+    else
+      StoreSettings()
+      wgt.data = nil
+      LoadScheme(wgt.scheme)
+    end
+    local root = p.is_meta and (wgt.meta and wgt.meta.fields) or (wgt.data and wgt.data.fields)
+    if root then
+      -- Usually one request; a shared $wildcard list can produce several,
+      -- one per field whose selection needs re-resolving after the edit.
+      for _, req in ipairs(p.requests) do
+        local field = SchemeEditor.LookupFieldByPath(root, req.path)
+        if field and req.new_value then
+          local idx = acendan.tableContainsVal(field.value, req.new_value)
+          if idx then
+            field.selected = idx
+            local title = p.is_meta and "Metadata" or wgt.data.title
+            SetCurrentValue(title .. " - " .. field.field, idx)
+          end
+        end
+      end
+    end
+  end
+
   -- Auto-fill fields from selected item's take name when selection changes
   if wgt.data and GetPreviousValue("opt_auto_populate", false) == "true" then
     local sel_item = reaper.GetSelectedMediaItem(0, 0)
@@ -1570,17 +1538,24 @@ function ValidateScheme(scheme)
     acendan.msg("Error loading scheme: " .. scheme .. "\n\n" .. tostring(result), "The Last Renamer")
     return nil
   end
+  if result then
+    result.__scheme_path = scheme_path
+    pcall(SchemeEditor.AttachSourceLocations, result.fields, scheme_path)
+  end
   return result
 end
 
 function ValidateMeta()
   if wgt.meta then return true end
-  local status, result = pcall(acendan.loadYaml, META_DIR .. "meta.yaml")
+  local meta_path = META_DIR .. "meta.yaml"
+  local status, result = pcall(acendan.loadYaml, meta_path)
   if not status then
     reaper.ImGui_TextColored(ctx, 0xFF0000FF, "Error loading metadata!\n\n" .. tostring(result))
     return false
   end
   wgt.meta = result
+  wgt.meta.__scheme_path = meta_path
+  pcall(SchemeEditor.AttachSourceLocations, wgt.meta.fields, meta_path)
   wgt.meta.serialize = {}
   RecallSettings("Metadata", wgt.meta.fields, wgt.meta.serialize)
   return true
