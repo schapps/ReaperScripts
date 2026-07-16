@@ -1,13 +1,15 @@
 -- @description Reposition Items
 -- @author Stephen Schappler
--- @version 1.3
+-- @version 1.4
 -- @about
 --   Spaces selected items relative to each other. The first item stays in place.
 --   "End" mode: gap between each item's end and the next item's start.
 --   "Start" mode: gap between each item's start and the next item's start.
 --   Supports seconds, frames, and beats as the gap unit.
+--   "Order items by track order" chains items track-by-track instead of by time position.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   7/16/26 - v1.4 Adding "Order items by track order" option
 --   5/06/26 - v1.3 Removing Provides
 --   4/27/26 - v1.2 Adding provides for ReaImGui Theme
 --   4/21/26 - v1.1 adding option to shift automation with items 
@@ -45,6 +47,7 @@ local unit_items      = {"Seconds", "Frames", "Beats"}
 local ref_items       = {"Start", "End"}
 local status_msg      = ""
 local move_automation = reaper.GetExtState("RepositionItems", "MoveAutomation") == "true"
+local order_by_track  = reaper.GetExtState("RepositionItems", "OrderByTrack") == "true"
 
 local function shift_envelopes(track, range_start, range_end, delta)
   for e = 0, reaper.CountTrackEnvelopes(track) - 1 do
@@ -94,7 +97,16 @@ local function reposition_items()
       len  = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
     }
   end
-  table.sort(items, function(a, b) return a.pos < b.pos end)
+  if order_by_track then
+    table.sort(items, function(a, b)
+      local ta = reaper.GetMediaTrackInfo_Value(reaper.GetMediaItem_Track(a.item), "IP_TRACKNUMBER")
+      local tb = reaper.GetMediaTrackInfo_Value(reaper.GetMediaItem_Track(b.item), "IP_TRACKNUMBER")
+      if ta ~= tb then return ta < tb end
+      return a.pos < b.pos
+    end)
+  else
+    table.sort(items, function(a, b) return a.pos < b.pos end)
+  end
 
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
@@ -178,6 +190,12 @@ local function loop()
     if new_auto_close ~= auto_close then
       auto_close = new_auto_close
       reaper.SetExtState("RepositionItems", "AutoClose", tostring(auto_close), true)
+    end
+
+    local _, new_order_by_track = ImGui.Checkbox(ctx, "Order items by track order", order_by_track)
+    if new_order_by_track ~= order_by_track then
+      order_by_track = new_order_by_track
+      reaper.SetExtState("RepositionItems", "OrderByTrack", tostring(order_by_track), true)
     end
 
     ImGui.Spacing(ctx)
