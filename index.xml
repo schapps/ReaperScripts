@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="6e2beda85c06d785544f5ef8d779b6ccf32374ef">
+<index version="1" name="SPS Scripts" commit="e372f39c9d587f41aeb73d90f41fe2cad11a43a2">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -705,6 +705,22 @@
 8/27/24 v1.1 - Adding buttons for Modulation and Toggle Envelope
 8/25/24 v1.0 - Adding the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/234f7b1e20149f44b263120aea23e87232fed922/Misc/Display%20Last%20Touched%20FX%20Parameter%20Value.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Edit Cursor Follows Envelope Drawing.lua" type="script" desc="Edit Cursor Follows Envelope Drawing">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 A toggle that will force the edit cursor to follow when drawing envelopes. Good for having the video follow envelope drawing.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-07-15T21:03:13Z">
+        <changelog><![CDATA[07/15/26 v1.0 - Adding the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d1421611c2d993e3e49a971fae9cd259040ea926/Misc/Edit%20Cursor%20Follows%20Envelope%20Drawing.lua</source>
       </version>
     </reapack>
     <reapack name="Move Cursor Left to Nearest Item Edge on Selected Track(s).lua" type="script" desc="Move cursor to nearest left item edge on selected track(s)">
@@ -5693,6 +5709,51 @@ v1.1 Fixing capture issue where underscores were messing up Title case]]></chang
         <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/SchemeEditor.lua</source>
         <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/SchemeEditorGui.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.3" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-15T16:35:44Z">
+        <changelog><![CDATA[v1.3 Added a read-only Visual Editor window (node-graph view of the current scheme's field structure) via Lib/SchemeVisualizer.lua
+v1.2 Replaced the "+" add-item button with right-click context menus (dropdown-level "Add Item...", per-item "Move Up"/"Move Down"); split scheme-editing logic into Lib/SchemeEditor.lua + Lib/SchemeEditorGui.lua
+v1.1 Fixing capture issue where underscores were messing up Title case]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.4" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-16T14:14:08Z">
+        <changelog><![CDATA[v1.4 Visual Editor functionality is in. Still needs testing and UX improvements.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.5" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-16T15:40:17Z">
+        <changelog><![CDATA[v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
