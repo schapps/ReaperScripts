@@ -177,8 +177,81 @@ local function DrawCanvas(ctx, w, h, data, source_path)
     if reaper.ImGui_InvisibleButton(ctx, "node_" .. node.id, NODE_WIDTH, NODE_HEIGHT) then
       state.selected_node = node
     end
+
+    -- Drag-to-reparent: BeginDragDropSource only returns true once an
+    -- actual drag is underway (a plain click never triggers it), so this
+    -- coexists cleanly with the InvisibleButton's click-to-select above and
+    -- the canvas's own pan-on-drag below (already guarded by
+    -- IsAnyItemActive, which is true while this button is held for a drag).
+    -- The payload is just the dragged node's id (a string) - source and
+    -- target both run in this same script/session, so the target side can
+    -- look the real field up directly via state.nodes instead of needing to
+    -- serialize anything through the payload itself.
+    if reaper.ImGui_BeginDragDropSource(ctx) then
+      reaper.ImGui_SetDragDropPayload(ctx, "STRUCT_FIELD_NODE", tostring(node.id))
+      reaper.ImGui_Text(ctx, "Move \"" .. node.field.field .. "\"")
+      reaper.ImGui_EndDragDropSource(ctx)
+    end
+    if reaper.ImGui_BeginDragDropTarget(ctx) then
+      local rv, payload = reaper.ImGui_AcceptDragDropPayload(ctx, "STRUCT_FIELD_NODE")
+      if rv then
+        local dragged = state.nodes[tonumber(payload)]
+        if dragged then
+          -- A node can't simultaneously be "a current sibling" and "a
+          -- different parent" of the dragged field, so this fully
+          -- disambiguates every drop: dropping onto a SIBLING (same
+          -- parent - both nil for top-level) reorders it to sit right
+          -- after the dropped-on node, immediately. Otherwise, whether the
+          -- dropped-on node can even ACCEPT children decides which
+          -- reparent flavor applies: a valid container -> become its
+          -- child (existing popup); anything else (text/number) -> become
+          -- ITS sibling instead, positioned right after it, rather than
+          -- refusing outright.
+          if dragged.parent_field == node.parent_field then
+            local siblings = dragged.parent_field and dragged.parent_field.fields or data.fields
+            local ok, err, reqs = StructureGui.CommitReorderForDrop(source_path, siblings, dragged.field, node.field)
+            if ok then reload_requests_from_nodes = reqs else Helpers.msg(err, "The Last Renamer") end
+          else
+            local is_container = type(node.field.value) == "table" or type(node.field.value) == "boolean"
+            local drop_err
+            if is_container then
+              drop_err = StructureGui.OpenMoveToPopupForDrop(dragged.field, dragged.parent_field, data.fields, node.field)
+            else
+              drop_err = StructureGui.OpenMoveToPopupForSiblingDrop(dragged.field, dragged.parent_field, data.fields, node.field, node.parent_field)
+            end
+            if drop_err then Helpers.msg(drop_err, "The Last Renamer") end
+          end
+        end
+      end
+      reaper.ImGui_EndDragDropTarget(ctx)
+    end
+
     local move_reload_requests = StructureGui.DrawNodeContextMenu(ctx, node.field, node.id, node.parent_field, data.fields, source_path)
     if move_reload_requests then reload_requests_from_nodes = move_reload_requests end
+  end
+
+  -- Drop on EMPTY canvas background -> move to top-level. Deliberately not
+  -- a BeginDragDropTarget/AcceptDragDropPayload pair on the child window
+  -- itself: registering that right after BeginChild (needed for it to bind
+  -- to the whole window's rect rather than "whatever was last submitted")
+  -- would run BEFORE the node loop even draws anything, so it can't know
+  -- whether the cursor will end up over a node's smaller rect later in the
+  -- same frame - both could then independently report "hovered" and
+  -- "accept" the same drop. Instead, GetDragDropPayload just PEEKS at
+  -- whatever payload is currently active (no rect of its own), so checking
+  -- it AFTER the node loop - gated on "this window is hovered AND no item
+  -- (i.e. no node) is" - correctly only fires when the drop truly lands on
+  -- empty space, since by this point every node's own hover state for this
+  -- frame has already been resolved.
+  if reaper.ImGui_IsWindowHovered(ctx) and not reaper.ImGui_IsAnyItemHovered(ctx) then
+    local has_payload, payload_type, payload, is_preview, is_delivery = reaper.ImGui_GetDragDropPayload(ctx)
+    if has_payload and payload_type == "STRUCT_FIELD_NODE" and is_delivery then
+      local dragged = state.nodes[tonumber(payload)]
+      if dragged then
+        local drop_err = StructureGui.OpenMoveToPopupForDrop(dragged.field, dragged.parent_field, data.fields, nil)
+        if drop_err then Helpers.msg(drop_err, "The Last Renamer") end
+      end
+    end
   end
 
   local reload_requests = StructureGui.DrawCreatePopup(ctx, source_path, data.fields)

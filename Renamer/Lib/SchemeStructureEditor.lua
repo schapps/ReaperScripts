@@ -654,6 +654,61 @@ function M.CommitMoveFieldBlock(source_path, siblings, field, direction)
   return true, nil, {}
 end
 
+-- Moves `field` to sit immediately after `ref_field`, both already in
+-- `siblings` (the same parent's list) - a generalization of
+-- CommitMoveFieldBlock from "swap two ADJACENT blocks" to "extract one
+-- block and reinsert it anywhere else in the same list". No reindentation
+-- needed (true siblings always share one item_indent), unlike reparenting.
+-- Used by the Visual Editor's drag-and-drop: dropping a field onto one of
+-- its own current siblings reorders it to sit right after that sibling,
+-- immediately, no confirmation popup (nothing about parent/id-condition is
+-- changing, so there's nothing left to confirm).
+function M.CommitReorderFieldTo(source_path, siblings, field, ref_field)
+  if not source_path then return false, "No scheme file path available." end
+  if field == ref_field then return false, "Cannot move a field after itself." end
+
+  local lines = Editor.ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local _, field_start, field_end, ferr = ReverifyField(lines, field)
+  if ferr then return false, ferr end
+  local _, ref_start, ref_end, rerr = ReverifyField(lines, ref_field)
+  if rerr then return false, rerr end
+
+  local field_lines = { table.unpack(lines, field_start, field_end) }
+  local removed_count = field_end - field_start + 1
+
+  -- If ref_field's block sits AFTER field's old position, removing field's
+  -- block first shifts every later line number (including ref's) up by
+  -- removed_count - if ref sits BEFORE field instead, it's untouched by
+  -- that removal.
+  local adj_ref_end = ref_end
+  if field_start < ref_start then
+    adj_ref_end = ref_end - removed_count
+  end
+
+  if not Editor.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    for i = field_end, field_start, -1 do
+      table.remove(lines, i)
+    end
+    local insert_at = adj_ref_end + 1
+    for i, l in ipairs(field_lines) do
+      table.insert(lines, insert_at - 1 + i, l)
+    end
+
+    local content = table.concat(lines, "\n")
+    local f = assert(io.open(source_path, "wb"))
+    f:write(content)
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true, nil, {}
+end
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~ REPARENT ~~~~~~~~~~~~
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -803,12 +858,24 @@ function M.CommitReparentField(source_path, top_level_fields, field, target, new
     return false, "Backup failed; no changes were made."
   end
 
+  -- Exactly one of these two is ever set (the "existing children" branch
+  -- sets insert_after_line; the "needs a brand new fields: key" branch
+  -- sets fields_key_insert_line instead) - unify them into one anchor line
+  -- number so the ordering check below has a real number to compare
+  -- against either way. Comparing directly against insert_after_line alone
+  -- crashed ("attempt to compare nil with number") whenever the target
+  -- parent had no existing children yet, since insert_after_line stays nil
+  -- in exactly that case - a real bug, not covered by any existing test
+  -- fixture (every prior reparent test happened to target a parent that
+  -- already had at least one child).
+  local anchor_line = insert_after_line or fields_key_insert_line
+
   local ok, result = pcall(function()
     -- Remove the old block (and its now-orphaned `fields:` key, if any)
     -- FIRST if it sits AFTER the insertion point, so removing it doesn't
     -- shift the insertion point's line number out from under us; insert
     -- first if the old block sits BEFORE the insertion point instead.
-    if block_start > insert_after_line and block_start > (fields_key_insert_line or 0) then
+    if block_start > anchor_line then
       for i = block_end, block_start, -1 do table.remove(lines, i) end
       if orphaned_fields_key then table.remove(lines, orphaned_fields_key) end
 

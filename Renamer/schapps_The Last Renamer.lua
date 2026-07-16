@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,7 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
---   v1.4 Visual Editor functionality is in. Still needs testing and UX improvements.
+--   v1.5 Visual Editor: drag and drop support
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~ SCRIPT PATH & IMGUI ~~~~~~

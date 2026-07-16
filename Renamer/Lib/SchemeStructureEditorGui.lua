@@ -94,6 +94,8 @@ local move_state = {
   field = nil,
   destinations = nil,
   selected_idx = 1,
+  ref_field = nil,  -- nil = append at the end of the destination's children;
+                    -- set = insert immediately after this specific sibling instead
   id_checks = {},
   error = nil,
 }
@@ -136,6 +138,87 @@ local function BuildMoveDestinations(top_level_fields, field, current_parent)
   local destinations = { { label = "Top Level", target_field = nil } }
   CollectMoveDestinations(top_level_fields, field, current_parent, nil, destinations)
   return destinations
+end
+
+-- Drag-and-drop's entry point into the exact same "Move to..." machinery
+-- the right-click menu uses - the destination is already chosen (whatever
+-- node the user dropped onto), so this just seeds `move_state` with that
+-- destination pre-selected and opens the SAME DrawMoveToPopup, skipping
+-- straight to the id-condition picker. Nothing commits without the user
+-- still clicking "Move" in that popup - a drop only ever pre-fills the
+-- destination, never bypasses confirmation.
+--
+-- Returns nil on success (popup now pending-open), or an error string if
+-- `dropped_on_field` isn't a valid destination for `field` at all (dropped
+-- onto itself, a non-container field, one of its own descendants, or its
+-- current parent) - BuildMoveDestinations already excludes all of those,
+-- so "not found in the list" is exactly the same validation the menu path
+-- gets, just surfaced as a message instead of a disabled combo entry.
+function SchemeStructureEditorGui.OpenMoveToPopupForDrop(field, current_parent, top_level_fields, dropped_on_field)
+  local destinations = BuildMoveDestinations(top_level_fields, field, current_parent)
+  local match_idx = nil
+  for i, dest in ipairs(destinations) do
+    if dest.target_field == dropped_on_field then match_idx = i; break end
+  end
+  if not match_idx then
+    return "Can't move \"" .. field.field .. "\" there - the target must be a dropdown or checkbox " ..
+      "field, and not " .. field.field .. "'s own current parent or one of its descendants."
+  end
+
+  move_state.pending_open = true
+  move_state.field = field
+  move_state.destinations = destinations
+  move_state.selected_idx = match_idx
+  move_state.ref_field = nil
+  move_state.id_checks = {}
+  move_state.error = nil
+  return nil
+end
+
+-- Drag-and-drop's entry point when the dropped-on node CAN'T be a parent
+-- (not a dropdown/checkbox) - rather than refusing outright, the next best
+-- interpretation is "become a sibling of the dropped-on field, positioned
+-- immediately after it". The actual reparent destination is
+-- `dropped_on_parent` (that field's OWN current parent - nil for
+-- top-level), not `dropped_on_field` itself (which can't have children);
+-- `dropped_on_field` only ever supplies the position to anchor after.
+--
+-- Returns nil on success (popup now pending-open, pre-selected to
+-- `dropped_on_parent` with `ref_field` set), or an error string if
+-- `dropped_on_field` is `field` itself or one of its own descendants -
+-- can't become a sibling of either of those either.
+function SchemeStructureEditorGui.OpenMoveToPopupForSiblingDrop(field, current_parent, top_level_fields, dropped_on_field, dropped_on_parent)
+  if dropped_on_field == field or Editor.ContainsField(field, dropped_on_field) then
+    return "Can't move \"" .. field.field .. "\" there - it can't be positioned relative to itself or one of its own descendants."
+  end
+
+  local destinations = BuildMoveDestinations(top_level_fields, field, current_parent)
+  local match_idx = nil
+  for i, dest in ipairs(destinations) do
+    if dest.target_field == dropped_on_parent then match_idx = i; break end
+  end
+  if not match_idx then
+    return "Can't move \"" .. field.field .. "\" there."
+  end
+
+  move_state.pending_open = true
+  move_state.field = field
+  move_state.destinations = destinations
+  move_state.selected_idx = match_idx
+  move_state.ref_field = dropped_on_field
+  move_state.id_checks = {}
+  move_state.error = nil
+  return nil
+end
+
+-- Drag-and-drop's entry point for REORDERING: dropping a field onto one of
+-- its own current siblings (same parent) moves it to sit immediately after
+-- that sibling - immediately, no popup, since nothing about parent/id-
+-- condition is changing (matches Move Up/Down's existing immediate style).
+-- Thin wrapper so SchemeVisualizer.lua doesn't need its own separate
+-- dependency on SchemeStructureEditor - it already only talks to this module.
+function SchemeStructureEditorGui.CommitReorderForDrop(source_path, siblings, field, ref_field)
+  return Editor.CommitReorderFieldTo(source_path, siblings, field, ref_field)
 end
 
 local function ResetForm(mode, parent_field, target)
@@ -341,6 +424,7 @@ function SchemeStructureEditorGui.DrawNodeContextMenu(ctx, field, node_id, paren
       move_state.field = field
       move_state.destinations = BuildMoveDestinations(top_level_fields, field, parent_field)
       move_state.selected_idx = 1
+      move_state.ref_field = nil
       move_state.id_checks = {}
       move_state.error = nil
     end
@@ -761,6 +845,11 @@ function SchemeStructureEditorGui.DrawMoveToPopup(ctx, source_path, top_level_fi
         -- conflicting ID" the moment two rows share a label.
         if reaper.ImGui_Selectable(ctx, dest.label .. "##" .. i, move_state.selected_idx == i) then
           move_state.selected_idx = i
+          -- Manually picking a destination always means "append" - a
+          -- pre-seeded ref_field only ever comes from a drag onto a
+          -- specific sibling, and shouldn't survive picking a different
+          -- destination by hand.
+          move_state.ref_field = nil
           move_state.id_checks = {}
         end
       end
@@ -792,8 +881,19 @@ function SchemeStructureEditorGui.DrawMoveToPopup(ctx, source_path, top_level_fi
     local can_submit = not err
     if not can_submit then reaper.ImGui_BeginDisabled(ctx) end
     if reaper.ImGui_Button(ctx, "Move") then
-      local target = dest.target_field and { kind = "child_append", parent_field = dest.target_field }
-        or { kind = "top_level_append" }
+      -- ref_field (only ever set via a drag onto a specific non-container
+      -- sibling - see OpenMoveToPopupForSiblingDrop) anchors right after
+      -- that field instead of appending at the end of the destination's
+      -- children; CommitReparentField already supports this via its
+      -- "_after" target kinds, just never exercised from the GUI until now.
+      local target
+      if dest.target_field then
+        target = { kind = move_state.ref_field and "child_after" or "child_append",
+          parent_field = dest.target_field, ref_field = move_state.ref_field }
+      else
+        target = { kind = move_state.ref_field and "top_level_after" or "top_level_append",
+          ref_field = move_state.ref_field }
+      end
       local ok, save_err, reqs = Editor.CommitReparentField(source_path, top_level_fields, move_state.field, target, new_id_value)
       if ok then
         move_state.error = nil
