@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="20731d0039a38456277b4e6aacad4b11ef0fa143">
+<index version="1" name="SPS Scripts" commit="e372f39c9d587f41aeb73d90f41fe2cad11a43a2">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5739,6 +5739,21 @@ v1.1 Fixing capture issue where underscores were messing up Title case]]></chang
         <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeStructureEditorGui.lua</source>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/20731d0039a38456277b4e6aacad4b11ef0fa143/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.5" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-16T15:40:17Z">
+        <changelog><![CDATA[v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/e372f39c9d587f41aeb73d90f41fe2cad11a43a2/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
