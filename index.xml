@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="e372f39c9d587f41aeb73d90f41fe2cad11a43a2">
+<index version="1" name="SPS Scripts" commit="fb5dec9913b99ecb39a9c9baa3fd6f7114b6dfaf">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -216,7 +216,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Spaces selected items relative to each other. The first item stays in place. "End" mode: gap between each item's end and the next item's start. "Start" mode: gap between each item's start and the next item's start. Supports seconds, frames, and beats as the gap unit.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Spaces selected items relative to each other. The first item stays in place. "End" mode: gap between each item's end and the next item's start. "Start" mode: gap between each item's start and the next item's start. Supports seconds, frames, and beats as the gap unit. "Order items by track order" chains items track-by-track instead of by time position.\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -243,6 +243,14 @@
 4/21/26 - v1.1 adding option to shift automation with items 
 4/21/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/1463f18697d83049b1619e13608b72bdcd643713/Items/Reposition%20Items.lua</source>
+      </version>
+      <version name="1.4" author="Stephen Schappler" time="2026-07-16T16:54:35Z">
+        <changelog><![CDATA[7/16/26 - v1.4 Adding "Order items by track order" option
+5/06/26 - v1.3 Removing Provides
+4/27/26 - v1.2 Adding provides for ReaImGui Theme
+4/21/26 - v1.1 adding option to shift automation with items 
+4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c90c4f58b21b24d85cde9365e59407d760413bf8/Items/Reposition%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
