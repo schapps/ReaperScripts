@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="a81c27980deadfc9b9a8094973fb78b678780630">
+<index version="1" name="SPS Scripts" commit="920497ca447161afa0f31d77d492183a45da6645">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5709,6 +5709,21 @@ v1.1 Fixing capture issue where underscores were messing up Title case]]></chang
         <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/SchemeEditor.lua</source>
         <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/SchemeEditorGui.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/6e2beda85c06d785544f5ef8d779b6ccf32374ef/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.3" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-15T16:35:44Z">
+        <changelog><![CDATA[v1.3 Added a read-only Visual Editor window (node-graph view of the current scheme's field structure) via Lib/SchemeVisualizer.lua
+v1.2 Replaced the "+" add-item button with right-click context menus (dropdown-level "Add Item...", per-item "Move Up"/"Move Down"); split scheme-editing logic into Lib/SchemeEditor.lua + Lib/SchemeEditorGui.lua
+v1.1 Fixing capture issue where underscores were messing up Title case]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/428c5e43beb5cb8b5e4564232ec8ea7435257d41/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
