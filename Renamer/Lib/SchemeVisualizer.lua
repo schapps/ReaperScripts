@@ -9,17 +9,18 @@
 -- but walks the WHOLE tree unconditionally, not just the currently-reachable
 -- path, since the point is to see the scheme's full shape at a glance.
 --
--- Phase 1 (this file): visualization only - no dragging, no persisted
--- layout, no writing back to the scheme file. Depends only on `acendan`
--- (for ImGui_Tooltip, etc.), injected via init() like every other Lib module
--- here, since dofile'd chunks don't share the main script's `local` variables.
+-- Phase 1 (this file): visualization. Structural editing (creating new
+-- fields) is layered in via SchemeStructureEditorGui, injected alongside
+-- `acendan` since dofile'd chunks don't share the main script's `local`
+-- variables.
 
 local SchemeVisualizer = {}
 
-local Helpers
+local Helpers, StructureGui
 
-function SchemeVisualizer.init(helpers)
+function SchemeVisualizer.init(helpers, structure_gui)
   Helpers = helpers
+  StructureGui = structure_gui
 end
 
 local COLUMN_WIDTH = 220
@@ -62,10 +63,11 @@ local function ComputeLayout(fields)
   local function walk(list, depth, parent_node)
     for _, field in ipairs(list) do
       local node = {
-        id    = next_id,
-        field = field,
-        x     = depth * COLUMN_WIDTH,
-        y     = y_cursor[1],
+        id           = next_id,
+        field        = field,
+        parent_field = parent_node and parent_node.field or nil,
+        x            = depth * COLUMN_WIDTH,
+        y            = y_cursor[1],
       }
       next_id = next_id + 1
       y_cursor[1] = y_cursor[1] + ROW_HEIGHT
@@ -104,11 +106,21 @@ local function EnsureLayout(data)
   end
 end
 
-local function DrawCanvas(ctx, w, h)
+local function DrawCanvas(ctx, w, h, data, source_path)
   reaper.ImGui_BeginChild(ctx, "canvas", w, h, reaper.ImGui_ChildFlags_Borders())
 
   local origin_x, origin_y = reaper.ImGui_GetCursorScreenPos(ctx)
   local draw_list = reaper.ImGui_GetWindowDrawList(ctx)
+
+  -- Whole-scheme context menu (right-click empty canvas background) can be
+  -- called here - BeginPopupContextWindow's NoOpenOverItems flag means it
+  -- only fires for empty-space clicks regardless of call order relative to
+  -- the nodes drawn below. DrawCreatePopup itself, though, is deferred
+  -- until after the node loop, so that a "Add Child Field..." click from a
+  -- node's OWN context menu (which can only be drawn after we know the
+  -- node's screen position) still gets its ImGui_OpenPopup call processed
+  -- this same frame, not one frame late.
+  StructureGui.DrawCanvasContextMenu(ctx)
 
   local function to_screen(x, y)
     return origin_x + state.pan_x + x, origin_y + state.pan_y + y
@@ -138,6 +150,7 @@ local function DrawCanvas(ctx, w, h)
     reaper.ImGui_DrawList_AddText(draw_list, label_x, label_y, 0xE0E0E0FF, edge.label)
   end
 
+  local reload_requests_from_nodes = nil
   for _, node in ipairs(state.nodes) do
     local x1, y1 = to_screen(node.x, node.y)
     local x2, y2 = x1 + NODE_WIDTH, y1 + NODE_HEIGHT
@@ -164,7 +177,18 @@ local function DrawCanvas(ctx, w, h)
     if reaper.ImGui_InvisibleButton(ctx, "node_" .. node.id, NODE_WIDTH, NODE_HEIGHT) then
       state.selected_node = node
     end
+    local move_reload_requests = StructureGui.DrawNodeContextMenu(ctx, node.field, node.id, node.parent_field, data.fields, source_path)
+    if move_reload_requests then reload_requests_from_nodes = move_reload_requests end
   end
+
+  local reload_requests = StructureGui.DrawCreatePopup(ctx, source_path, data.fields)
+  if reload_requests_from_nodes then reload_requests = reload_requests_from_nodes end
+  local delete_reload_requests = StructureGui.DrawDeleteConfirmPopup(ctx, source_path)
+  if delete_reload_requests then reload_requests = delete_reload_requests end
+  local extract_reload_requests = StructureGui.DrawExtractToWildcardPopup(ctx, source_path)
+  if extract_reload_requests then reload_requests = extract_reload_requests end
+  local move_to_reload_requests = StructureGui.DrawMoveToPopup(ctx, source_path, data.fields)
+  if move_to_reload_requests then reload_requests = move_to_reload_requests end
 
   -- Pan: drag anywhere on the canvas that isn't currently holding a node's
   -- InvisibleButton (mouse button 0 = left).
@@ -177,6 +201,7 @@ local function DrawCanvas(ctx, w, h)
   end
 
   reaper.ImGui_EndChild(ctx)
+  return reload_requests
 end
 
 local function DrawInspector(ctx, w, h)
@@ -216,11 +241,15 @@ local function DrawInspector(ctx, w, h)
 end
 
 -- Renders the "Scheme Visual Editor" window for the currently loaded scheme
--- document `data` (wgt.data or wgt.meta). Returns false once the user
--- closes it - the caller should clear its own show-flag when this returns
--- false, and stop calling DrawWindow until it's reopened.
+-- document `data` (always wgt.data - the Visual Editor only ever shows the
+-- Naming scheme, never Metadata). Returns open, reload: `open` is false
+-- once the user closes the window (the caller should clear its own
+-- show-flag and stop calling DrawWindow until it's reopened); `reload`,
+-- when non-nil, is a { is_meta, requests } table ready to be assigned
+-- directly to wgt.__pending_reload - is_meta is always false here, since
+-- this window never touches wgt.meta.
 function SchemeVisualizer.DrawWindow(ctx, data)
-  if not data or not data.fields then return true end
+  if not data or not data.fields then return true, nil end
   EnsureLayout(data)
 
   -- Same theme (purple title bar, rounded corners, etc.) as the main
@@ -229,17 +258,42 @@ function SchemeVisualizer.DrawWindow(ctx, data)
 
   reaper.ImGui_SetNextWindowSize(ctx, 900, 600, reaper.ImGui_Cond_FirstUseEver())
   local rv, open = reaper.ImGui_Begin(ctx, "Scheme Visual Editor - " .. (data.title or ""), true)
+  local reload = nil
   if rv then
+    local source_path = data.__scheme_path
+
+    -- The undo stack can span more than one scheme file across a session -
+    -- only actually trigger a reload if the entry just restored belongs to
+    -- the scheme currently open in this window.
+    local undo_result = StructureGui.DrawUndoButton(ctx)
+    if undo_result and undo_result.restored_path == source_path then
+      reload = { is_meta = false, requests = {} }
+    end
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Manage Wildcards...") then
+      StructureGui.OpenWildcardsPopup()
+    end
+    reaper.ImGui_SameLine(ctx)
+    reaper.ImGui_TextDisabled(ctx, "Right-click the canvas or a node to add fields.")
+
+    local wildcards_reload_requests = StructureGui.DrawWildcardsPopup(ctx, source_path)
+    if wildcards_reload_requests then
+      reload = { is_meta = false, requests = wildcards_reload_requests }
+    end
+
     local avail_w, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
     local inspector_w = 260
-    DrawCanvas(ctx, avail_w - inspector_w - 8, 0)
+    local reload_requests = DrawCanvas(ctx, avail_w - inspector_w - 8, 0, data, source_path)
+    if reload_requests then
+      reload = { is_meta = false, requests = reload_requests }
+    end
     reaper.ImGui_SameLine(ctx)
     DrawInspector(ctx, inspector_w, 0)
     reaper.ImGui_End(ctx)
   end
 
   Helpers.ImGui_PopStyles()
-  return open
+  return open, reload
 end
 
 return SchemeVisualizer

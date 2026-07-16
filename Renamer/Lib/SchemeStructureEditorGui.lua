@@ -1,0 +1,992 @@
+-- @noindex
+-- SchemeStructureEditorGui: the field-creation/editing form popup, right-
+-- click context menus ("Add Top-Level Field...", "Add Child Field...",
+-- "Edit Field...", "Delete Field..."), and the "Undo Last Change" control
+-- for the Visual Editor window. The same form popup serves both creating a
+-- new field and editing an existing one (form.action = "create" | "edit"),
+-- since the two share almost the entire property-editing UI.
+--
+-- Depends on SchemeStructureEditor.lua (pure logic/file-I/O) and the main
+-- script's `acendan` helper table, both injected via init() since dofile'd
+-- chunks don't share the main script's `local` variables.
+
+local SchemeStructureEditorGui = {}
+
+local Editor, Helpers
+
+function SchemeStructureEditorGui.init(structure_editor, helpers)
+  Editor = structure_editor
+  Helpers = helpers
+end
+
+local CAPITALIZATION_OPTIONS = { "None", "Title", "PascalCase", "UPPER", "lower" }
+local TYPE_OPTIONS = { "Dropdown", "Text", "Boolean", "Number" }
+local TYPE_KEYS = { "dropdown", "text", "boolean", "number" }
+
+-- Module-local form state - only one creation popup can be open at a time
+-- across the whole Visual Editor window, so this doesn't need per-call
+-- instancing (mirrors the field.__new_value_input-style state already used
+-- for the Add-Item popup elsewhere in this codebase, just not tied to a
+-- specific field object since a "create" has no pre-existing field yet).
+local form = {
+  pending_open = false,
+  action = "create",   -- "create" | "edit"
+  target_field = nil,  -- the field being edited, only set when action == "edit"
+  mode = nil,          -- "top_level" | "child"
+  parent_field = nil,
+  target = nil,
+  type_idx = 1,
+  label = "",
+  required = false,
+  skip = false,
+  capitalization_idx = 1,
+  separator = "",
+  help = "",
+  options = {},         -- dropdown: array of { value = "", short = "" }
+  use_short = false,
+  text_value = "",
+  hint = "",
+  bool_value = false,
+  btrue = "",
+  bfalse = "",
+  num_value = "1",
+  zeroes = "",
+  singles = false,
+  id_checks = {},       -- child mode: option-string (or "true"/"false") -> bool
+  error = nil,
+}
+
+-- Module-local delete-confirmation state - same "only one at a time"
+-- reasoning as `form` above.
+local delete_state = {
+  pending_open = false,
+  field = nil,
+  error = nil,
+}
+
+-- Module-local "Extract to $wildcard" popup state - same "only one at a
+-- time" reasoning as `form`/`delete_state` above.
+local extract_state = {
+  pending_open = false,
+  field = nil,
+  name_input = "",
+  error = nil,
+}
+
+-- Module-local "Manage Wildcards" popup state. `rows` is rebuilt fresh from
+-- disk (via Editor.ListWildcardDefinitions) each time the popup opens, and
+-- again after every successful commit inside it - each row wraps one
+-- definition with its own mutable UI buffers (editable items/value, a
+-- rename buffer, a per-row error).
+local wildcards_state = {
+  pending_open = false,
+  rows = nil,
+}
+
+-- Module-local "Move to..." popup state - same "only one at a time"
+-- reasoning as the others above. `destinations` is rebuilt each time the
+-- popup opens: "Top Level" plus every dropdown/boolean field in the tree
+-- except `field` itself, its own descendants, and its CURRENT parent
+-- (reparenting to the same parent is refused server-side too, but excluding
+-- it here keeps the destination list from offering a choice that always fails).
+local move_state = {
+  pending_open = false,
+  field = nil,
+  destinations = nil,
+  selected_idx = 1,
+  id_checks = {},
+  error = nil,
+}
+
+local function FormatIdForLabel(id)
+  if type(id) == "table" then
+    local parts = {}
+    for _, v in ipairs(id) do parts[#parts + 1] = tostring(v) end
+    return table.concat(parts, ", ")
+  end
+  return tostring(id)
+end
+
+-- Recursively collects every dropdown/boolean field under `fields` that
+-- could accept `field` as a new child - excluding `field` itself, anything
+-- inside its own subtree (via Editor.ContainsField), and its current parent.
+-- `ancestor_label` (the immediate parent's own label, nil at the top level)
+-- gets folded into the destination's displayed label, since field labels
+-- aren't unique across the tree - e.g. Example.yaml has three separate
+-- "Manufacturer" fields, all children of the SAME "Country" field, each
+-- under a different id condition, so the parent's label alone wouldn't
+-- disambiguate them either; the id condition is included too.
+local function CollectMoveDestinations(fields, field, current_parent, ancestor_label, out)
+  for _, f in ipairs(fields) do
+    if f ~= field and f ~= current_parent and not Editor.ContainsField(field, f) then
+      if type(f.value) == "table" or type(f.value) == "boolean" then
+        local label = f.field
+        if ancestor_label then
+          label = label .. "  (under " .. ancestor_label ..
+            (f.id ~= nil and (" = " .. FormatIdForLabel(f.id)) or "") .. ")"
+        end
+        out[#out + 1] = { label = label, target_field = f }
+      end
+    end
+    if f.fields then CollectMoveDestinations(f.fields, field, current_parent, f.field, out) end
+  end
+end
+
+local function BuildMoveDestinations(top_level_fields, field, current_parent)
+  local destinations = { { label = "Top Level", target_field = nil } }
+  CollectMoveDestinations(top_level_fields, field, current_parent, nil, destinations)
+  return destinations
+end
+
+local function ResetForm(mode, parent_field, target)
+  form.pending_open = true
+  form.action = "create"
+  form.target_field = nil
+  form.mode = mode
+  form.parent_field = parent_field
+  form.target = target
+  form.type_idx = 1
+  form.label = ""
+  form.required = false
+  form.skip = false
+  form.capitalization_idx = 1
+  form.separator = ""
+  form.help = ""
+  form.options = { { value = "", short = "" } }
+  form.use_short = false
+  form.text_value = ""
+  form.hint = ""
+  form.bool_value = false
+  form.btrue = ""
+  form.bfalse = ""
+  form.num_value = "1"
+  form.zeroes = ""
+  form.singles = false
+  form.id_checks = {}
+  form.error = nil
+end
+
+-- Finds the index of `value` in `list` (linear search over a plain array),
+-- or 1 as a safe fallback if not found - used to preselect the type/
+-- capitalization combos when populating the form from an existing field.
+local function IndexOf(list, value)
+  for i, v in ipairs(list) do
+    if v == value then return i end
+  end
+  return 1
+end
+
+-- Populates the form from an EXISTING field's current properties, for the
+-- "Edit Field..." action - the inverse of BuildFieldSpec/BuildIdValue
+-- below. `parent_field` is needed (not derivable from `field` alone, since
+-- fields don't store a back-reference) to know which options the id-
+-- condition picker should offer - threaded in from the visualizer's node
+-- layout, which already tracks it for edge-drawing purposes.
+local function ResetFormForEdit(field, parent_field)
+  form.pending_open = true
+  form.action = "edit"
+  form.target_field = field
+  form.mode = field.id ~= nil and "child" or "top_level"
+  form.parent_field = parent_field
+  form.target = nil
+
+  form.label = field.field
+  form.required = field.required or false
+  form.skip = field.skip or false
+  form.capitalization_idx = IndexOf(CAPITALIZATION_OPTIONS, field.capitalization)
+  form.separator = field.separator or ""
+  form.help = field.help or ""
+
+  form.options = { { value = "", short = "" } }
+  form.use_short = false
+  form.text_value = ""
+  form.hint = ""
+  form.bool_value = false
+  form.btrue = ""
+  form.bfalse = ""
+  form.num_value = "1"
+  form.zeroes = ""
+  form.singles = false
+
+  if type(field.value) == "table" then
+    form.type_idx = IndexOf(TYPE_KEYS, "dropdown")
+    form.options = {}
+    for i, v in ipairs(field.value) do
+      form.options[i] = { value = tostring(v), short = field.short and field.short[i] or "" }
+    end
+    form.use_short = field.short ~= nil
+  elseif type(field.value) == "boolean" then
+    form.type_idx = IndexOf(TYPE_KEYS, "boolean")
+    form.bool_value = field.value
+    form.btrue = field.btrue or ""
+    form.bfalse = field.bfalse or ""
+  elseif type(field.value) == "number" then
+    form.type_idx = IndexOf(TYPE_KEYS, "number")
+    form.num_value = tostring(field.value)
+    form.zeroes = field.zeroes and tostring(field.zeroes) or ""
+    form.singles = field.singles or false
+  else
+    form.type_idx = IndexOf(TYPE_KEYS, "text")
+    form.text_value = field.value or ""
+    form.hint = field.hint or ""
+  end
+
+  form.id_checks = {}
+  if form.mode == "child" then
+    if type(field.id) == "table" then
+      for _, v in ipairs(field.id) do form.id_checks[v] = true end
+    elseif type(field.id) == "boolean" then
+      form.id_checks[tostring(field.id)] = true
+    else
+      form.id_checks[field.id] = true
+    end
+  end
+
+  form.error = nil
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~ CONTEXT MENUS ~~~~~~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- Right-click empty canvas background -> whole-scheme actions. Must be
+-- called right after the canvas child window begins, before any node is
+-- drawn, since BeginPopupContextWindow binds to the current window itself.
+function SchemeStructureEditorGui.DrawCanvasContextMenu(ctx)
+  -- NoOpenOverItems: without it, right-clicking a node (drawn on top of
+  -- this same canvas child window) would ALSO trigger this window-level
+  -- menu underneath it, alongside the node's own context menu.
+  local flags = reaper.ImGui_PopupFlags_MouseButtonRight() | reaper.ImGui_PopupFlags_NoOpenOverItems()
+  if reaper.ImGui_BeginPopupContextWindow(ctx, "CanvasCtx", flags) then
+    if reaper.ImGui_MenuItem(ctx, "Add Top-Level Field...") then
+      ResetForm("top_level", nil, { kind = "top_level_append" })
+    end
+    reaper.ImGui_EndPopup(ctx)
+  end
+end
+
+-- Right-click a node -> "Add Child Field...", only meaningful under a
+-- dropdown or boolean parent (PassesIDCheck only resolves an id condition
+-- against a table- or boolean-valued parent's .selected - a string/number
+-- parent has no such branching, and every existing nesting parent in the
+-- real scheme corpus is one of these two types). Shown disabled with an
+-- explanatory tooltip otherwise, rather than hidden.
+--
+-- Returns a reload_requests array (non-nil) if "Move Up"/"Move Down" was
+-- clicked and committed successfully this frame (the only immediate,
+-- non-popup-mediated action here), else nil - every other action is
+-- deferred-open (a popup drawn later this same frame).
+function SchemeStructureEditorGui.DrawNodeContextMenu(ctx, field, node_id, parent_field, top_level_fields, source_path)
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopupContextItem(ctx, "StructNodeCtx_" .. node_id) then
+    if reaper.ImGui_MenuItem(ctx, "Edit Field...") then
+      ResetFormForEdit(field, parent_field)
+    end
+
+    local can_have_children = type(field.value) == "table" or type(field.value) == "boolean"
+    if not can_have_children then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_MenuItem(ctx, "Add Child Field...") then
+      ResetForm("child", field, { kind = "child_append", parent_field = field })
+    end
+    if not can_have_children then
+      reaper.ImGui_EndDisabled(ctx)
+      Helpers.ImGui_Tooltip("Only dropdown or checkbox fields can have conditional children.")
+    end
+
+    -- Only a literal (non-wildcard-backed) dropdown has a `value: [...]`
+    -- list of its own to extract - a shared list already IS a wildcard, and
+    -- non-dropdown types have nothing list-shaped to share.
+    local can_extract = type(field.value) == "table" and not field.__wildcard_key
+    if not can_extract then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_MenuItem(ctx, "Extract to $wildcard...") then
+      extract_state.pending_open = true
+      extract_state.field = field
+      extract_state.name_input = ""
+      extract_state.error = nil
+    end
+    if not can_extract then
+      reaper.ImGui_EndDisabled(ctx)
+      Helpers.ImGui_Tooltip(field.__wildcard_key
+        and "This field's value is already a shared $wildcard."
+        or "Only dropdown fields can be extracted to a shared wildcard.")
+    end
+
+    reaper.ImGui_Separator(ctx)
+
+    -- Reorder among siblings - executed IMMEDIATELY (no confirmation), low
+    -- risk and already covered by undo, matching the main window's existing
+    -- immediate "Move Up"/"Move Down" for dropdown options.
+    local siblings = parent_field and parent_field.fields or top_level_fields
+    local index = nil
+    for i, f in ipairs(siblings) do if f == field then index = i; break end end
+    local can_move_up = index and index > 1
+    local can_move_down = index and index < #siblings
+
+    if not can_move_up then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_MenuItem(ctx, "Move Up") then
+      local ok, err, reqs = Editor.CommitMoveFieldBlock(source_path, siblings, field, -1)
+      if ok then reload_requests = reqs else Helpers.msg(err, "The Last Renamer") end
+    end
+    if not can_move_up then reaper.ImGui_EndDisabled(ctx) end
+
+    if not can_move_down then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_MenuItem(ctx, "Move Down") then
+      local ok, err, reqs = Editor.CommitMoveFieldBlock(source_path, siblings, field, 1)
+      if ok then reload_requests = reqs else Helpers.msg(err, "The Last Renamer") end
+    end
+    if not can_move_down then reaper.ImGui_EndDisabled(ctx) end
+
+    if reaper.ImGui_MenuItem(ctx, "Move to...") then
+      move_state.pending_open = true
+      move_state.field = field
+      move_state.destinations = BuildMoveDestinations(top_level_fields, field, parent_field)
+      move_state.selected_idx = 1
+      move_state.id_checks = {}
+      move_state.error = nil
+    end
+
+    reaper.ImGui_Separator(ctx)
+    -- Warning-colored text, distinct from the plain menu items above -
+    -- clicking it opens a confirmation dialog rather than deleting
+    -- immediately (see DrawDeleteConfirmPopup), since a single accidental
+    -- menu click on a node with a large subtree (e.g. UCS.yaml's Category,
+    -- ~80 nested Subcategory blocks) would otherwise be a bad experience
+    -- even with the backup/undo safety net.
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFF6B6BFF)
+    if reaper.ImGui_MenuItem(ctx, "Delete Field...") then
+      delete_state.pending_open = true
+      delete_state.field = field
+      delete_state.error = nil
+    end
+    reaper.ImGui_PopStyleColor(ctx)
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~ FORM -> FIELD SPEC ~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- Extracted so DrawMoveToPopup can build an id value against an arbitrary
+-- (not necessarily `form.parent_field`) target parent too.
+local function BuildIdValueFrom(parent_field, id_checks)
+  local selected = {}
+  if type(parent_field.value) == "boolean" then
+    if id_checks["true"] then selected[#selected + 1] = true end
+    if id_checks["false"] then selected[#selected + 1] = false end
+  else
+    for _, opt in ipairs(parent_field.value) do
+      if id_checks[opt] then selected[#selected + 1] = opt end
+    end
+  end
+  if #selected == 0 then return nil end
+  if #selected == 1 then return selected[1] end
+  return selected
+end
+
+local function BuildIdValue()
+  if form.mode ~= "child" then return nil end
+  return BuildIdValueFrom(form.parent_field, form.id_checks)
+end
+
+local function BuildFieldSpec()
+  local type_key = TYPE_KEYS[form.type_idx]
+  local spec = {
+    type = type_key,
+    label = (form.label or ""):match("^%s*(.-)%s*$"),
+    required = form.required,
+    skip = form.skip,
+    capitalization = CAPITALIZATION_OPTIONS[form.capitalization_idx],
+    separator = form.separator ~= "" and form.separator or nil,
+    help = form.help ~= "" and form.help or nil,
+  }
+
+  if type_key == "dropdown" then
+    spec.options, spec.short = {}, form.use_short and {} or nil
+    for _, opt in ipairs(form.options) do
+      local v = (opt.value or ""):match("^%s*(.-)%s*$")
+      if v ~= "" then
+        spec.options[#spec.options + 1] = v
+        if form.use_short then spec.short[#spec.short + 1] = opt.short or "" end
+      end
+    end
+  elseif type_key == "text" then
+    spec.value = form.text_value
+    spec.hint = form.hint ~= "" and form.hint or nil
+  elseif type_key == "boolean" then
+    spec.value = form.bool_value
+    -- Unlike hint/help/separator (genuinely optional - many real fields
+    -- omit them), a boolean field's btrue/bfalse must ALWAYS both be
+    -- written, even as "", matching every existing hand-authored boolean
+    -- field in the real scheme corpus - LoadField's rendering does
+    -- `field.value and field.btrue or field.bfalse`, which crashes with
+    -- "attempt to concatenate a nil value" if the branch actually taken
+    -- resolves to a genuinely absent (nil, not merely blank) key.
+    spec.btrue = form.btrue or ""
+    spec.bfalse = form.bfalse or ""
+  elseif type_key == "number" then
+    spec.value = tonumber(form.num_value) or 0
+    spec.zeroes = tonumber(form.zeroes)
+    spec.singles = form.singles
+  end
+
+  return spec, BuildIdValue()
+end
+
+-- Live, client-side pre-check for enabling/disabling the Create button and
+-- showing an inline error - the authoritative validation still happens
+-- inside CommitCreateField itself on submit, same "check both places"
+-- pattern already used by the Add-Item popup elsewhere in this codebase.
+local function ValidateForSubmit(spec, id_value)
+  if spec.label == "" then return "Field name cannot be blank." end
+  if spec.type == "dropdown" and (not spec.options or #spec.options == 0) then
+    return "Add at least one option."
+  end
+  if form.mode == "child" and id_value == nil then
+    return "Select at least one value that shows this field."
+  end
+  return nil
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~~~~~ THE FORM ~~~~~~~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+local function DrawDropdownFields(ctx)
+  reaper.ImGui_Text(ctx, "Options")
+  local rv
+  rv, form.use_short = reaper.ImGui_Checkbox(ctx, "Use short codes", form.use_short)
+
+  local remove_idx = nil
+  for i, opt in ipairs(form.options) do
+    reaper.ImGui_PushID(ctx, i)
+    rv, opt.value = reaper.ImGui_InputText(ctx, "##OptValue", opt.value)
+    if form.use_short then
+      reaper.ImGui_SameLine(ctx)
+      rv, opt.short = reaper.ImGui_InputText(ctx, "##OptShort", opt.short)
+    end
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_SmallButton(ctx, "x") then remove_idx = i end
+    reaper.ImGui_PopID(ctx)
+  end
+  if remove_idx then table.remove(form.options, remove_idx) end
+  if reaper.ImGui_Button(ctx, "+ Add Option") then
+    form.options[#form.options + 1] = { value = "", short = "" }
+  end
+end
+
+-- Takes `parent_field`/`id_checks` explicitly (rather than reading
+-- `form.*` directly) so both the create/edit form AND DrawMoveToPopup's
+-- separate `move_state` can share this without duplicating the
+-- boolean-vs-dropdown branching.
+local function DrawIdConditionPicker(ctx, parent_field, id_checks)
+  reaper.ImGui_Text(ctx, "Show when parent is:")
+  local rv
+  if type(parent_field.value) == "boolean" then
+    rv, id_checks["true"]  = reaper.ImGui_Checkbox(ctx, "True",  id_checks["true"]  or false)
+    reaper.ImGui_SameLine(ctx)
+    rv, id_checks["false"] = reaper.ImGui_Checkbox(ctx, "False", id_checks["false"] or false)
+  else
+    for _, opt in ipairs(parent_field.value) do
+      rv, id_checks[opt] = reaper.ImGui_Checkbox(ctx, tostring(opt), id_checks[opt] or false)
+    end
+  end
+end
+
+-- Opened via ResetForm (deferred, matching the field.__open_add_item_popup
+-- pattern already used elsewhere: setting a flag here, and the actual
+-- reaper.ImGui_OpenPopup call happening on the very next check, since a
+-- MenuItem click that triggered ResetForm is itself still closing its own
+-- enclosing context-menu popup this same frame).
+--
+-- Returns a reload_requests array (non-nil) once a field is successfully
+-- created this frame, else nil.
+function SchemeStructureEditorGui.DrawCreatePopup(ctx, source_path, top_level_fields)
+  if form.pending_open then
+    form.pending_open = false
+    reaper.ImGui_OpenPopup(ctx, "CreateFieldPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "CreateFieldPopup") then
+    local title
+    if form.action == "edit" then
+      title = "Edit \"" .. form.target_field.field .. "\""
+    elseif form.mode == "child" then
+      title = "Add Child Field under \"" .. form.parent_field.field .. "\""
+    else
+      title = "Add Top-Level Field"
+    end
+    reaper.ImGui_Text(ctx, title)
+    reaper.ImGui_Separator(ctx)
+
+    local rv
+    reaper.ImGui_Text(ctx, "Name")
+    rv, form.label = reaper.ImGui_InputText(ctx, "##NewFieldLabel", form.label)
+
+    -- Changing a field's fundamental type isn't supported (delete + recreate
+    -- is the agreed workaround) - shown but disabled in edit mode so the
+    -- user can still SEE the type without being able to change it.
+    reaper.ImGui_Text(ctx, "Type")
+    if form.action == "edit" then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_BeginCombo(ctx, "##NewFieldType", TYPE_OPTIONS[form.type_idx]) then
+      for i, label in ipairs(TYPE_OPTIONS) do
+        if reaper.ImGui_Selectable(ctx, label, form.type_idx == i) then form.type_idx = i end
+      end
+      reaper.ImGui_EndCombo(ctx)
+    end
+    if form.action == "edit" then
+      reaper.ImGui_EndDisabled(ctx)
+      Helpers.ImGui_Tooltip("To change a field's type, delete it and create a new one.")
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    local type_key = TYPE_KEYS[form.type_idx]
+    if type_key == "dropdown" then
+      DrawDropdownFields(ctx)
+    elseif type_key == "text" then
+      reaper.ImGui_Text(ctx, "Initial Value")
+      rv, form.text_value = reaper.ImGui_InputText(ctx, "##TextValue", form.text_value)
+      reaper.ImGui_Text(ctx, "Hint")
+      rv, form.hint = reaper.ImGui_InputText(ctx, "##Hint", form.hint)
+    elseif type_key == "boolean" then
+      rv, form.bool_value = reaper.ImGui_Checkbox(ctx, "Initial Value (checked)", form.bool_value)
+      reaper.ImGui_Text(ctx, "True Suffix")
+      rv, form.btrue = reaper.ImGui_InputText(ctx, "##BTrue", form.btrue)
+      reaper.ImGui_Text(ctx, "False Suffix")
+      rv, form.bfalse = reaper.ImGui_InputText(ctx, "##BFalse", form.bfalse)
+    elseif type_key == "number" then
+      reaper.ImGui_Text(ctx, "Initial Value")
+      rv, form.num_value = reaper.ImGui_InputText(ctx, "##NumValue", form.num_value)
+      reaper.ImGui_Text(ctx, "Zero Padding")
+      rv, form.zeroes = reaper.ImGui_InputText(ctx, "##Zeroes", form.zeroes)
+      rv, form.singles = reaper.ImGui_Checkbox(ctx, "Singles", form.singles)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    if form.mode == "child" then
+      DrawIdConditionPicker(ctx, form.parent_field, form.id_checks)
+      reaper.ImGui_Spacing(ctx)
+      reaper.ImGui_Separator(ctx)
+    end
+
+    rv, form.required = reaper.ImGui_Checkbox(ctx, "Required", form.required)
+    reaper.ImGui_SameLine(ctx)
+    rv, form.skip = reaper.ImGui_Checkbox(ctx, "Skip (don't include in name)", form.skip)
+
+    reaper.ImGui_Text(ctx, "Capitalization")
+    if reaper.ImGui_BeginCombo(ctx, "##Capitalization", CAPITALIZATION_OPTIONS[form.capitalization_idx]) then
+      for i, c in ipairs(CAPITALIZATION_OPTIONS) do
+        if reaper.ImGui_Selectable(ctx, c, form.capitalization_idx == i) then form.capitalization_idx = i end
+      end
+      reaper.ImGui_EndCombo(ctx)
+    end
+
+    reaper.ImGui_Text(ctx, "Separator (optional)")
+    rv, form.separator = reaper.ImGui_InputText(ctx, "##Separator", form.separator)
+
+    reaper.ImGui_Text(ctx, "Help Text (optional)")
+    rv, form.help = reaper.ImGui_InputText(ctx, "##Help", form.help)
+
+    reaper.ImGui_Spacing(ctx)
+    local field_spec, id_value = BuildFieldSpec()
+    local err = ValidateForSubmit(field_spec, id_value)
+
+    if err then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, err)
+    elseif form.error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, form.error)
+    end
+
+    local can_submit = not err
+    if not can_submit then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, form.action == "edit" and "Save" or "Create") then
+      field_spec.id = id_value
+      local ok, save_err, reqs
+      if form.action == "edit" then
+        ok, save_err, reqs = Editor.CommitEditField(source_path, form.target_field, field_spec, form.mode == "child")
+      else
+        ok, save_err, reqs = Editor.CommitCreateField(source_path, top_level_fields, form.target, field_spec)
+      end
+      if ok then
+        form.error = nil
+        reload_requests = reqs
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        form.error = save_err
+      end
+    end
+    if not can_submit then reaper.ImGui_EndDisabled(ctx) end
+
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Opened via the "Delete Field..." menu entry (deferred-open, same pattern
+-- as DrawCreatePopup). Shows a descendant-count warning when the field has
+-- nested children, since deleting it removes the whole subtree. Returns a
+-- reload_requests array (non-nil) once a field is successfully deleted
+-- this frame, else nil.
+function SchemeStructureEditorGui.DrawDeleteConfirmPopup(ctx, source_path)
+  if delete_state.pending_open then
+    delete_state.pending_open = false
+    reaper.ImGui_OpenPopup(ctx, "DeleteFieldPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "DeleteFieldPopup") then
+    local field = delete_state.field
+    reaper.ImGui_Text(ctx, "Delete \"" .. field.field .. "\"?")
+
+    local descendant_count = Editor.CountDescendants(field)
+    if descendant_count > 0 then
+      reaper.ImGui_TextColored(ctx, 0xFF6B6BFF,
+        "This will also delete " .. descendant_count .. " nested field" ..
+        (descendant_count == 1 and "" or "s") .. ".")
+    end
+
+    if delete_state.error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, delete_state.error)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0xB33A3AFF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0xCC4747FF)
+    if reaper.ImGui_Button(ctx, "Delete") then
+      local ok, err, reqs = Editor.CommitDeleteField(source_path, field)
+      if ok then
+        delete_state.error = nil
+        delete_state.field = nil
+        reload_requests = reqs
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        delete_state.error = err
+      end
+    end
+    reaper.ImGui_PopStyleColor(ctx, 2)
+
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Opened via the "Extract to $wildcard..." menu entry (deferred-open, same
+-- pattern as DrawCreatePopup/DrawDeleteConfirmPopup). Returns a
+-- reload_requests array (non-nil) once the extraction succeeds this frame,
+-- else nil.
+function SchemeStructureEditorGui.DrawExtractToWildcardPopup(ctx, source_path)
+  if extract_state.pending_open then
+    extract_state.pending_open = false
+    reaper.ImGui_OpenPopup(ctx, "ExtractToWildcardPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "ExtractToWildcardPopup") then
+    reaper.ImGui_Text(ctx, "Extract \"" .. extract_state.field.field .. "\" to a shared $wildcard")
+    reaper.ImGui_Separator(ctx)
+
+    reaper.ImGui_Text(ctx, "Wildcard Name")
+    local rv
+    rv, extract_state.name_input = reaper.ImGui_InputText(ctx, "##WildcardName", extract_state.name_input)
+    Helpers.ImGui_Tooltip("Letters, numbers, and underscores only - referenced elsewhere as $" ..
+      (extract_state.name_input ~= "" and extract_state.name_input or "name") .. ".")
+
+    if extract_state.error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, extract_state.error)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    if reaper.ImGui_Button(ctx, "Extract") then
+      local ok, err, reqs = Editor.CommitExtractToWildcard(source_path, extract_state.field, extract_state.name_input)
+      if ok then
+        extract_state.error = nil
+        reload_requests = reqs
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        extract_state.error = err
+      end
+    end
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Opened via the "Move to..." menu entry (deferred-open, same pattern as
+-- the other popups). `top_level_fields` is needed both to build the
+-- destination list (already done in DrawNodeContextMenu, stored on
+-- move_state.destinations) and as CommitReparentField's own anchor
+-- parameter for a "Top Level" destination. Returns a reload_requests array
+-- (non-nil) once the move succeeds this frame, else nil.
+function SchemeStructureEditorGui.DrawMoveToPopup(ctx, source_path, top_level_fields)
+  if move_state.pending_open then
+    move_state.pending_open = false
+    reaper.ImGui_OpenPopup(ctx, "MoveToPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "MoveToPopup") then
+    reaper.ImGui_Text(ctx, "Move \"" .. move_state.field.field .. "\" to...")
+    reaper.ImGui_Separator(ctx)
+
+    local destinations = move_state.destinations or {}
+    reaper.ImGui_Text(ctx, "Destination")
+    local current = destinations[move_state.selected_idx]
+    if reaper.ImGui_BeginCombo(ctx, "##MoveDestination", current and current.label or "") then
+      for i, dest in ipairs(destinations) do
+        -- Field labels aren't unique across the tree (e.g. Example.yaml has
+        -- three separate "Manufacturer" fields, one per country) - the
+        -- "##<i>" suffix gives each Selectable its own ImGui ID (ImGui only
+        -- displays the text before "##", so the visible label is
+        -- unaffected) without it, ReaImGui throws "N visible items with
+        -- conflicting ID" the moment two rows share a label.
+        if reaper.ImGui_Selectable(ctx, dest.label .. "##" .. i, move_state.selected_idx == i) then
+          move_state.selected_idx = i
+          move_state.id_checks = {}
+        end
+      end
+      reaper.ImGui_EndCombo(ctx)
+    end
+
+    local dest = destinations[move_state.selected_idx]
+    local new_id_value = nil
+    if dest and dest.target_field then
+      reaper.ImGui_Spacing(ctx)
+      DrawIdConditionPicker(ctx, dest.target_field, move_state.id_checks)
+      new_id_value = BuildIdValueFrom(dest.target_field, move_state.id_checks)
+    end
+
+    local err = nil
+    if not dest then
+      err = "No valid destination available."
+    elseif dest.target_field and new_id_value == nil then
+      err = "Select at least one value that shows this field."
+    end
+
+    if err then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, err)
+    elseif move_state.error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, move_state.error)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    local can_submit = not err
+    if not can_submit then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Move") then
+      local target = dest.target_field and { kind = "child_append", parent_field = dest.target_field }
+        or { kind = "top_level_append" }
+      local ok, save_err, reqs = Editor.CommitReparentField(source_path, top_level_fields, move_state.field, target, new_id_value)
+      if ok then
+        move_state.error = nil
+        reload_requests = reqs
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        move_state.error = save_err
+      end
+    end
+    if not can_submit then reaper.ImGui_EndDisabled(ctx) end
+
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Refreshes wildcards_state.rows fresh from disk - called both when the
+-- popup first opens and after every successful commit inside it, so the
+-- popup never shows stale data alongside its own edits.
+local function RefreshWildcardRows(source_path)
+  local defs = Editor.ListWildcardDefinitions(source_path)
+  local rows = {}
+  for i, def in ipairs(defs) do
+    local items = nil
+    if def.is_list then
+      items = {}
+      for j, v in ipairs(def.items) do items[j] = tostring(v) end
+    end
+    rows[i] = {
+      name = def.name,
+      is_list = def.is_list,
+      items = items,
+      scalar_value = def.raw_value,
+      rename_buf = def.name,
+      error = nil,
+    }
+  end
+  wildcards_state.rows = rows
+end
+
+-- Called from the Visual Editor's toolbar "Manage Wildcards..." button -
+-- `wildcards_state` is module-local, so this is the caller's only way to
+-- trigger the deferred-open (same reasoning as ResetForm/ResetFormForEdit
+-- being the entry points for the create/edit form).
+function SchemeStructureEditorGui.OpenWildcardsPopup()
+  wildcards_state.pending_open = true
+end
+
+-- Opened via the "Manage Wildcards..." button in the Visual Editor's
+-- toolbar. Lists every $name definition in the file with inline edit
+-- (list-type: add/remove rows, reusing the same shape as DrawDropdownFields
+-- minus short codes; scalar-type: a single text field), rename, and delete
+-- controls. Returns a reload_requests array (non-nil) once ANY row's commit
+-- succeeds this frame, else nil - the popup stays open across a successful
+-- edit (rows are simply refreshed), only "Close" dismisses it.
+function SchemeStructureEditorGui.DrawWildcardsPopup(ctx, source_path)
+  if wildcards_state.pending_open then
+    wildcards_state.pending_open = false
+    RefreshWildcardRows(source_path)
+    reaper.ImGui_OpenPopup(ctx, "ManageWildcardsPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "ManageWildcardsPopup") then
+    reaper.ImGui_Text(ctx, "Manage Wildcards")
+    reaper.ImGui_Separator(ctx)
+
+    local rows = wildcards_state.rows or {}
+    if #rows == 0 then
+      reaper.ImGui_TextDisabled(ctx, "This scheme has no $wildcards defined yet.")
+    end
+
+    for _, row in ipairs(rows) do
+      reaper.ImGui_PushID(ctx, row.name)
+      reaper.ImGui_Text(ctx, "$" .. row.name ..
+        (row.is_list and ("  (list, " .. #row.items .. " item" .. (#row.items == 1 and "" or "s") .. ")") or "  (text)"))
+
+      local rv
+      if row.is_list then
+        local remove_idx = nil
+        for i, item in ipairs(row.items) do
+          reaper.ImGui_PushID(ctx, i)
+          rv, row.items[i] = reaper.ImGui_InputText(ctx, "##Item", item)
+          reaper.ImGui_SameLine(ctx)
+          if reaper.ImGui_SmallButton(ctx, "x") then remove_idx = i end
+          reaper.ImGui_PopID(ctx)
+        end
+        if remove_idx then table.remove(row.items, remove_idx) end
+        if reaper.ImGui_Button(ctx, "+ Add Item") then
+          row.items[#row.items + 1] = ""
+        end
+        reaper.ImGui_SameLine(ctx)
+        if reaper.ImGui_Button(ctx, "Save List") then
+          local final_items = {}
+          for _, v in ipairs(row.items) do
+            local trimmed = (v or ""):match("^%s*(.-)%s*$")
+            if trimmed ~= "" then final_items[#final_items + 1] = trimmed end
+          end
+          local ok, err = Editor.CommitEditWildcardList(source_path, row.name, final_items)
+          if ok then
+            RefreshWildcardRows(source_path)
+            reload_requests = {}
+          else
+            row.error = err
+          end
+        end
+      else
+        rv, row.scalar_value = reaper.ImGui_InputText(ctx, "##ScalarValue", row.scalar_value)
+        reaper.ImGui_SameLine(ctx)
+        if reaper.ImGui_Button(ctx, "Save") then
+          local ok, err = Editor.CommitEditWildcardScalar(source_path, row.name, row.scalar_value)
+          if ok then
+            RefreshWildcardRows(source_path)
+            reload_requests = {}
+          else
+            row.error = err
+          end
+        end
+      end
+
+      rv, row.rename_buf = reaper.ImGui_InputText(ctx, "##RenameBuf", row.rename_buf)
+      reaper.ImGui_SameLine(ctx)
+      if reaper.ImGui_Button(ctx, "Rename") then
+        local ok, err = Editor.CommitRenameWildcard(source_path, row.name, row.rename_buf)
+        if ok then
+          RefreshWildcardRows(source_path)
+          reload_requests = {}
+        else
+          row.error = err
+        end
+      end
+
+      reaper.ImGui_SameLine(ctx)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0xB33A3AFF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0xCC4747FF)
+      if reaper.ImGui_Button(ctx, "Delete") then
+        local ok, err = Editor.CommitDeleteWildcard(source_path, row.name)
+        if ok then
+          RefreshWildcardRows(source_path)
+          reload_requests = {}
+        else
+          row.error = err
+        end
+      end
+      reaper.ImGui_PopStyleColor(ctx, 2)
+
+      if row.error then
+        reaper.ImGui_TextColored(ctx, 0xFF0000FF, row.error)
+      end
+
+      reaper.ImGui_Spacing(ctx)
+      reaper.ImGui_Separator(ctx)
+      reaper.ImGui_PopID(ctx)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    if reaper.ImGui_Button(ctx, "Close") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~~~~~ UNDO ~~~~~~~~~~~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- Returns { restored_path = path } if a structural edit was just undone
+-- this frame, else nil. The caller (SchemeVisualizer) compares
+-- restored_path against the currently-loaded scheme's own path to decide
+-- whether a reload is actually needed (the undo stack can span more than
+-- one scheme file across a session).
+function SchemeStructureEditorGui.DrawUndoButton(ctx)
+  local has_undo = Editor.HasUndo()
+  if not has_undo then reaper.ImGui_BeginDisabled(ctx) end
+  local clicked = reaper.ImGui_Button(ctx, "Undo Last Change")
+  if not has_undo then reaper.ImGui_EndDisabled(ctx) end
+  Helpers.ImGui_Tooltip("Reverts the most recent field creation (or other structural edit) in this session.")
+
+  if not clicked then return nil end
+  local ok, err, path = Editor.PopUndoSnapshot()
+  if not ok then
+    Helpers.msg(err, "The Last Renamer")
+    return nil
+  end
+  return { restored_path = path }
+end
+
+return SchemeStructureEditorGui

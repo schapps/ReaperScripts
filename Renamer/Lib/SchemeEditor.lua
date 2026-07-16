@@ -9,6 +9,9 @@ local M = {}
 local backed_up_paths = {}
 local config = { backups_dir = nil, sep = nil, dir_exists = nil, msg = nil }
 
+local undo_stack = {}
+local MAX_UNDO_DEPTH = 20
+
 function M.init(opts)
   config.backups_dir = opts.backups_dir
   config.sep         = opts.sep
@@ -23,11 +26,13 @@ end
 -- field's `value:`/`short:` inline list, so the GUI's context menus can
 -- append/reorder entries there without disturbing the rest of the file.
 
-local function EscapePattern(s)
+-- Exported: reused by SchemeStructureEditor.lua for locating/re-verifying
+-- field blocks, not just this file's own line-level lookups.
+function M.EscapePattern(s)
   return (s:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%1"))
 end
 
-local function ReadRawLines(path)
+function M.ReadRawLines(path)
   local f = io.open(path, "rb")
   if not f then return nil end
   local content = f:read("*all")
@@ -38,6 +43,8 @@ local function ReadRawLines(path)
   end
   return lines
 end
+local EscapePattern = M.EscapePattern
+local ReadRawLines  = M.ReadRawLines
 
 -- Parse a single-line inline list "key: [ 'a', 'b', c ]" into an array of
 -- unquoted string values, or nil if this line isn't a single-line flow list.
@@ -122,6 +129,66 @@ local function FindWildcardDefinitionLine(lines, name, expected)
   return nil
 end
 
+-- Given a field's already-located primary line (via FindForward), finds its
+-- own YAML sequence-item dash line and the full line range of its block -
+-- its own remaining properties, its own `fields:` key if any, and its
+-- entire nested descendant subtree. Two shapes occur in this schema:
+-- either the field's own line IS the dash line ("- field: X"), or the dash
+-- is one line up and one indent level shallower, fused with a preceding
+-- `id:` ("- id: Y" / "field: X" on the next line - scanned backward rather
+-- than assumed to be always exactly one line up, in case a field is ever
+-- hand-authored with an unusual property order).
+--
+-- The block's end is the last line before the next line at indent <= the
+-- dash's own indent ("item_indent"). This is simpler than it looks: every
+-- property/child belonging to this entry is necessarily indented MORE than
+-- its own dash (entering a nested `fields:` array only ever adds
+-- indentation, never returns to a shallower level within the same entry),
+-- while the next sibling's dash is always exactly at item_indent (dashes
+-- in one YAML sequence share one indent by definition) - so a plain
+-- `indent <= item_indent` check finds the boundary with no need for the
+-- dash-vs-field-key disambiguation FindMatchingListLine needs (that
+-- function searches *within* one field's own props using the field-line's
+-- raw indent, a narrower and more ambiguous problem than finding this
+-- entry's own outer boundary).
+--
+-- Returns item_indent, block_start_line, block_end_line, or nil if the
+-- dash line can't be confidently located.
+local function FindFieldBlockRange(lines, field_line)
+  local field_line_indent = #(lines[field_line]:match("^(%s*)") or "")
+  local block_start_line, item_indent
+
+  if lines[field_line]:match("^%s*%-") then
+    block_start_line, item_indent = field_line, field_line_indent
+  else
+    for i = field_line - 1, 1, -1 do
+      local indent = #(lines[i]:match("^(%s*)") or "")
+      if lines[i]:match("^%s*%-") and indent == field_line_indent - 2 then
+        block_start_line, item_indent = i, indent
+        break
+      end
+      if indent < field_line_indent - 2 then break end
+    end
+    if not block_start_line then return nil end
+  end
+
+  local block_end_line = #lines
+  for i = block_start_line + 1, #lines do
+    if lines[i]:match("%S") then
+      if #(lines[i]:match("^(%s*)") or "") <= item_indent then
+        block_end_line = i - 1
+        break
+      end
+    end
+  end
+  while block_end_line > block_start_line and not lines[block_end_line]:match("%S") do
+    block_end_line = block_end_line - 1
+  end
+
+  return item_indent, block_start_line, block_end_line
+end
+M.FindFieldBlockRange = FindFieldBlockRange
+
 -- Walks `fields` in the same depth-first, document order as the GUI's field
 -- renderer, attaching field.__value_line / field.__short_line (1-based line
 -- numbers in the raw file) wherever a confident match is found. A field
@@ -144,6 +211,23 @@ function M.AttachSourceLocations(fields, path)
     for _, field in ipairs(list) do
       local field_line = FindForward(lines, cursor, field.field)
       if field_line then
+        field.__field_line = field_line
+        local item_indent, block_start, block_end = FindFieldBlockRange(lines, field_line)
+        if item_indent then
+          field.__item_indent, field.__block_start_line, field.__block_end_line = item_indent, block_start, block_end
+        end
+        -- A child field's `id:` can itself be a $wildcard reference (e.g.
+        -- Example.yaml's Headquarters: `id: $countries`), substituted to a
+        -- literal list before parsing just like a wildcard `value:` - flag
+        -- it the same way, so anything regenerating this field's `id:`
+        -- line (the structural edit form) knows not to silently flatten
+        -- the reference into a literal copy.
+        if field.id ~= nil and block_start and lines[block_start] then
+          local wc_name = lines[block_start]:match("^%s*%-%s*id%s*:%s*%$([%w_]+)%s*$")
+          if wc_name then
+            field.__id_wildcard_key = wc_name
+          end
+        end
         cursor = field_line + 1
         if type(field.value) == "table" then
           field.__value_line = FindMatchingListLine(lines, cursor, field_line, "value", field.value)
@@ -222,6 +306,55 @@ local function UnquoteToken(tok)
   return tok:match("^'(.*)'$") or tok:match('^"(.*)"$') or tok
 end
 
+-- Given a value and the quoting convention to use, return a safely-quoted
+-- (or bare, if safe) YAML token. `quote_char` (the file's detected
+-- LIST-ITEM quoting convention, e.g. UCS.yaml's single-quotes) only forces
+-- quoting when `for_list_item` is true - it has no bearing on standalone
+-- scalars (field/id labels, a bare `value:`), which are a different,
+-- unrelated stylistic axis (every field label in UCS.yaml is bare even
+-- though its list items are single-quoted; forcing quote_char onto labels
+-- too was a real bug caught by the edit-field test suite - editing any
+-- field in a single-quote-style file like UCS.yaml was quoting its label
+-- unnecessarily, e.g. `- field: 'Category'` instead of `- field: Category`).
+-- Otherwise, quote only if the value would be unsafe left bare.
+-- `for_list_item` narrows/widens which characters count as unsafe:
+--   - A standalone scalar (a field/id label, or a bare `value:`) is safe
+--     with embedded spaces (e.g. "A Useful Prefix", "Is SFX?" are bare in
+--     the real corpus) - it only needs quoting for chars that would break
+--     key:value parsing (a leading/embedded `:`) or a few flow-list-unsafe
+--     characters, in case it's later re-read back into a list context.
+--   - An item inside an inline [ ... ] flow list is comma-delimited, and
+--     this codebase's vendored YAML parser (Lib/yaml.lua) cannot parse an
+--     unquoted item containing ANY whitespace, not just leading/trailing
+--     (confirmed by reproducing "expected comma" against the real parser
+--     with a bare multi-word item) - every existing multi-word list item
+--     in the real scheme corpus is quoted for exactly this reason (e.g.
+--     'Non-Player Character', 'User Interface', 'Dirt & Sand'); single-word
+--     items are bare. This shipped as a real bug once already (a live user
+--     hit the "expected comma" parser error creating a dropdown with a
+--     multi-word option) before this whitespace check existed.
+-- Exported: shared by SerializeListLine (list items) and
+-- SchemeStructureEditor.lua's new-field serializer (labels/ids/scalars).
+function M.QuoteBareToken(val, quote_char, for_list_item)
+  val = tostring(val)
+  if for_list_item and quote_char then
+    if val:find(quote_char, 1, true) then
+      return nil, "Value cannot contain the " .. quote_char .. " character used to quote this list."
+    end
+    return quote_char .. val .. quote_char
+  end
+  if for_list_item then
+    if val == "" or val:match("[,%[%]#]") or val:match("%s") or val:match("^['\"]") then
+      return "'" .. val .. "'"
+    end
+  else
+    if val == "" or val:match("[,%[%]#:]") or val:match("^%s") or val:match("%s$") or val:match("^['\"]") then
+      return "'" .. val .. "'"
+    end
+  end
+  return val
+end
+
 -- Given the raw text of a "key: [ ... ]" line and the desired final array
 -- of item values (in order), return a new line reflecting that array.
 -- Items that already existed on the line are reused byte-for-byte (so a
@@ -251,19 +384,228 @@ function M.SerializeListLine(line, items)
     local queue = by_value[val]
     if queue and #queue > 0 then
       out[#out + 1] = table.remove(queue, 1)
-    elseif quote_char then
-      if val:find(quote_char, 1, true) then
+    else
+      local serialized, qerr = M.QuoteBareToken(val, quote_char, true)
+      if not serialized then
         return nil, "New item cannot contain the " .. quote_char .. " character used to quote this list."
       end
-      out[#out + 1] = quote_char .. val .. quote_char
-    elseif val:match("[,%[%]#]") or val:match("^%s") or val:match("%s$") then
-      out[#out + 1] = "'" .. val .. "'"
-    else
-      out[#out + 1] = val
+      out[#out + 1] = serialized
     end
   end
 
   return indent .. key .. gap .. "[" .. table.concat(out, ", ") .. "]" .. tail
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~ WILDCARD MANAGEMENT ~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- $name definitions are file-level, not attached to any one field - unlike
+-- everything above (which locates ONE field's own lines), these operate on
+-- the whole file: discovering every "$name: ..." definition, finding every
+-- OTHER line that references one, and renaming/deleting/editing them.
+--
+-- Discovery is deliberately anchored the same way the real substitution
+-- pass is (see the main script's loadYaml: `line:sub(1,1) == "$"`) - a
+-- wildcard definition has NO leading whitespace, confirmed against the only
+-- real scheme that uses them (Example.yaml's `$bodyHint`/`$countries` sit
+-- at column 0, siblings of `title:`/`separator:`, not nested under `fields:`).
+
+-- Every "$name: ..." definition line in the file, in file order. `is_list`
+-- distinguishes a "$name: [ ... ]" wildcard (parsed into `items`) from a
+-- scalar one (kept as raw, unparsed `raw_value` text - e.g. `$bodyHint`'s
+-- plain sentence). Used both by the "Manage Wildcards" popup and by
+-- SchemeStructureEditor's extract-to-wildcard (to check a chosen name isn't
+-- already taken).
+function M.ListWildcardDefinitions(source_path)
+  local lines = ReadRawLines(source_path)
+  if not lines then return {} end
+  local defs = {}
+  for i, line in ipairs(lines) do
+    if line:sub(1, 1) == "$" then
+      local name = line:match("^%$([%w_]+)%s*:")
+      if name then
+        local items = ParseInlineListLine(line, "%$" .. EscapePattern(name))
+        if items then
+          defs[#defs + 1] = { name = name, line = i, is_list = true, items = items }
+        else
+          local raw_value = line:match("^%$[%w_]+%s*:%s*(.*)$")
+          defs[#defs + 1] = { name = name, line = i, is_list = false, raw_value = raw_value or "" }
+        end
+      end
+    end
+  end
+  return defs
+end
+
+-- Every line (other than a "$name: ..." definition line itself) that
+-- references $name - not just `value:`/`id:`, since the real substitution
+-- pass is a blind textual replace that can hit ANY scalar property (see
+-- SchemeStructureEditor's ReplaceFieldProperties, which discovered
+-- Example.yaml's `hint: $bodyHint`). The trailing `%f[%W]` frontier is a
+-- zero-width assertion (matches a position, consumes no characters) so a
+-- search for "$countries" doesn't false-positive on some other, longer
+-- name that happens to share that prefix (e.g. "$countriesExtra").
+function M.FindWildcardUsageLines(lines, name)
+  local pattern = "%$" .. EscapePattern(name) .. "%f[%W]"
+  local usages = {}
+  for i, line in ipairs(lines) do
+    if not (line:sub(1, 1) == "$" and line:match("^%$" .. EscapePattern(name) .. "%s*:")) then
+      if line:find(pattern) then
+        usages[#usages + 1] = i
+      end
+    end
+  end
+  return usages
+end
+
+-- Re-finds `$name`'s own definition line fresh (never trusts a cached line
+-- number), or nil, err if it no longer looks like a wildcard definition.
+local function FindWildcardDefLineNow(lines, name)
+  for i, line in ipairs(lines) do
+    if line:sub(1, 1) == "$" and line:match("^%$" .. EscapePattern(name) .. "%s*:") then
+      return i
+    end
+  end
+  return nil, "Could not find $" .. name .. "'s definition. Please reload the scheme and try again."
+end
+
+-- Rewrites $name's own "[ ... ]" definition line to reflect `new_items`,
+-- exactly like WriteSchemeList does for a field's own list - reuses
+-- SerializeListLine so existing items keep their original quoting/text and
+-- only genuinely new ones are freshly quoted.
+function M.CommitEditWildcardList(source_path, name, new_items)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local def_line, ferr = FindWildcardDefLineNow(lines, name)
+  if not def_line then return false, ferr end
+
+  local new_line, serr = M.SerializeListLine(lines[def_line], new_items)
+  if not new_line then return false, serr end
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    lines[def_line] = new_line
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
+-- Rewrites $name's own scalar definition line to `new_value`, using the
+-- same bare-vs-quoted scalar convention as a field's own value/label
+-- (QuoteBareToken with for_list_item=false) - e.g. Example.yaml's
+-- `$bodyHint: I Am A Good Filename` is entirely bare despite the spaces,
+-- because none of its characters are actually unsafe left bare.
+function M.CommitEditWildcardScalar(source_path, name, new_value)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local def_line, ferr = FindWildcardDefLineNow(lines, name)
+  if not def_line then return false, ferr end
+
+  local val_tok, verr = M.QuoteBareToken(new_value or "", nil, false)
+  if not val_tok then return false, verr end
+  local new_line = "$" .. name .. ": " .. val_tok
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    lines[def_line] = new_line
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
+-- Renames $old_name to $new_name everywhere: its own definition line AND
+-- every usage site found by FindWildcardUsageLines, in one read/write pair.
+-- Each affected line is rewritten with a single gsub using the same
+-- frontier-bounded pattern as FindWildcardUsageLines - since the frontier
+-- assertion consumes no characters, the matched (and replaced) text is
+-- exactly "$old_name", leaving anything that follows on the line untouched.
+function M.CommitRenameWildcard(source_path, old_name, new_name)
+  if not new_name or new_name:match("^%s*$") then
+    return false, "New name cannot be blank."
+  end
+  if not new_name:match("^[%w_]+$") then
+    return false, "Wildcard names can only contain letters, numbers, and underscores."
+  end
+  if new_name == old_name then
+    return false, "That's already this wildcard's name."
+  end
+
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local def_line, ferr = FindWildcardDefLineNow(lines, old_name)
+  if not def_line then return false, ferr end
+
+  for _, def in ipairs(M.ListWildcardDefinitions(source_path)) do
+    if def.name == new_name then
+      return false, "A wildcard named $" .. new_name .. " already exists."
+    end
+  end
+
+  local usage_lines = M.FindWildcardUsageLines(lines, old_name)
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    local pattern = "%$" .. EscapePattern(old_name) .. "%f[%W]"
+    local replacement = "$" .. new_name
+    lines[def_line] = lines[def_line]:gsub(pattern, replacement)
+    for _, i in ipairs(usage_lines) do
+      lines[i] = lines[i]:gsub(pattern, replacement)
+    end
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
+-- Deletes $name's definition line entirely - refuses (no backup taken, no
+-- change made) if anything still references it, since removing a still-used
+-- wildcard would silently turn every reference into a literal, unresolved
+-- "$name" string once the substitution pass no longer finds a definition.
+function M.CommitDeleteWildcard(source_path, name)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local def_line, ferr = FindWildcardDefLineNow(lines, name)
+  if not def_line then return false, ferr end
+
+  local usage_lines = M.FindWildcardUsageLines(lines, name)
+  if #usage_lines > 0 then
+    return false, "$" .. name .. " is still used by " .. #usage_lines ..
+      " line(s) in this file. Remove or edit those references first."
+  end
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    table.remove(lines, def_line)
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
 end
 
 -- Copies source_path into Backups/Schemes/ once per file per session, before
@@ -299,6 +641,80 @@ function M.BackupSchemeFile(source_path)
 
   backed_up_paths[source_path] = true
   return true
+end
+
+-- Always-fresh, per-write timestamped backup for structural edits (create/
+-- delete/move a field block) - distinct from BackupSchemeFile's once-per-
+-- session policy above, which stays as-is for the lower-risk list-edit
+-- features (add item / reorder). Also pushes the same content onto the
+-- in-memory undo stack, so a structural edit gets both an on-disk snapshot
+-- and an in-session "Undo Last Change" available immediately.
+function M.SnapshotSchemeFile(source_path)
+  local backup_dir = config.backups_dir .. "Schemes" .. config.sep
+  if not config.dir_exists(backup_dir) then
+    reaper.RecursiveCreateDirectory(backup_dir, 0)
+    if not config.dir_exists(backup_dir) then
+      config.msg("Error creating scheme backups directory:\n\n" .. backup_dir, "The Last Renamer")
+      return false
+    end
+  end
+
+  local ok, content = pcall(function()
+    local f = assert(io.open(source_path, "rb"))
+    local c = f:read("*all")
+    f:close()
+    return c
+  end)
+  if not ok then
+    config.msg("Could not read the scheme file before editing:\n\n" .. tostring(content), "The Last Renamer")
+    return false
+  end
+
+  local base = source_path:match("[^/\\]+$") or "scheme.yaml"
+  local backup_path = backup_dir .. base:gsub("%.yaml$", "") .. "_" .. os.date("%Y%m%d_%H%M%S") .. "_struct.yaml"
+
+  local wok, werr = pcall(function()
+    local f_out = assert(io.open(backup_path, "wb"))
+    f_out:write(content)
+    f_out:close()
+  end)
+  if not wok then
+    config.msg("Could not create a backup before this structural edit:\n\n" .. tostring(werr) ..
+      "\n\nNo changes were made.", "The Last Renamer")
+    return false
+  end
+
+  M.PushUndoSnapshot(source_path, content)
+  return true
+end
+
+function M.PushUndoSnapshot(source_path, content)
+  undo_stack[#undo_stack + 1] = { path = source_path, content = content }
+  if #undo_stack > MAX_UNDO_DEPTH then
+    table.remove(undo_stack, 1)
+  end
+end
+
+function M.HasUndo()
+  return #undo_stack > 0
+end
+
+-- Pops and restores the most recent structural-edit snapshot (a pure
+-- restore, not a redo - there is no redo stack). Returns ok, err, path -
+-- the caller compares `path` against wgt.data.__scheme_path /
+-- wgt.meta.__scheme_path to know which one to reload.
+function M.PopUndoSnapshot()
+  local entry = table.remove(undo_stack)
+  if not entry then return false, "Nothing to undo." end
+  local ok, err = pcall(function()
+    local f = assert(io.open(entry.path, "wb"))
+    f:write(entry.content)
+    f:close()
+  end)
+  if not ok then
+    return false, "Failed to restore previous version:\n\n" .. tostring(err)
+  end
+  return true, nil, entry.path
 end
 
 -- Rewrites a single line (by 1-based line number) of source_path to reflect
