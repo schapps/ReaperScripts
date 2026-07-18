@@ -44,6 +44,8 @@ local form = {
   help = "",
   options = {},         -- dropdown: array of { value = "", short = "" }
   use_short = false,
+  use_wildcard = false, -- dropdown: use an existing $wildcard instead of literal options
+  wildcard_ref = nil,   -- dropdown: the selected wildcard's name (no leading $)
   text_value = "",
   hint = "",
   bool_value = false,
@@ -70,6 +72,19 @@ local extract_state = {
   pending_open = false,
   field = nil,
   name_input = "",
+  error = nil,
+}
+
+-- Module-local "Link to $wildcard" popup state - the inverse of
+-- extract_state: points a field at an ALREADY-EXISTING wildcard instead of
+-- creating a new one. `defs` is rebuilt fresh from disk each time the
+-- popup opens (list-type wildcards only, since a dropdown's value must be
+-- a list).
+local link_state = {
+  pending_open = false,
+  field = nil,
+  defs = nil,
+  selected_idx = 1,
   error = nil,
 }
 
@@ -237,6 +252,8 @@ local function ResetForm(mode, parent_field, target)
   form.help = ""
   form.options = { { value = "", short = "" } }
   form.use_short = false
+  form.use_wildcard = false
+  form.wildcard_ref = nil
   form.text_value = ""
   form.hint = ""
   form.bool_value = false
@@ -282,6 +299,8 @@ local function ResetFormForEdit(field, parent_field)
 
   form.options = { { value = "", short = "" } }
   form.use_short = false
+  form.use_wildcard = false
+  form.wildcard_ref = nil
   form.text_value = ""
   form.hint = ""
   form.bool_value = false
@@ -394,6 +413,28 @@ function SchemeStructureEditorGui.DrawNodeContextMenu(ctx, field, node_id, paren
         or "Only dropdown fields can be extracted to a shared wildcard.")
     end
 
+    -- Same enable condition as "Extract to $wildcard..." (a literal,
+    -- non-wildcard dropdown) - linking replaces that same value: [...] list
+    -- with a $name reference, just to an EXISTING definition instead of a
+    -- brand-new one.
+    if not can_extract then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_MenuItem(ctx, "Link to $wildcard...") then
+      link_state.pending_open = true
+      link_state.field = field
+      link_state.defs = {}
+      for _, def in ipairs(Editor.ListWildcardDefinitions(source_path)) do
+        if def.is_list then link_state.defs[#link_state.defs + 1] = def end
+      end
+      link_state.selected_idx = 1
+      link_state.error = nil
+    end
+    if not can_extract then
+      reaper.ImGui_EndDisabled(ctx)
+      Helpers.ImGui_Tooltip(field.__wildcard_key
+        and "This field's value is already a shared $wildcard."
+        or "Only dropdown fields can be linked to a shared wildcard.")
+    end
+
     reaper.ImGui_Separator(ctx)
 
     -- Reorder among siblings - executed IMMEDIATELY (no confirmation), low
@@ -488,12 +529,16 @@ local function BuildFieldSpec()
   }
 
   if type_key == "dropdown" then
-    spec.options, spec.short = {}, form.use_short and {} or nil
-    for _, opt in ipairs(form.options) do
-      local v = (opt.value or ""):match("^%s*(.-)%s*$")
-      if v ~= "" then
-        spec.options[#spec.options + 1] = v
-        if form.use_short then spec.short[#spec.short + 1] = opt.short or "" end
+    if form.use_wildcard then
+      spec.wildcard_ref = form.wildcard_ref
+    else
+      spec.options, spec.short = {}, form.use_short and {} or nil
+      for _, opt in ipairs(form.options) do
+        local v = (opt.value or ""):match("^%s*(.-)%s*$")
+        if v ~= "" then
+          spec.options[#spec.options + 1] = v
+          if form.use_short then spec.short[#spec.short + 1] = opt.short or "" end
+        end
       end
     end
   elseif type_key == "text" then
@@ -525,8 +570,12 @@ end
 -- pattern already used by the Add-Item popup elsewhere in this codebase.
 local function ValidateForSubmit(spec, id_value)
   if spec.label == "" then return "Field name cannot be blank." end
-  if spec.type == "dropdown" and (not spec.options or #spec.options == 0) then
-    return "Add at least one option."
+  if spec.type == "dropdown" then
+    if spec.wildcard_ref then
+      if spec.wildcard_ref == "" then return "Select a wildcard." end
+    elseif not spec.options or #spec.options == 0 then
+      return "Add at least one option."
+    end
   end
   if form.mode == "child" and id_value == nil then
     return "Select at least one value that shows this field."
@@ -538,12 +587,47 @@ end
 -- ~~~~~~~~~~~~ THE FORM ~~~~~~~~~~~~
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-local function DrawDropdownFields(ctx)
-  reaper.ImGui_Text(ctx, "Options")
+local function DrawDropdownFields(ctx, source_path)
   local rv
+  rv, form.use_wildcard = reaper.ImGui_Checkbox(ctx, "Use an existing $wildcard", form.use_wildcard)
+
+  if form.use_wildcard then
+    local defs = {}
+    for _, def in ipairs(Editor.ListWildcardDefinitions(source_path)) do
+      if def.is_list then defs[#defs + 1] = def end
+    end
+    if #defs == 0 then
+      reaper.ImGui_TextDisabled(ctx, "This scheme has no list-type $wildcards yet - create one via \"Extract to $wildcard...\" first.")
+      return
+    end
+
+    if not form.wildcard_ref then form.wildcard_ref = defs[1].name end
+    reaper.ImGui_Text(ctx, "Wildcard")
+    local current
+    for _, def in ipairs(defs) do if def.name == form.wildcard_ref then current = def end end
+    if reaper.ImGui_BeginCombo(ctx, "##FormWildcard", current and ("$" .. current.name) or "") then
+      for i, def in ipairs(defs) do
+        if reaper.ImGui_Selectable(ctx, "$" .. def.name .. "##" .. i, form.wildcard_ref == def.name) then
+          form.wildcard_ref = def.name
+        end
+      end
+      reaper.ImGui_EndCombo(ctx)
+    end
+
+    if current then
+      reaper.ImGui_Spacing(ctx)
+      reaper.ImGui_Text(ctx, "Items:")
+      for _, v in ipairs(current.items) do
+        reaper.ImGui_BulletText(ctx, tostring(v))
+      end
+    end
+    return
+  end
+
+  reaper.ImGui_Text(ctx, "Options")
   rv, form.use_short = reaper.ImGui_Checkbox(ctx, "Use short codes", form.use_short)
 
-  local remove_idx = nil
+  local remove_idx, swap_idx = nil, nil
   for i, opt in ipairs(form.options) do
     reaper.ImGui_PushID(ctx, i)
     rv, opt.value = reaper.ImGui_InputText(ctx, "##OptValue", opt.value)
@@ -552,8 +636,19 @@ local function DrawDropdownFields(ctx)
       rv, opt.short = reaper.ImGui_InputText(ctx, "##OptShort", opt.short)
     end
     reaper.ImGui_SameLine(ctx)
+    if i == 1 then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_SmallButton(ctx, "^") then swap_idx = i - 1 end
+    if i == 1 then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_SameLine(ctx)
+    if i == #form.options then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_SmallButton(ctx, "v") then swap_idx = i end
+    if i == #form.options then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_SameLine(ctx)
     if reaper.ImGui_SmallButton(ctx, "x") then remove_idx = i end
     reaper.ImGui_PopID(ctx)
+  end
+  if swap_idx then
+    form.options[swap_idx], form.options[swap_idx + 1] = form.options[swap_idx + 1], form.options[swap_idx]
   end
   if remove_idx then table.remove(form.options, remove_idx) end
   if reaper.ImGui_Button(ctx, "+ Add Option") then
@@ -629,7 +724,7 @@ function SchemeStructureEditorGui.DrawCreatePopup(ctx, source_path, top_level_fi
     reaper.ImGui_Spacing(ctx)
     local type_key = TYPE_KEYS[form.type_idx]
     if type_key == "dropdown" then
-      DrawDropdownFields(ctx)
+      DrawDropdownFields(ctx, source_path)
     elseif type_key == "text" then
       reaper.ImGui_Text(ctx, "Initial Value")
       rv, form.text_value = reaper.ImGui_InputText(ctx, "##TextValue", form.text_value)
@@ -805,6 +900,85 @@ function SchemeStructureEditorGui.DrawExtractToWildcardPopup(ctx, source_path)
         extract_state.error = err
       end
     end
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Opened via the "Link to $wildcard..." menu entry (deferred-open, same
+-- pattern as the other popups) - the inverse of the extract popup: instead
+-- of naming a brand-new wildcard, pick one that already exists from a
+-- combo (list-type only), with a live preview of its current items so
+-- linking's effect (the field's current literal options are discarded in
+-- favor of whatever the wildcard already holds) is visible before
+-- confirming. Warns if the field also has `short:` codes, since those stay
+-- field-owned and may no longer line up with the newly-linked list.
+function SchemeStructureEditorGui.DrawLinkToWildcardPopup(ctx, source_path)
+  if link_state.pending_open then
+    link_state.pending_open = false
+    reaper.ImGui_OpenPopup(ctx, "LinkToWildcardPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "LinkToWildcardPopup") then
+    reaper.ImGui_Text(ctx, "Link \"" .. link_state.field.field .. "\" to an existing $wildcard")
+    reaper.ImGui_Separator(ctx)
+
+    local defs = link_state.defs or {}
+    if #defs == 0 then
+      reaper.ImGui_TextDisabled(ctx, "This scheme has no list-type $wildcards yet - create one via \"Extract to $wildcard...\" first.")
+    else
+      reaper.ImGui_Text(ctx, "Wildcard")
+      local current = defs[link_state.selected_idx]
+      if reaper.ImGui_BeginCombo(ctx, "##LinkWildcard", current and ("$" .. current.name) or "") then
+        for i, def in ipairs(defs) do
+          if reaper.ImGui_Selectable(ctx, "$" .. def.name .. "##" .. i, link_state.selected_idx == i) then
+            link_state.selected_idx = i
+          end
+        end
+        reaper.ImGui_EndCombo(ctx)
+      end
+
+      if current then
+        reaper.ImGui_Spacing(ctx)
+        reaper.ImGui_Text(ctx, "Items:")
+        for _, v in ipairs(current.items) do
+          reaper.ImGui_BulletText(ctx, tostring(v))
+        end
+      end
+
+      if link_state.field.short then
+        reaper.ImGui_Spacing(ctx)
+        reaper.ImGui_TextColored(ctx, 0xFFAA00FF,
+          "This field has its own short codes, which will stay as-is and may no longer line up with $" ..
+          (current and current.name or "...") .. "'s items.")
+      end
+    end
+
+    if link_state.error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, link_state.error)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    local can_submit = #defs > 0
+    if not can_submit then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Link") then
+      local def = defs[link_state.selected_idx]
+      local ok, err, reqs = Editor.CommitLinkToWildcard(source_path, link_state.field, def.name)
+      if ok then
+        link_state.error = nil
+        reload_requests = reqs
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        link_state.error = err
+      end
+    end
+    if not can_submit then reaper.ImGui_EndDisabled(ctx) end
     reaper.ImGui_SameLine(ctx)
     if reaper.ImGui_Button(ctx, "Cancel") then
       reaper.ImGui_CloseCurrentPopup(ctx)

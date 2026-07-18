@@ -260,6 +260,8 @@ local function DrawCanvas(ctx, w, h, data, source_path)
   if delete_reload_requests then reload_requests = delete_reload_requests end
   local extract_reload_requests = StructureGui.DrawExtractToWildcardPopup(ctx, source_path)
   if extract_reload_requests then reload_requests = extract_reload_requests end
+  local link_reload_requests = StructureGui.DrawLinkToWildcardPopup(ctx, source_path)
+  if link_reload_requests then reload_requests = link_reload_requests end
   local move_to_reload_requests = StructureGui.DrawMoveToPopup(ctx, source_path, data.fields)
   if move_to_reload_requests then reload_requests = move_to_reload_requests end
 

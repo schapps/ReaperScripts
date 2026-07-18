@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.5
+-- @version 1.8
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,9 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+--   v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+--   v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
 --   v1.5 Visual Editor: drag and drop support
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

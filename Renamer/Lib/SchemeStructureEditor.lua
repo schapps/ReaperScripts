@@ -110,9 +110,19 @@ function M.SerializeNewFieldBlock(field_spec, item_indent, style)
   if field_spec.skip then emit(pad_prop .. "skip: true") end
 
   if field_spec.type == "dropdown" then
-    emit(pad_prop .. "value: [" .. SerializeList(field_spec.options, style) .. "]")
-    if field_spec.short and #field_spec.short > 0 then
-      emit(pad_prop .. "short: [" .. SerializeList(field_spec.short, style) .. "]")
+    -- wildcard_ref: point straight at an already-existing "$name: [...]"
+    -- definition instead of a literal list - the create-time equivalent of
+    -- "Link to $wildcard...", skipping the create-a-dummy-field-then-link
+    -- round trip. short: is never emitted alongside it (no wildcard in the
+    -- real scheme corpus has ever had a companion "short wildcard" - short
+    -- codes stay field-owned, same rule as linking an EXISTING field).
+    if field_spec.wildcard_ref then
+      emit(pad_prop .. "value: $" .. field_spec.wildcard_ref)
+    else
+      emit(pad_prop .. "value: [" .. SerializeList(field_spec.options, style) .. "]")
+      if field_spec.short and #field_spec.short > 0 then
+        emit(pad_prop .. "short: [" .. SerializeList(field_spec.short, style) .. "]")
+      end
     end
     if field_spec.default then
       emit(pad_prop .. "default: " .. tostring(math.floor(field_spec.default)))
@@ -168,12 +178,17 @@ local function ValidateFieldSpec(field_spec, is_child)
     return false, "Field name cannot be blank."
   end
   if field_spec.type == "dropdown" then
-    if not field_spec.options or #field_spec.options == 0 then
+    if field_spec.wildcard_ref then
+      if field_spec.wildcard_ref:match("^%s*$") then
+        return false, "Select a wildcard."
+      end
+    elseif not field_spec.options or #field_spec.options == 0 then
       return false, "A dropdown field needs at least one option."
-    end
-    for _, v in ipairs(field_spec.options) do
-      if v == "" or (type(v) == "string" and v:match("^%s*$")) then
-        return false, "Dropdown options cannot be blank."
+    else
+      for _, v in ipairs(field_spec.options) do
+        if v == "" or (type(v) == "string" and v:match("^%s*$")) then
+          return false, "Dropdown options cannot be blank."
+        end
       end
     end
   elseif field_spec.type ~= "text" and field_spec.type ~= "boolean" and field_spec.type ~= "number" then
@@ -477,6 +492,66 @@ function M.CommitExtractToWildcard(source_path, field, wildcard_name)
   local ok, result = pcall(function()
     lines[value_line] = value_indent .. "value: $" .. wildcard_name
     table.insert(lines, anchor_line, "$" .. wildcard_name .. ": " .. bracket_body)
+    local content = table.concat(lines, "\n")
+    local f = assert(io.open(source_path, "wb"))
+    f:write(content)
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true, nil, {}
+end
+
+-- The inverse of CommitExtractToWildcard: points a field's own literal
+-- `value: [...]` at an ALREADY-EXISTING "$name: [...]" wildcard definition,
+-- instead of creating a new one - a single-region edit (just the field's
+-- own value line), unlike extraction's two-region splice, since no new
+-- definition line needs inserting.
+--
+-- Deliberately does NOT touch `short:` (if present) - short codes stay
+-- field-owned even after linking, exactly like every other wildcard
+-- operation this session (no wildcard in the real scheme corpus has ever
+-- had a companion "short wildcard"). The GUI surfaces a warning when
+-- `short:` exists, since its length/order may no longer match the newly-
+-- linked wildcard's item count.
+function M.CommitLinkToWildcard(source_path, field, wildcard_name)
+  if not source_path then return false, "No scheme file path available." end
+  if type(field.value) ~= "table" then
+    return false, "Only dropdown fields can be linked to a shared wildcard."
+  end
+  if field.__wildcard_key then
+    return false, "This field's value is already a shared $wildcard reference."
+  end
+
+  local lines = Editor.ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local found = false
+  for _, def in ipairs(Editor.ListWildcardDefinitions(source_path)) do
+    if def.name == wildcard_name and def.is_list then found = true; break end
+  end
+  if not found then
+    return false, "$" .. wildcard_name .. " is not a defined list-type wildcard in this file."
+  end
+
+  local item_indent, block_start, block_end, verr = ReverifyField(lines, field)
+  if verr then return false, verr end
+
+  local own_props_end = FindOwnPropsEnd(lines, item_indent, block_start, block_end)
+  local value_line, value_indent
+  for i = block_start, own_props_end do
+    local indent = lines[i]:match("^(%s*)value%s*:%s*%[")
+    if indent then value_line, value_indent = i, indent; break end
+  end
+  if not value_line then
+    return false, "Could not locate this field's own value list (unsupported/multi-line format)."
+  end
+
+  if not Editor.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    lines[value_line] = value_indent .. "value: $" .. wildcard_name
     local content = table.concat(lines, "\n")
     local f = assert(io.open(source_path, "wb"))
     f:write(content)
@@ -960,6 +1035,16 @@ function M.CommitCreateField(source_path, top_level_fields, target, field_spec)
   local is_child = (target.kind == "child_append" or target.kind == "child_after")
   local vok, verr = ValidateFieldSpec(field_spec, is_child)
   if not vok then return false, verr end
+
+  if field_spec.wildcard_ref then
+    local found = false
+    for _, def in ipairs(Editor.ListWildcardDefinitions(source_path)) do
+      if def.name == field_spec.wildcard_ref and def.is_list then found = true; break end
+    end
+    if not found then
+      return false, "$" .. field_spec.wildcard_ref .. " is not a defined list-type wildcard in this file."
+    end
+  end
 
   local iok, ierr = M.InsertFieldBlock(source_path, top_level_fields, target, field_spec)
   if not iok then return false, ierr end
