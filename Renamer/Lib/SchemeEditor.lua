@@ -608,6 +608,170 @@ function M.CommitDeleteWildcard(source_path, name)
   return true
 end
 
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~ ROOT SETTINGS MANAGEMENT ~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- The scheme's root-level keys (separator/illegal/find/replace/maxchars/
+-- dupes - see the wiki's "Root" section) sit at column 0, siblings of
+-- `title:`/`fields:`. Same shape as a "$name: ..." wildcard definition
+-- (found above), just without the `$` prefix and - unlike a wildcard, which
+-- always already exists once created - frequently absent from the file
+-- entirely (most real schemes omit several of these six keys), so every
+-- commit function here has to handle "insert a new line" as the common
+-- case, not just "rewrite an existing line".
+
+-- Column-0-anchored (no leading %s*) so a root key is never confused with a
+-- same-named field-level key - e.g. Example.yaml has a field-local
+-- `separator: " "` override nested under one of its fields.
+local function FindRootKeyLineNow(lines, key)
+  local pattern = "^" .. key .. "%s*:"
+  for i, line in ipairs(lines) do
+    if line:match(pattern) then return i end
+  end
+  return nil
+end
+
+-- A brand-new root key is inserted immediately before the top-level
+-- `fields:` line - present at column 0 in every real scheme file, and the
+-- natural boundary between root settings and the field list.
+local function FindRootInsertionLine(lines)
+  for i, line in ipairs(lines) do
+    if line:match("^fields%s*:") then return i end
+  end
+  return #lines + 1
+end
+
+-- Fixed set of internal keys this module knows about - never escaped user
+-- input, so FindRootKeyLineNow's pattern concatenation is safe.
+local ROOT_SCALAR_KEYS = { separator = true, replace = true, maxchars = true, dupes = true }
+local ROOT_LIST_KEYS   = { illegal = true, find = true }
+
+-- Reads all six root settings fresh from disk (never relies on the parsed
+-- wgt.data table) - same convention as ListWildcardDefinitions. Returns
+-- { separator = { present, value }, illegal = { present, items }, ... }.
+-- Scalar values are unquoted text; the GUI layer (not this one) interprets
+-- maxchars as numeric and dupes as boolean, matching how the existing
+-- "Number" field type keeps its own tonumber(form.num_value) conversion in
+-- SchemeStructureEditorGui.lua rather than pushing it down here.
+function M.ListRootSettings(source_path)
+  local lines = ReadRawLines(source_path)
+  local result = {}
+  for key in pairs(ROOT_SCALAR_KEYS) do
+    result[key] = { present = false, value = nil }
+  end
+  for key in pairs(ROOT_LIST_KEYS) do
+    result[key] = { present = false, items = nil }
+  end
+  if not lines then return result end
+
+  for key in pairs(ROOT_SCALAR_KEYS) do
+    local line_no = FindRootKeyLineNow(lines, key)
+    if line_no then
+      local raw = lines[line_no]:match("^" .. key .. "%s*:%s*(.-)%s*$")
+      result[key] = { present = true, value = raw and UnquoteToken(raw) or "" }
+    end
+  end
+  for key in pairs(ROOT_LIST_KEYS) do
+    local line_no = FindRootKeyLineNow(lines, key)
+    if line_no then
+      local items = ParseInlineListLine(lines[line_no], key)
+      result[key] = { present = true, items = items or {} }
+    end
+  end
+  return result
+end
+
+-- Rewrites (or, if absent, inserts before `fields:`) a root "key: value"
+-- line - the root-key equivalent of CommitEditWildcardScalar. `key` must be
+-- one of ROOT_SCALAR_KEYS (separator/replace/maxchars/dupes); `new_value`
+-- is always passed as a string (the GUI converts dupes/maxchars via
+-- tostring/string.format before calling this).
+function M.CommitEditRootScalar(source_path, key, new_value)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local val_tok, verr = M.QuoteBareToken(new_value or "", nil, false)
+  if not val_tok then return false, verr end
+  local new_line = key .. ": " .. val_tok
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    local line_no = FindRootKeyLineNow(lines, key)
+    if line_no then
+      lines[line_no] = new_line
+    else
+      table.insert(lines, FindRootInsertionLine(lines), new_line)
+    end
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
+-- Rewrites (or, if absent, inserts before `fields:`) a root "key: [ ... ]"
+-- line - the root-key equivalent of CommitEditWildcardList. `key` must be
+-- one of ROOT_LIST_KEYS (illegal/find). When the key is absent, hands
+-- SerializeListLine a synthetic "key: []" template so every item takes the
+-- normal fresh-quoting path, rather than duplicating that quoting logic here.
+function M.CommitEditRootList(source_path, key, new_items)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local line_no = FindRootKeyLineNow(lines, key)
+  local template = line_no and lines[line_no] or (key .. ": []")
+  local new_line, serr = M.SerializeListLine(template, new_items)
+  if not new_line then return false, serr end
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    if line_no then
+      lines[line_no] = new_line
+    else
+      table.insert(lines, FindRootInsertionLine(lines), new_line)
+    end
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
+-- Deletes a root key's line entirely - backs each row's "Clear" button,
+-- restoring whatever hardcoded fallback the main script uses when the key
+-- is absent (e.g. illegal's default character list). No usage-reference
+-- guard like CommitDeleteWildcard needs, since root settings aren't
+-- referenced by $name elsewhere in the file. No-ops (returns true) if the
+-- key is already absent.
+function M.CommitRemoveRootKey(source_path, key)
+  local lines = ReadRawLines(source_path)
+  if not lines then return false, "Could not read scheme file." end
+
+  local line_no = FindRootKeyLineNow(lines, key)
+  if not line_no then return true end
+
+  if not M.SnapshotSchemeFile(source_path) then
+    return false, "Backup failed; no changes were made."
+  end
+
+  local ok, result = pcall(function()
+    table.remove(lines, line_no)
+    local f = assert(io.open(source_path, "wb"))
+    f:write(table.concat(lines, "\n"))
+    f:close()
+  end)
+  if not ok then return false, tostring(result) end
+  return true
+end
+
 -- Copies source_path into Backups/Schemes/ once per file per session, before
 -- the first write-back to that file. A failed backup blocks the write.
 function M.BackupSchemeFile(source_path)

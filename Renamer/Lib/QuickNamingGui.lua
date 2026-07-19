@@ -206,12 +206,18 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
   -- flicker-close/reopen it. Keep it stable; the item count is shown in the
   -- body instead (near "Preview", below).
   local title = "Quick Text Naming - " .. (data.title or "")
-  -- NoNavInputs: keeps Dear ImGui's own keyboard-nav focus-shifting out of
-  -- this window entirely, so Up/Down/Tab are only ever seen via our own
-  -- IsKeyPressed polling below - see the long comment on DrawOptionsList
-  -- for why (an earlier attempt relying on Dear ImGui's native nav to
-  -- cycle the options list was flaky). Mouse clicks on every widget still
-  -- work normally; this only affects keyboard/gamepad-driven focus.
+  -- NoNavInputs: "no keyboard/gamepad navigation within the window" (per
+  -- its doc entry) - keeps Dear ImGui's own nav-highlight from wandering
+  -- between the input/list/button in response to arrow keys, which is what
+  -- previously made Down jump from the input to the list-as-a-whole and
+  -- then straight past it to the Rename button. (An earlier revision of
+  -- this comment claimed this flag also disables SetKeyboardFocusHere -
+  -- that was a misread; the *item*-level ItemFlags_NoNav is the one whose
+  -- doc text mentions disabling SetKeyboardFocusHere, and this window-level
+  -- flag's own text doesn't say that at all. Switching away from it broke
+  -- nothing about focus restoration - it just brought back the wandering
+  -- nav-highlight outline, so it's back.) Mouse clicks on every widget
+  -- still work normally; this only affects keyboard/gamepad-driven focus.
   local rv, open = reaper.ImGui_Begin(ctx, title, true, reaper.ImGui_WindowFlags_NoNavInputs())
   if rv then
     reaper.ImGui_SeparatorText(ctx, data.title or "Name")
@@ -264,16 +270,34 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     -- comment for why this rewrites the buffer in place rather than
     -- swapping wgt.quick.text directly. "" is a valid pending value (a
     -- clear), so the check is for non-nil, not truthiness of the text.
+    --
+    -- Not cleared unconditionally here: for a click-driven accept (needs_
+    -- refocus=true), SetKeyboardFocusHere() was just requested moments ago,
+    -- and it's not certain the widget is *already* active by the time this
+    -- same InputText() call runs the "Always" callback - if it isn't yet
+    -- (focus lands starting next frame instead), the callback attached this
+    -- frame silently never fires, and clearing pending_replace regardless
+    -- would drop the swap entirely. Keeping it set (and re-attaching the
+    -- callback) until IsItemActive() actually reports true retries this
+    -- safely: once confirmed active, the callback has necessarily already
+    -- had its chance to run that same call, so it's safe to stop retrying.
     local input_flags, input_callback = reaper.ImGui_InputTextFlags_None(), nil
     if wgt.quick.pending_replace ~= nil then
       input_flags = reaper.ImGui_InputTextFlags_CallbackAlways()
       input_callback = MakeReplaceCallback(ctx, wgt.quick.pending_replace)
+      -- Safety cap: if the widget somehow never reports active (e.g. this
+      -- whole timing theory is wrong), give up after a few frames instead
+      -- of recompiling a fresh EEL function indefinitely every frame.
+      wgt.quick.pending_replace_tries = (wgt.quick.pending_replace_tries or 0) + 1
     end
-    wgt.quick.pending_replace = nil
 
     local changed, new_text = reaper.ImGui_InputText(ctx, "##quick_name", wgt.quick.text, input_flags, input_callback)
     if changed then wgt.quick.text = new_text end
     wgt.quick.input_was_active = reaper.ImGui_IsItemActive(ctx)
+    if wgt.quick.input_was_active or (wgt.quick.pending_replace_tries or 0) > 5 then
+      wgt.quick.pending_replace = nil
+      wgt.quick.pending_replace_tries = nil
+    end
 
     -- needs_refocus: false for Tab (NoNavInputs means it never lost focus),
     -- true for a mouse click (on an options-list row or the "x" button

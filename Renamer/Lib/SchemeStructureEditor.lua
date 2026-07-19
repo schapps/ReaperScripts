@@ -1019,6 +1019,24 @@ function M.CommitDeleteWildcard(source_path, name)
   return Editor.CommitDeleteWildcard(source_path, name)
 end
 
+-- Proxies for SchemeEditor's root-settings-management functions - same
+-- rationale as the wildcard proxies above.
+function M.ListRootSettings(source_path)
+  return Editor.ListRootSettings(source_path)
+end
+
+function M.CommitEditRootScalar(source_path, key, new_value)
+  return Editor.CommitEditRootScalar(source_path, key, new_value)
+end
+
+function M.CommitEditRootList(source_path, key, new_items)
+  return Editor.CommitEditRootList(source_path, key, new_items)
+end
+
+function M.CommitRemoveRootKey(source_path, key)
+  return Editor.CommitRemoveRootKey(source_path, key)
+end
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~ ORCHESTRATION ~~~~~~~~~~~
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

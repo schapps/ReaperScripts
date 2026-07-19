@@ -349,11 +349,20 @@ function SchemeVisualizer.DrawWindow(ctx, data)
       StructureGui.OpenWildcardsPopup()
     end
     reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Root Settings...") then
+      StructureGui.OpenRootSettingsPopup()
+    end
+    reaper.ImGui_SameLine(ctx)
     reaper.ImGui_TextDisabled(ctx, "Right-click the canvas or a node to add fields.")
 
     local wildcards_reload_requests = StructureGui.DrawWildcardsPopup(ctx, source_path)
     if wildcards_reload_requests then
       reload = { is_meta = false, requests = wildcards_reload_requests }
+    end
+
+    local root_settings_reload_requests = StructureGui.DrawRootSettingsPopup(ctx, source_path)
+    if root_settings_reload_requests then
+      reload = { is_meta = false, requests = root_settings_reload_requests }
     end
 
     local avail_w, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)

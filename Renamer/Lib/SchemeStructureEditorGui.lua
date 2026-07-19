@@ -98,6 +98,23 @@ local wildcards_state = {
   rows = nil,
 }
 
+-- Module-local "Root Settings" popup state - same "read fresh from disk on
+-- open, edit in local buffers, Save commits, popup stays open across a
+-- successful save" pattern as wildcards_state. `.present` on each entry
+-- tracks whether the key currently exists in the file at all (most of these
+-- six keys are frequently absent), so "Clear" can be disabled when there's
+-- nothing to clear.
+local root_settings_state = {
+  pending_open = false,
+  separator = { present = false, buf = "" },
+  illegal   = { present = false, items = {} },
+  find      = { present = false, items = {} },
+  replace   = { present = false, buf = "" },
+  maxchars  = { present = false, buf = "" },
+  dupes     = { present = false, value = false },
+  error = nil,
+}
+
 -- Module-local "Move to..." popup state - same "only one at a time"
 -- reasoning as the others above. `destinations` is rebuilt each time the
 -- popup opens: "Top Level" plus every dropdown/boolean field in the tree
@@ -1229,6 +1246,229 @@ function SchemeStructureEditorGui.DrawWildcardsPopup(ctx, source_path)
     end
 
     reaper.ImGui_Spacing(ctx)
+    if reaper.ImGui_Button(ctx, "Close") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~ ROOT SETTINGS ~~~~~~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- Refreshes root_settings_state fresh from disk - called both when the
+-- popup first opens and after every successful commit inside it, same
+-- reasoning as RefreshWildcardRows.
+local function RefreshRootSettings(source_path)
+  local s = Editor.ListRootSettings(source_path)
+  root_settings_state.separator = { present = s.separator.present, buf = s.separator.value or "" }
+  root_settings_state.illegal   = { present = s.illegal.present, items = s.illegal.items or {} }
+  root_settings_state.find      = { present = s.find.present, items = s.find.items or {} }
+  root_settings_state.replace   = { present = s.replace.present, buf = s.replace.value or "" }
+  root_settings_state.maxchars  = { present = s.maxchars.present, buf = s.maxchars.value or "" }
+  root_settings_state.dupes     = { present = s.dupes.present, value = (s.dupes.value == "true") }
+  root_settings_state.error = nil
+end
+
+-- Renders an editable list of plain string rows (add/remove - no reorder,
+-- unlike a field's dropdown options, since illegal/find item order has no
+-- effect on behavior) into `items` (a flat array of strings, mutated in
+-- place). `id` scopes the ImGui IDs so illegal's and find's rows don't collide.
+local function DrawStringListRows(ctx, id, items)
+  reaper.ImGui_PushID(ctx, id)
+  local remove_idx = nil
+  for i, item in ipairs(items) do
+    reaper.ImGui_PushID(ctx, i)
+    local rv
+    rv, items[i] = reaper.ImGui_InputText(ctx, "##Item", item)
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_SmallButton(ctx, "x") then remove_idx = i end
+    reaper.ImGui_PopID(ctx)
+  end
+  if remove_idx then table.remove(items, remove_idx) end
+  if reaper.ImGui_Button(ctx, "+ Add Item") then
+    items[#items + 1] = ""
+  end
+  reaper.ImGui_PopID(ctx)
+end
+
+-- Called from the Visual Editor's toolbar "Root Settings..." button - same
+-- deferred-open reasoning as OpenWildcardsPopup.
+function SchemeStructureEditorGui.OpenRootSettingsPopup()
+  root_settings_state.pending_open = true
+end
+
+-- Opened via the "Root Settings..." button in the Visual Editor's toolbar.
+-- Lists the six root-level scheme settings (separator/replace/illegal/find/
+-- maxchars/dupes - see the wiki's "Root" section; title and notesmode are
+-- deliberately out of scope: title is the ExtState key for every saved
+-- preset/history entry, so renaming it here would orphan them, and
+-- notesmode has no reader anywhere in this codebase). Each row has its own
+-- Save (and, except dupes, Clear) button - edits stay in local buffers
+-- until Save is clicked, same as the wildcards popup. Returns a
+-- reload_requests array (non-nil) once ANY row's commit succeeds this
+-- frame, else nil - the popup stays open across a successful edit, only
+-- "Close" dismisses it.
+function SchemeStructureEditorGui.DrawRootSettingsPopup(ctx, source_path)
+  if root_settings_state.pending_open then
+    root_settings_state.pending_open = false
+    RefreshRootSettings(source_path)
+    reaper.ImGui_OpenPopup(ctx, "RootSettingsPopup")
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "RootSettingsPopup") then
+    reaper.ImGui_Text(ctx, "Root Settings")
+    reaper.ImGui_Separator(ctx)
+
+    local rv
+
+    -- separator
+    reaper.ImGui_PushID(ctx, "separator")
+    reaper.ImGui_Text(ctx, "separator" ..
+      (root_settings_state.separator.present and "" or "  (not set - fields won't be joined by anything)"))
+    rv, root_settings_state.separator.buf = reaper.ImGui_InputText(ctx, "##Buf", root_settings_state.separator.buf)
+    if reaper.ImGui_Button(ctx, "Save") then
+      local ok, err = Editor.CommitEditRootScalar(source_path, "separator", root_settings_state.separator.buf)
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    reaper.ImGui_SameLine(ctx)
+    if not root_settings_state.separator.present then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Clear") then
+      local ok, err = Editor.CommitRemoveRootKey(source_path, "separator")
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not root_settings_state.separator.present then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopID(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    reaper.ImGui_TextDisabled(ctx, "illegal and find use Lua patterns, not literal characters " ..
+      "(e.g. %. matches a literal period, %% matches a literal percent sign).")
+
+    -- illegal
+    reaper.ImGui_PushID(ctx, "illegal")
+    reaper.ImGui_Text(ctx, "illegal" ..
+      (root_settings_state.illegal.present and "" or "  (not set - falls back to a built-in default list)"))
+    DrawStringListRows(ctx, "IllegalRows", root_settings_state.illegal.items)
+    if reaper.ImGui_Button(ctx, "Save") then
+      local final = {}
+      for _, v in ipairs(root_settings_state.illegal.items) do
+        local trimmed = (v or ""):match("^%s*(.-)%s*$")
+        if trimmed ~= "" then final[#final + 1] = trimmed end
+      end
+      local ok, err = Editor.CommitEditRootList(source_path, "illegal", final)
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    reaper.ImGui_SameLine(ctx)
+    if not root_settings_state.illegal.present then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Clear") then
+      local ok, err = Editor.CommitRemoveRootKey(source_path, "illegal")
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not root_settings_state.illegal.present then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopID(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    -- find (kept next to replace - the two are a paired find/replace pass)
+    reaper.ImGui_PushID(ctx, "find")
+    reaper.ImGui_Text(ctx, "find" ..
+      (root_settings_state.find.present and "" or "  (not set - paired with replace below)"))
+    DrawStringListRows(ctx, "FindRows", root_settings_state.find.items)
+    if reaper.ImGui_Button(ctx, "Save") then
+      local final = {}
+      for _, v in ipairs(root_settings_state.find.items) do
+        local trimmed = (v or ""):match("^%s*(.-)%s*$")
+        if trimmed ~= "" then final[#final + 1] = trimmed end
+      end
+      local ok, err = Editor.CommitEditRootList(source_path, "find", final)
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    reaper.ImGui_SameLine(ctx)
+    if not root_settings_state.find.present then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Clear") then
+      local ok, err = Editor.CommitRemoveRootKey(source_path, "find")
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not root_settings_state.find.present then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopID(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    -- replace
+    reaper.ImGui_PushID(ctx, "replace")
+    reaper.ImGui_Text(ctx, "replace" ..
+      (root_settings_state.replace.present and "" or "  (not set - paired with find above)"))
+    rv, root_settings_state.replace.buf = reaper.ImGui_InputText(ctx, "##Buf", root_settings_state.replace.buf)
+    if reaper.ImGui_Button(ctx, "Save") then
+      local ok, err = Editor.CommitEditRootScalar(source_path, "replace", root_settings_state.replace.buf)
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    reaper.ImGui_SameLine(ctx)
+    if not root_settings_state.replace.present then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Clear") then
+      local ok, err = Editor.CommitRemoveRootKey(source_path, "replace")
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not root_settings_state.replace.present then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopID(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    -- maxchars
+    reaper.ImGui_PushID(ctx, "maxchars")
+    reaper.ImGui_Text(ctx, "maxchars" ..
+      (root_settings_state.maxchars.present and "" or "  (not set - no length limit)"))
+    rv, root_settings_state.maxchars.buf = reaper.ImGui_InputText(ctx, "##Buf", root_settings_state.maxchars.buf)
+    local maxchars_trimmed = (root_settings_state.maxchars.buf or ""):match("^%s*(.-)%s*$")
+    local maxchars_num, maxchars_err = nil, nil
+    if maxchars_trimmed ~= "" then
+      maxchars_num = tonumber(maxchars_trimmed)
+      if not maxchars_num or maxchars_num ~= math.floor(maxchars_num) or maxchars_num <= 0 then
+        maxchars_err = "Must be blank or a positive whole number."
+      end
+    end
+    if maxchars_err then reaper.ImGui_TextColored(ctx, 0xFF0000FF, maxchars_err) end
+    local can_save_maxchars = not maxchars_err
+    if not can_save_maxchars then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Save") then
+      local ok, err
+      if maxchars_trimmed == "" then
+        ok, err = Editor.CommitRemoveRootKey(source_path, "maxchars")
+      else
+        ok, err = Editor.CommitEditRootScalar(source_path, "maxchars", string.format("%d", maxchars_num))
+      end
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not can_save_maxchars then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_SameLine(ctx)
+    if not root_settings_state.maxchars.present then reaper.ImGui_BeginDisabled(ctx) end
+    if reaper.ImGui_Button(ctx, "Clear") then
+      local ok, err = Editor.CommitRemoveRootKey(source_path, "maxchars")
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    if not root_settings_state.maxchars.present then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopID(ctx)
+    reaper.ImGui_Separator(ctx)
+
+    -- dupes (no Clear - absent and `dupes: false` are behaviorally
+    -- identical per the main script's `not wgt.data.dupes` check)
+    reaper.ImGui_PushID(ctx, "dupes")
+    rv, root_settings_state.dupes.value = reaper.ImGui_Checkbox(ctx,
+      "dupes (allow duplicate values across fields)", root_settings_state.dupes.value)
+    if reaper.ImGui_Button(ctx, "Save") then
+      local ok, err = Editor.CommitEditRootScalar(source_path, "dupes", tostring(root_settings_state.dupes.value))
+      if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
+    end
+    reaper.ImGui_PopID(ctx)
+
+    if root_settings_state.error then
+      reaper.ImGui_Spacing(ctx)
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, root_settings_state.error)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+    reaper.ImGui_Separator(ctx)
     if reaper.ImGui_Button(ctx, "Close") then
       reaper.ImGui_CloseCurrentPopup(ctx)
     end
