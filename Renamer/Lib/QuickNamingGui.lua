@@ -14,7 +14,7 @@
 local QuickNamingGui = {}
 
 local Predictor   -- NamePredictor module
-local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes }
+local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, GetPreviousValue }
 local acendan     -- shared style/tooltip/scale helper table (same one every other Lib module gets)
 
 function QuickNamingGui.init(name_predictor, helpers, acendan_helpers)
@@ -489,6 +489,15 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
       local apply_enumeration = BuildEnumeration(data)
       local apply_name = BuildFullName(wgt.quick.text, apply_enumeration)
       Helpers.ApplyQuickName(wgt.target, wgt.mode, apply_name, apply_enumeration)
+      -- ApplyQuickName sets wgt.quick.error as a side effect - nil on
+      -- success, an error string on failure (see Rename() in the main
+      -- script). `open` is this function's own local (from the
+      -- reaper.ImGui_Begin call above), so - unlike the classic tab, which
+      -- needs a wgt.__pending_close flag to reach Main()'s own `open` local
+      -- from a separate function - this can just close the window directly.
+      if not wgt.quick.error and Helpers.GetPreviousValue("opt_auto_close_on_rename", false) == "true" then
+        open = false
+      end
     end
     -- SameLine puts this text at the button's top, not centered - the
     -- button is drawn at BIG_FONT_SCALE (taller) while this status message

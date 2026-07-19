@@ -1233,6 +1233,12 @@ function TabSettings()
   if rv then SetCurrentValue("opt_auto_clear", auto_clear) end
   acendan.ImGui_Tooltip("Automatically clear all fields when loading scheme (opening tool or switching scheme).")
 
+  local auto_close = GetPreviousValue("opt_auto_close_on_rename", false)
+  local rv, auto_close = reaper.ImGui_Checkbox(ctx, "Auto Close on Rename", auto_close == "true" and true or false)
+  if rv then SetCurrentValue("opt_auto_close_on_rename", auto_close) end
+  acendan.ImGui_Tooltip(
+    "Automatically close the window after a successful rename, in both the main window and Quick Naming.")
+
   local enable_meta = GetPreviousValue("opt_enable_meta", false)
   local rv, enable_meta = reaper.ImGui_Checkbox(ctx, "Enable Metadata Tab", enable_meta == "true" and true or false)
   if rv then SetCurrentValue("opt_enable_meta", enable_meta) end
@@ -1506,6 +1512,15 @@ function Main()
 
   if reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Escape()) and
       not reaper.ImGui_IsPopupOpen(ctx, "", reaper.ImGui_PopupFlags_AnyPopupId()) then
+    open = false
+  end
+
+  -- Set by ApplyName() above (via TabNaming's Rename button, mid-frame,
+  -- inside the TabBar block) when "Auto Close on Rename" is enabled and the
+  -- rename succeeded - consumed here, right before End(), same as the
+  -- Escape-key check just above.
+  if wgt.__pending_close then
+    wgt.__pending_close = false
     open = false
   end
 
@@ -2069,6 +2084,16 @@ function ApplyName()
   reaper.Undo_EndBlock("The Last Renamer - " .. wgt.data.title, -1)
   StoreSettings()
   StoreHistory()
+  -- Rename() returns nil on success, an error string on failure (see its
+  -- own comment below) - only close on an actual successful rename. `open`
+  -- is a local inside Main()'s own render frame, not reachable from here
+  -- directly, so this just raises a flag Main() checks and clears right
+  -- before its own reaper.ImGui_End(ctx), same "flag now, consume at the
+  -- top/end of the next check in Main()" convention wgt.__pending_reload
+  -- already uses elsewhere in this file.
+  if not wgt.error and GetPreviousValue("opt_auto_close_on_rename", false) == "true" then
+    wgt.__pending_close = true
+  end
 end
 
 -- Quick Naming's counterpart to ApplyName(): commits the free-typed name
@@ -2573,11 +2598,12 @@ NamePredictor.init({
   Capitalize    = Capitalize,
 })
 QuickNamingGui.init(NamePredictor, {
-  PreviewRename   = PreviewRename,
-  ApplyQuickName  = ApplyQuickName,
-  LoadTargets     = LoadTargets,
-  FindField       = FindField,
-  PadZeroes       = PadZeroes,
+  PreviewRename     = PreviewRename,
+  ApplyQuickName    = ApplyQuickName,
+  LoadTargets       = LoadTargets,
+  FindField         = FindField,
+  PadZeroes         = PadZeroes,
+  GetPreviousValue  = GetPreviousValue,
 }, acendan)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
