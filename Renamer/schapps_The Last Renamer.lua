@@ -562,6 +562,14 @@ local SchemeEditorGui           = dofile(script_path .. "Lib" .. SEP .. "SchemeE
 local SchemeStructureEditor     = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditor.lua")
 local SchemeStructureEditorGui  = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditorGui.lua")
 local SchemeVisualizer          = dofile(script_path .. "Lib" .. SEP .. "SchemeVisualizer.lua")
+-- Quick Naming's two modules are dofile'd here (with the others) but their
+-- init() calls are deferred to the bottom of this file - unlike the modules
+-- above, they depend on local functions (TryMatchField, SplitBySep,
+-- Capitalize, PreviewRename, ...) that aren't defined yet at this point in
+-- the script, since Lua executes top-to-bottom and those are declared much
+-- further down.
+local NamePredictor             = dofile(script_path .. "Lib" .. SEP .. "NamePredictor.lua")
+local QuickNamingGui            = dofile(script_path .. "Lib" .. SEP .. "QuickNamingGui.lua")
 SchemeEditorGui.init(SchemeEditor, acendan)
 SchemeEditor.init({ backups_dir = BACKUPS_DIR, sep = SEP, dir_exists = acendan.directoryExists, msg = acendan.msg })
 SchemeStructureEditor.init(SchemeEditor)
@@ -585,6 +593,7 @@ function Init()
   wgt.serialize = {}
   wgt.values   = {}
   wgt.last_selected_item = nil
+  wgt.show_quick_naming = GetPreviousValue("opt_quick_naming_open", false) == "true"
 
   wgt.targets = {}
   wgt.targets.Regions = { "Selected", "All", "Time Selection", "Edit Cursor" }
@@ -1059,7 +1068,11 @@ function TabNaming()
     reaper.ImGui_TextColored(ctx, 0xFFFF00BB, wgt.invalid)
   elseif wgt.error then
     reaper.ImGui_TextColored(ctx, 0xFF0000FF, wgt.error)
-  elseif reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter()) then
+  elseif reaper.ImGui_IsWindowFocused(ctx) and reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter()) then
+    -- Scoped to this window's own focus: IsKeyReleased alone is unscoped
+    -- (true regardless of which floating window has focus), which meant
+    -- pressing Enter while typing in the separate Quick Naming window would
+    -- ALSO fire this classic tab's rename using its own (unrelated) wgt.name.
     ApplyName()
   end
 
@@ -1119,7 +1132,9 @@ function TabMetadata()
   elseif wgt.meta.error then
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_TextColored(ctx, 0xFF0000FF, wgt.meta.error)
-  elseif reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter()) then
+  elseif reaper.ImGui_IsWindowFocused(ctx) and reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter()) then
+    -- Scoped to this window's own focus - see the matching comment in
+    -- TabNaming() for why this can't be a bare IsKeyReleased check anymore.
     ApplyMetadata()
   end
 
@@ -1465,7 +1480,19 @@ function Main()
   if not rv then return open end
 
   if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
-    TabItem("Naming",   TabNaming)
+    TabItem("Naming", TabNaming)
+
+    -- No TabItemFlags_Trailing here (unlike the "?" button below) - that
+    -- flag pins a tab to the trailing edge of the bar regardless of call
+    -- order, which is what previously pushed "Quick" out to the far right.
+    -- Calling it here, as a normal tab, places it between Naming and
+    -- Metadata/Settings instead.
+    if reaper.ImGui_TabItemButton(ctx, wgt.show_quick_naming and "[Quick]" or "Quick") then
+      wgt.show_quick_naming = not wgt.show_quick_naming
+      SetCurrentValue("opt_quick_naming_open", wgt.show_quick_naming)
+    end
+    acendan.ImGui_Tooltip("Opens Quick Naming: a free-type name box with live, scheme-aware autocomplete suggestions.")
+
     TabItem("Metadata", TabMetadata, "opt_enable_meta")
     TabItem("Settings", TabSettings)
 
@@ -1489,6 +1516,14 @@ function Main()
     local editor_open, editor_reload = SchemeVisualizer.DrawWindow(ctx, wgt.data)
     if not editor_open then wgt.show_visual_editor = false end
     if editor_reload then wgt.__pending_reload = editor_reload end
+  end
+
+  if wgt.show_quick_naming and wgt.data then
+    local quick_open = QuickNamingGui.DrawWindow(ctx, wgt)
+    if not quick_open then
+      wgt.show_quick_naming = false
+      SetCurrentValue("opt_quick_naming_open", false)
+    end
   end
 
   if open then reaper.defer(Main) else return end
@@ -2036,6 +2071,16 @@ function ApplyName()
   StoreHistory()
 end
 
+-- Quick Naming's counterpart to ApplyName(): commits the free-typed name
+-- (already carrying its auto-appended enumeration token, see
+-- QuickNamingGui.BuildFullName) via the same Rename() path the classic tab
+-- uses, so both surfaces share identical rename/undo/numbering behavior.
+function ApplyQuickName(target, mode, name, enumeration)
+  reaper.Undo_BeginBlock()
+  wgt.quick.error = Rename(target, mode, name, enumeration)
+  reaper.Undo_EndBlock("The Last Renamer - Quick Naming", -1)
+end
+
 function Rename(target, mode, name, enumeration)
   if not target or not mode then
     return "Missing renaming target!"
@@ -2073,6 +2118,35 @@ function Rename(target, mode, name, enumeration)
   end
 
   return "Project has no " .. target .. " to rename!"
+end
+
+-- Dry-run counterpart to Rename(): computes what each target's new name
+-- would be (via the same Process*/SanitizeName path, with preview=true so
+-- nothing is actually mutated) without applying it. Used by Quick Naming's
+-- live "Current Name / New Name" table.
+function PreviewRename(target, mode, name, enumeration)
+  if not target or not mode then return {}, "Missing renaming target!" end
+  if not name or name == "" then return {}, nil end
+
+  local result
+  if target == "Regions" then
+    local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
+    result = num_regions > 0 and ProcessRegions(mode, num_markers + num_regions, name, enumeration, false, true)
+        or "Project has no Regions to rename!"
+  elseif target == "Items" then
+    local num_items = reaper.CountMediaItems(0)
+    result = num_items > 0 and ProcessItems(mode, num_items, name, enumeration, false, true)
+        or "Project has no Items to rename!"
+  elseif target == "Tracks" then
+    local num_tracks = reaper.CountTracks(0)
+    result = num_tracks > 0 and ProcessTracks(mode, num_tracks, name, enumeration, true)
+        or "Project has no Tracks to rename!"
+  else
+    return {}, "Missing renaming target!"
+  end
+
+  if type(result) == "table" then return result, nil end
+  return {}, result
 end
 
 function SanitizeName(name, enumeration, wildcards, skipincrement)
@@ -2122,7 +2196,7 @@ function PadZeroes(num, zeroes)
   return num_str
 end
 
-function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
+function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta, preview)
   local error = nil
   local queue = {}
 
@@ -2135,7 +2209,7 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
         if isrgn then
           if pos >= start_time_sel and rgnend <= end_time_sel then
             local wildcards = { { find = "$name", replace = rgnname }, { find = "$num", replace = PadZeroes(markrgnindexnumber) } }
-            queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards }
+            queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards, rgnname }
           end
         end
         i = i + 1
@@ -2149,7 +2223,7 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
       local _, isrgn, pos, rgnend, rgnname, markrgnindexnumber, color = reaper.EnumProjectMarkers3(0, i)
       if isrgn then
         local wildcards = { { find = "$name", replace = rgnname }, { find = "$num", replace = PadZeroes(markrgnindexnumber) } }
-        queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards }
+        queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards, rgnname }
       end
       i = i + 1
     end
@@ -2159,7 +2233,7 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
       local _, isrgn, pos, rgnend, rgnname, markrgnindexnumber, color = reaper.EnumProjectMarkers3(0, regionidx)
       if isrgn then
         local wildcards = { { find = "$name", replace = rgnname }, { find = "$num", replace = PadZeroes(markrgnindexnumber) } }
-        queue[#queue + 1] = { regionidx, pos, rgnend, color, markrgnindexnumber, wildcards }
+        queue[#queue + 1] = { regionidx, pos, rgnend, color, markrgnindexnumber, wildcards, rgnname }
       end
     end
   elseif mode == "Selected" then
@@ -2171,7 +2245,7 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
           local _, isrgn, pos, rgnend, rgnname, markrgnindexnumber, color = reaper.EnumProjectMarkers3(0, i)
           if isrgn and markrgnindexnumber == regionidx then
             local wildcards = { { find = "$name", replace = rgnname }, { find = "$num", replace = PadZeroes(markrgnindexnumber) } }
-            queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards }
+            queue[#queue + 1] = { i, pos, rgnend, color, markrgnindexnumber, wildcards, rgnname }
             break
           end
           i = i + 1
@@ -2185,11 +2259,17 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
   if #queue > 0 then
     if meta then return queue end
     enumeration.num = #queue
+    local rows = preview and {} or nil
     for _, item in ipairs(queue) do
-      local i, pos, rgnend, color, markrgnindexnumber, wildcards = table.unpack(item)
-      reaper.SetProjectMarkerByIndex(0, i, true, pos, rgnend, markrgnindexnumber,
-        SanitizeName(name, enumeration, wildcards), color)
+      local i, pos, rgnend, color, markrgnindexnumber, wildcards, rgnname = table.unpack(item)
+      local new_name = SanitizeName(name, enumeration, wildcards)
+      if preview then
+        rows[#rows + 1] = { current = rgnname, new = new_name }
+      else
+        reaper.SetProjectMarkerByIndex(0, i, true, pos, rgnend, markrgnindexnumber, new_name, color)
+      end
     end
+    if preview then return rows end
   else
     error = "No regions to rename (" .. mode .. ")!"
   end
@@ -2197,7 +2277,7 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta)
   return error
 end
 
-function ProcessItems(mode, num_items, name, enumeration, meta)
+function ProcessItems(mode, num_items, name, enumeration, meta, preview)
   local error         = nil
   local queue         = {}
   local ini_sel_items = {}
@@ -2227,7 +2307,7 @@ function ProcessItems(mode, num_items, name, enumeration, meta)
         local item_num   = math.floor(reaper.GetMediaItemInfo_Value(item, "IP_ITEMNUMBER") + 1)
         if take ~= nil then
           local wildcards = { { find = "$name", replace = item_name }, { find = "$num", replace = PadZeroes(item_num) } }
-          queue[#queue + 1] = { item, take, wildcards, item_start, item_end, item_num }
+          queue[#queue + 1] = { item, take, wildcards, item_start, item_end, item_num, item_name }
         end
       end
     else
@@ -2246,7 +2326,7 @@ function ProcessItems(mode, num_items, name, enumeration, meta)
       local item_num   = math.floor(reaper.GetMediaItemInfo_Value(item, "IP_ITEMNUMBER") + 1)
       if take ~= nil then
         local wildcards = { { find = "$name", replace = item_name }, { find = "$num", replace = PadZeroes(item_num) } }
-        queue[#queue + 1] = { item, take, wildcards, item_start, item_end, item_num }
+        queue[#queue + 1] = { item, take, wildcards, item_start, item_end, item_num, item_name }
       end
     end
   end
@@ -2254,9 +2334,10 @@ function ProcessItems(mode, num_items, name, enumeration, meta)
   if #queue > 0 then
     if meta then return queue end
     enumeration.num = #queue
+    local rows = preview and {} or nil
     local prev_had_overlap = false
     for _, item_data in ipairs(queue) do
-      local item, take, wildcards, item_start, item_end, item_num = table.unpack(item_data)
+      local item, take, wildcards, item_start, item_end, item_num, item_name = table.unpack(item_data)
 
       local has_overlap = false
       if wgt.overlap then
@@ -2288,8 +2369,13 @@ function ProcessItems(mode, num_items, name, enumeration, meta)
       -- Overlap items: skip auto-increment (they share the same number).
       -- Non-overlap items: allow auto-increment so each gets a unique number.
       local new_name = SanitizeName(name, enumeration, wildcards, has_overlap)
-      reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", new_name, true)
+      if preview then
+        rows[#rows + 1] = { current = item_name, new = new_name }
+      else
+        reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", new_name, true)
+      end
     end
+    if preview then return rows end
   else
     error = "No items to rename (" .. mode .. ")!"
   end
@@ -2297,7 +2383,7 @@ function ProcessItems(mode, num_items, name, enumeration, meta)
   return error
 end
 
-function ProcessTracks(mode, num_tracks, name, enumeration)
+function ProcessTracks(mode, num_tracks, name, enumeration, preview)
   local error = nil
   local queue = {}
 
@@ -2309,7 +2395,7 @@ function ProcessTracks(mode, num_tracks, name, enumeration)
         local _, track_name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
         local track_num = math.floor(reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER"))
         local wildcards = { { find = "$name", replace = track_name }, { find = "$num", replace = PadZeroes(track_num) } }
-        queue[#queue + 1] = { track, wildcards }
+        queue[#queue + 1] = { track, wildcards, track_name }
       end
     else
       error = "No tracks selected!"
@@ -2320,16 +2406,23 @@ function ProcessTracks(mode, num_tracks, name, enumeration)
       local _, track_name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
       local track_num = math.floor(reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER"))
       local wildcards = { { find = "$name", replace = track_name }, { find = "$num", replace = PadZeroes(track_num) } }
-      queue[#queue + 1] = { track, wildcards }
+      queue[#queue + 1] = { track, wildcards, track_name }
     end
   end
 
   if #queue > 0 then
     enumeration.num = #queue
+    local rows = preview and {} or nil
     for _, item in ipairs(queue) do
-      local track, wildcards = table.unpack(item)
-      reaper.GetSetMediaTrackInfo_String(track, "P_NAME", SanitizeName(name, enumeration, wildcards), true)
+      local track, wildcards, track_name = table.unpack(item)
+      local new_name = SanitizeName(name, enumeration, wildcards)
+      if preview then
+        rows[#rows + 1] = { current = track_name, new = new_name }
+      else
+        reaper.GetSetMediaTrackInfo_String(track, "P_NAME", new_name, true)
+      end
     end
+    if preview then return rows end
   else
     error = "No tracks to rename (" .. mode .. ")!"
   end
@@ -2460,6 +2553,26 @@ function SetMetadataMarker(marker, pos, num)
   reaper.AddProjectMarker(0, false, pos, 0, marker, num and num or -1)
   reaper.AddProjectMarker(0, false, pos + 0.001, 0, META_MKR_PREFIX, num and num or -1)
 end
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~~~~~~~ QUICK NAMING INIT ~~~~~~~
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Deferred until here (see the comment where these two are dofile'd, near
+-- the other Lib modules) because they depend on TryMatchField/SplitBySep/
+-- Capitalize/PreviewRename/LoadTargets/FindField/PadZeroes/ApplyQuickName,
+-- all defined above this point but not yet at the top of the file.
+NamePredictor.init({
+  TryMatchField = TryMatchField,
+  SplitBySep    = SplitBySep,
+  Capitalize    = Capitalize,
+})
+QuickNamingGui.init(NamePredictor, {
+  PreviewRename   = PreviewRename,
+  ApplyQuickName  = ApplyQuickName,
+  LoadTargets     = LoadTargets,
+  FindField       = FindField,
+  PadZeroes       = PadZeroes,
+}, acendan)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~~~ MAIN ~~~~~~~~~~~~~~
