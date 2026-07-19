@@ -48,6 +48,11 @@ end
 -- InputTextCallback_ClearSelection() as a harmless best-effort extra, in
 -- case a genuine focus-loss-then-regain (see needs_refocus in Accept()
 -- below) still selects something despite the in-place edit.
+--
+-- Only ever attached together with InputTextFlags_CallbackAlways alone (see
+-- DrawWindow below) - never combined with CallbackCharFilter below on the
+-- same InputText call - so this function never needs to branch on
+-- EventFlag; whenever it runs, it's always this one event type.
 local function EscapeEelString(str)
   return (str:gsub("\\", "\\\\"):gsub('"', '\\"'))
 end
@@ -58,6 +63,46 @@ local function MakeReplaceCallback(ctx, new_text)
     "InputTextCallback_ClearSelection();",
     EscapeEelString(new_text))
   local fn = reaper.ImGui_CreateFunctionFromEEL(code)
+  reaper.ImGui_Attach(ctx, fn)
+  return fn
+end
+
+-- Lua pattern magic characters - see BuildCharFilterBody below.
+local MAGIC_PATTERN_CHARS = "^$()%.[]*+-?"
+
+-- Builds the EEL body for a CharFilter-only callback (attached only via
+-- InputTextFlags_CallbackCharFilter, never combined with CallbackAlways
+-- above - see DrawWindow below - so, symmetrically with MakeReplaceCallback,
+-- this never needs an EventFlag check either): live-substitutes, as the
+-- user types, each `find` entry that reduces to a single literal
+-- (non-pattern-magic) character - e.g. a space - with `replace`, via the
+-- callback's EventChar variable (a plain character code, writable only
+-- during this event - "Modify EventChar to replace, or EventChar = 0 to
+-- discard"). Only a single-character find entry paired with a 0-or-1-
+-- character replace reduces to a single EventChar swap; anything longer (a
+-- multi-char pattern, or a multi-char replacement) cannot be expressed as a
+-- single incoming character becoming a single outgoing one, so those are
+-- left to only show up in the Preview table below, exactly as before this
+-- function existed. Returns nil if nothing here qualifies.
+local function BuildCharFilterBody(data)
+  if not data.find or not data.replace or #data.replace > 1 then return nil end
+  local replace_code = #data.replace == 1 and data.replace:byte() or 0
+  local lines = {}
+  for _, pattern in ipairs(data.find) do
+    if #pattern == 1 and not MAGIC_PATTERN_CHARS:find(pattern, 1, true) then
+      lines[#lines + 1] = string.format("(EventChar == %d) ? (EventChar = %d);", pattern:byte(), replace_code)
+    end
+  end
+  if #lines == 0 then return nil end
+  return table.concat(lines, " ")
+end
+
+-- Compiled once per scheme and cached (see wgt.quick.char_filter_fn in
+-- DrawWindow below), not per-call like MakeReplaceCallback - the character
+-- mapping only depends on `body`, which is static for as long as the same
+-- `data` table is in use.
+local function MakeCharFilterCallback(ctx, body)
+  local fn = reaper.ImGui_CreateFunctionFromEEL(body)
   reaper.ImGui_Attach(ctx, fn)
   return fn
 end
@@ -289,9 +334,32 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
       -- whole timing theory is wrong), give up after a few frames instead
       -- of recompiling a fresh EEL function indefinitely every frame.
       wgt.quick.pending_replace_tries = (wgt.quick.pending_replace_tries or 0) + 1
+    else
+      -- No pending Accept/Clear this frame: attach the live find/replace
+      -- CharFilter callback instead (see BuildCharFilterBody), so a typed
+      -- space (etc.) is substituted the instant it's typed, not just in the
+      -- Preview table below. Compiled once per scheme and cached, not
+      -- rebuilt every keystroke - the character mapping only depends on the
+      -- scheme (`data`), which is static for as long as the same `data`
+      -- table is in use. A scheme reload/switch always produces a
+      -- brand-new `data` table (see LoadScheme in the main script), which
+      -- naturally invalidates this cache via the identity check below.
+      if wgt.quick.char_filter_data ~= data then
+        wgt.quick.char_filter_data = data
+        local body = BuildCharFilterBody(data)
+        wgt.quick.char_filter_fn = body and MakeCharFilterCallback(ctx, body) or nil
+      end
+      if wgt.quick.char_filter_fn then
+        input_flags = reaper.ImGui_InputTextFlags_CallbackCharFilter()
+        input_callback = wgt.quick.char_filter_fn
+      end
     end
 
     local changed, new_text = reaper.ImGui_InputText(ctx, "##quick_name", wgt.quick.text, input_flags, input_callback)
+    -- Captured right after the InputText call so the "x" clear button below
+    -- (drawn at normal, non-BIG_FONT_SCALE size) can be sized to match its
+    -- height instead of being visibly shorter than the enlarged name box.
+    local _, input_h = reaper.ImGui_GetItemRectSize(ctx)
     if changed then wgt.quick.text = new_text end
     wgt.quick.input_was_active = reaper.ImGui_IsItemActive(ctx)
     if wgt.quick.input_was_active or (wgt.quick.pending_replace_tries or 0) > 5 then
@@ -362,12 +430,15 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     end
     reaper.ImGui_PopFont(ctx)
 
-    -- Mirrors the exact "x##<id> SmallButton + NoTabStop + clear tooltip"
-    -- convention SchemeEditorGui.ComboBox/AutoFillComboBox already use for
-    -- their own clear buttons.
+    -- Same "x##<id> + NoTabStop + clear tooltip" convention
+    -- SchemeEditorGui.ComboBox/AutoFillComboBox use for their own clear
+    -- buttons, but sized to input_h (the name box's own height, captured
+    -- above) on both axes - square, and matching the box's BIG_FONT_SCALE
+    -- height - rather than SmallButton's tight, normal-size auto-fit, which
+    -- left it visibly shorter than the enlarged input next to it.
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
-    if reaper.ImGui_SmallButton(ctx, "x##quick_name_clear") then ClearText() end
+    if reaper.ImGui_Button(ctx, "x##quick_name_clear", input_h, input_h) then ClearText() end
     reaper.ImGui_PopItemFlag(ctx)
     acendan.ImGui_Tooltip("Clear the name box.")
 
@@ -453,7 +524,17 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     -- scales away with more space. Measuring instead of guessing self-
     -- corrects within a frame no matter what LoadTargets() ends up drawing.
     local avail_w, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
-    if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, avail_h - wgt.quick.targets_h) then
+    -- ItemSpacing is pushed as {4, 4} * ui_scale (see acendan.ImGui_Styles.vars
+    -- in the main script) - ImGui inserts exactly one such gap between the
+    -- end of this table and the start of the Targets group below (BeginGroup
+    -- counts as the next item), and that gap isn't part of either's own
+    -- measured height. Left unsubtracted, the table+gap+group total overflows
+    -- avail_h by that fixed amount every frame - a constant pixel error that
+    -- doesn't shrink as the window grows, which is exactly what previously
+    -- made the window's own scrollbar appear permanently regardless of how
+    -- tall it was resized.
+    local item_spacing_y = 4 * acendan.ImGui_GetScale()
+    if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, avail_h - wgt.quick.targets_h - item_spacing_y) then
       reaper.ImGui_TableSetupColumn(ctx, "Current Name")
       reaper.ImGui_TableSetupColumn(ctx, "New Name")
       reaper.ImGui_TableHeadersRow(ctx)
@@ -462,7 +543,16 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
         reaper.ImGui_TableSetColumnIndex(ctx, 0)
         reaper.ImGui_Text(ctx, row.current)
         reaper.ImGui_TableSetColumnIndex(ctx, 1)
-        reaper.ImGui_Text(ctx, row.new)
+        -- Nothing typed yet (PreviewRename still runs with a blank name so
+        -- the table lists the matched targets immediately on selection,
+        -- mirroring nvk.tools) - show a muted placeholder instead of a
+        -- blank cell, so an empty New Name column reads as "nothing typed"
+        -- rather than looking broken.
+        if row.new == "" then
+          reaper.ImGui_TextDisabled(ctx, "<empty>")
+        else
+          reaper.ImGui_Text(ctx, row.new)
+        end
       end
       reaper.ImGui_EndTable(ctx)
     end

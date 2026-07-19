@@ -1354,10 +1354,13 @@ function SchemeStructureEditorGui.DrawRootSettingsPopup(ctx, source_path)
       (root_settings_state.illegal.present and "" or "  (not set - falls back to a built-in default list)"))
     DrawStringListRows(ctx, "IllegalRows", root_settings_state.illegal.items)
     if reaper.ImGui_Button(ctx, "Save") then
+      -- No trimming here (unlike a field/wildcard label) - illegal is a
+      -- list of Lua patterns, so a row that's purely whitespace (e.g. a
+      -- literal space) is meaningful content, not stray formatting. Only a
+      -- genuinely empty, never-touched "+ Add Item" row gets dropped.
       local final = {}
       for _, v in ipairs(root_settings_state.illegal.items) do
-        local trimmed = (v or ""):match("^%s*(.-)%s*$")
-        if trimmed ~= "" then final[#final + 1] = trimmed end
+        if v ~= "" then final[#final + 1] = v end
       end
       local ok, err = Editor.CommitEditRootList(source_path, "illegal", final)
       if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end
@@ -1378,10 +1381,13 @@ function SchemeStructureEditorGui.DrawRootSettingsPopup(ctx, source_path)
       (root_settings_state.find.present and "" or "  (not set - paired with replace below)"))
     DrawStringListRows(ctx, "FindRows", root_settings_state.find.items)
     if reaper.ImGui_Button(ctx, "Save") then
+      -- No trimming here either, same reasoning as illegal above - a
+      -- whitespace-only row (e.g. a literal space, the most common real
+      -- find entry - "find: [\" \"]") is exactly what a user typing a
+      -- space intends to save, not something to discard as blank.
       local final = {}
       for _, v in ipairs(root_settings_state.find.items) do
-        local trimmed = (v or ""):match("^%s*(.-)%s*$")
-        if trimmed ~= "" then final[#final + 1] = trimmed end
+        if v ~= "" then final[#final + 1] = v end
       end
       local ok, err = Editor.CommitEditRootList(source_path, "find", final)
       if ok then RefreshRootSettings(source_path); reload_requests = {} else root_settings_state.error = err end

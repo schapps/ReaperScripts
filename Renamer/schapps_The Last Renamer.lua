@@ -2124,9 +2124,15 @@ end
 -- would be (via the same Process*/SanitizeName path, with preview=true so
 -- nothing is actually mutated) without applying it. Used by Quick Naming's
 -- live "Current Name / New Name" table.
+--
+-- Runs even when `name` is blank (SanitizeName("") just yields "") rather
+-- than short-circuiting to an empty result, so the table still lists every
+-- matched target's Current Name (New Name blank) the moment a target/mode
+-- is chosen - before the user has typed anything - mirroring nvk.tools'
+-- "Rename N items" table, which populates from selection alone.
 function PreviewRename(target, mode, name, enumeration)
   if not target or not mode then return {}, "Missing renaming target!" end
-  if not name or name == "" then return {}, nil end
+  name = name or ""
 
   local result
   if target == "Regions" then
