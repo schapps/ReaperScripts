@@ -32,8 +32,6 @@ function NamePredictor.init(helpers)
   Cap   = helpers.Capitalize
 end
 
-local MAX_CANDIDATES = 8
-
 local function PrefixMatch(str, partial)
   if partial == "" then return true end
   if not str or str == "" then return false end
@@ -110,11 +108,19 @@ local function RankCandidates(field, partial)
         end
       end
     end
+    -- With no partial typed yet, every option matches trivially on its full
+    -- value (see the `match_source = val` branch above) - ranking those by
+    -- match length would just sort the whole list by name length, unrelated
+    -- to the scheme's own field.value order. Keep scheme order in that case;
+    -- once the user is actually typing, rank shorter/closer matches first
+    -- (e.g. an exact short-code hit ahead of a long value that merely shares
+    -- the same prefix), falling back to scheme order for ties.
     table.sort(scored, function(a, b)
+      if partial == "" then return a.index < b.index end
       if #a.match_source == #b.match_source then return a.index < b.index end
       return #a.match_source < #b.match_source
     end)
-    for i = 1, math.min(#scored, MAX_CANDIDATES) do
+    for i = 1, #scored do
       local s = scored[i]
       local insert_raw = s.short or s.text
       local insert = Cap and Cap(insert_raw, field.capitalization) or insert_raw
