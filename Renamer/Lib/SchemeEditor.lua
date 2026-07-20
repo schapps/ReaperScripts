@@ -7,16 +7,21 @@
 local M = {}
 
 local backed_up_paths = {}
-local config = { backups_dir = nil, sep = nil, dir_exists = nil, msg = nil }
+local config = { backups_dir = nil, sep = nil, dir_exists = nil, msg = nil, ensure_writable = nil }
 
 local undo_stack = {}
 local MAX_UNDO_DEPTH = 20
 
 function M.init(opts)
-  config.backups_dir = opts.backups_dir
-  config.sep         = opts.sep
-  config.dir_exists  = opts.dir_exists
-  config.msg         = opts.msg
+  config.backups_dir     = opts.backups_dir
+  config.sep             = opts.sep
+  config.dir_exists      = opts.dir_exists
+  config.msg             = opts.msg
+  -- Optional P4Integration hook (source_path) -> bool: false blocks the
+  -- write. Defaults to always-allow so callers that don't inject it (or
+  -- future direct unit-style calls into this module) see unchanged
+  -- behavior.
+  config.ensure_writable = opts.ensure_writable or function(source_path) return true end
 end
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -775,6 +780,7 @@ end
 -- Copies source_path into Backups/Schemes/ once per file per session, before
 -- the first write-back to that file. A failed backup blocks the write.
 function M.BackupSchemeFile(source_path)
+  if not config.ensure_writable(source_path) then return false end
   if backed_up_paths[source_path] then return true end
 
   local backup_dir = config.backups_dir .. "Schemes" .. config.sep
@@ -814,6 +820,7 @@ end
 -- in-memory undo stack, so a structural edit gets both an on-disk snapshot
 -- and an in-session "Undo Last Change" available immediately.
 function M.SnapshotSchemeFile(source_path)
+  if not config.ensure_writable(source_path) then return false end
   local backup_dir = config.backups_dir .. "Schemes" .. config.sep
   if not config.dir_exists(backup_dir) then
     reaper.RecursiveCreateDirectory(backup_dir, 0)
@@ -870,6 +877,10 @@ end
 function M.PopUndoSnapshot()
   local entry = table.remove(undo_stack)
   if not entry then return false, "Nothing to undo." end
+  if not config.ensure_writable(entry.path) then
+    undo_stack[#undo_stack + 1] = entry -- restore; don't lose the pending undo
+    return false, "Undo aborted; could not check out the scheme file for editing."
+  end
   local ok, err = pcall(function()
     local f = assert(io.open(entry.path, "wb"))
     f:write(entry.content)

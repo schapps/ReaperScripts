@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.9
+-- @version 1.10
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
 --   v1.9 Fixing bug for entry display when dropdown lists are super long
 --   v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
 --   v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
@@ -564,6 +565,7 @@ local META_MKR_PREFIX = "#META"
 -- Scheme-editor modules (dofile'd once at startup, not inside Main()/defer -
 -- dofile always re-executes, no require-style memoization/caching). These
 -- can't see this script's `local acendan`, so it's injected explicitly.
+local P4Integration             = dofile(script_path .. "Lib" .. SEP .. "P4Integration.lua")
 local SchemeEditor              = dofile(script_path .. "Lib" .. SEP .. "SchemeEditor.lua")
 local SchemeEditorGui           = dofile(script_path .. "Lib" .. SEP .. "SchemeEditorGui.lua")
 local SchemeStructureEditor     = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditor.lua")
@@ -578,7 +580,17 @@ local SchemeVisualizer          = dofile(script_path .. "Lib" .. SEP .. "SchemeV
 local NamePredictor             = dofile(script_path .. "Lib" .. SEP .. "NamePredictor.lua")
 local QuickNamingGui            = dofile(script_path .. "Lib" .. SEP .. "QuickNamingGui.lua")
 SchemeEditorGui.init(SchemeEditor, acendan)
-SchemeEditor.init({ backups_dir = BACKUPS_DIR, sep = SEP, dir_exists = acendan.directoryExists, msg = acendan.msg })
+P4Integration.init({
+  msg         = acendan.msg,
+  get_enabled = function() return GetPreviousValue("opt_enable_p4", false) == "true" end,
+})
+SchemeEditor.init({
+  backups_dir     = BACKUPS_DIR,
+  sep             = SEP,
+  dir_exists      = acendan.directoryExists,
+  msg             = acendan.msg,
+  ensure_writable = P4Integration.EnsureWritable,
+})
 SchemeStructureEditor.init(SchemeEditor)
 SchemeStructureEditorGui.init(SchemeStructureEditor, acendan)
 SchemeVisualizer.init(acendan, SchemeStructureEditorGui)
@@ -1241,6 +1253,15 @@ function TabSettings()
   Button("Rescan Folder", function()
     wgt.schemes = FetchSchemes()
   end, "Rescan the schemes directory for new scheme files.")
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_SeparatorText(ctx, "Perforce")
+
+  local enable_p4 = GetPreviousValue("opt_enable_p4", false)
+  local rv, enable_p4 = reaper.ImGui_Checkbox(ctx, "Enable Perforce Integration", enable_p4 == "true" and true or false)
+  if rv then SetCurrentValue("opt_enable_p4", enable_p4) end
+  acendan.ImGui_Tooltip(
+    "When enabled, before writing to a scheme file tracked in Perforce, prompts to automatically check it out (p4 edit) first.\n\nRequires the Perforce command-line client (p4) to be installed and configured. Has no effect if Perforce isn't detected for a given file.")
 
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_SeparatorText(ctx, "Options")
