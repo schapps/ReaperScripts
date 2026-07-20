@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="44f28c0deadf2a8707d1751baf76c3448254d74c">
+<index version="1" name="SPS Scripts" commit="879c38f2617e875a7d2c67f5e5d7c3e49a303a6b">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5801,6 +5801,29 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/44f28c0deadf2a8707d1751baf76c3448254d74c/Renamer/Lib/SchemeStructureEditorGui.lua</source>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/44f28c0deadf2a8707d1751baf76c3448254d74c/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/44f28c0deadf2a8707d1751baf76c3448254d74c/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.10" author="Aaron Cendan, modified by Stephen Schappler" time="2026-07-20T18:40:19Z">
+        <changelog><![CDATA[v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/879c38f2617e875a7d2c67f5e5d7c3e49a303a6b/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
