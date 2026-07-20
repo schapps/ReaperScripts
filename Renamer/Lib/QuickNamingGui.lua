@@ -16,7 +16,7 @@
 local QuickNamingGui = {}
 
 local Predictor   -- NamePredictor module
-local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, WindowDefaultHeight, GetSelectedItemName }
+local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, GetSelectedItemName, HasExportScript, RunExportScript }
 local acendan     -- shared style/tooltip/scale helper table (same one every other Lib module gets)
 
 function QuickNamingGui.init(name_predictor, helpers, acendan_helpers)
@@ -198,13 +198,12 @@ end
 
 local MAX_VISIBLE_OPTIONS = 6
 
--- Default/baseline height (unscaled px, scaled at the call site) for the
--- Preview table, at the window's own baseline default height
--- (Helpers.WindowDefaultHeight). Grows 1:1 with however much taller than
--- that baseline the user has resized the window (see the table-sizing code
--- below) - so it stays a modest fraction of the window rather than
--- monopolizing it at the default size, but still gets genuinely bigger if
--- the window is expanded vertically, instead of just leaving unused space.
+-- Floor (unscaled px, scaled at the call site) for the Preview table's
+-- height - the table otherwise fills whatever room is left after reserving
+-- space for the Targets footer (see the table-sizing code below), which
+-- could go arbitrarily small/negative on a short window; this keeps it at
+-- a sane minimum instead, letting the child overflow/scroll rather than the
+-- table itself collapsing.
 local QUICK_PREVIEW_TABLE_HEIGHT = 110
 
 -- Always-visible list of the next field's candidate values, rendered inline
@@ -541,69 +540,28 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
         (wgt.target and not wgt.mode) and ("Please set a renaming mode for target: " .. wgt.target) or
         (wgt.quick.text == "" and "Type a name above!") or nil
 
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
-    if invalid then reaper.ImGui_BeginDisabled(ctx) end
-    local rename_clicked = reaper.ImGui_Button(ctx, "Rename")
-    local _, button_h = reaper.ImGui_GetItemRectSize(ctx)
-    if invalid then reaper.ImGui_EndDisabled(ctx) end
-    reaper.ImGui_PopFont(ctx)
-    acendan.ImGui_Tooltip("Pro Tip: You can press the 'Enter' key to trigger renaming from the name field above.")
-
-    -- Scoped to this window's own focus (resolves against the child window
-    -- created by BeginChild above, not a top-level window - a child becomes
-    -- Dear ImGui's "focused window" once an item inside it gains keyboard
-    -- focus, which this module's own SetKeyboardFocusHere auto-focus logic
-    -- above already ensures happens): a bare IsKeyReleased check is true
-    -- regardless of which window/tab currently has focus, which would fire
-    -- this alongside (or instead of) whichever the user actually meant to
-    -- submit - e.g. another floating window like the Scheme Visual Editor.
-    local enter_submit = not invalid and reaper.ImGui_IsWindowFocused(ctx) and
-        reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter())
-
-    if rename_clicked or enter_submit then
-      wgt.quick.error = nil
-      -- A fresh enumeration table, NOT the `enumeration` local from the top
-      -- of this frame: that one was already consumed by PreviewRename above
-      -- (which runs unconditionally every frame to feed the live table),
-      -- and SanitizeName increments `.start` in place as it goes - reusing
-      -- it here would mean the real rename picks up wherever the preview
-      -- pass left the counter (e.g. starting at 4 for a 3-item preview that
-      -- ran right before this click), instead of starting fresh from the
-      -- scheme's actual Enumeration value.
-      local apply_enumeration = BuildEnumeration(data)
-      local apply_name = BuildFullName(wgt.quick.text, apply_enumeration)
-      Helpers.ApplyQuickName(wgt.target, wgt.mode, apply_name, apply_enumeration)
-    end
-    -- SameLine puts this text at the button's top, not centered - the
-    -- button is drawn at BIG_FONT_SCALE (taller) while this status message
-    -- stays normal-sized, so nudge it down by half the height difference.
-    local function DrawStatusMessage(color, text)
-      reaper.ImGui_SameLine(ctx)
-      local text_h = reaper.ImGui_GetTextLineHeight(ctx)
-      reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + (button_h - text_h) / 2)
-      reaper.ImGui_TextColored(ctx, color, text)
-    end
-
-    if invalid then
-      DrawStatusMessage(0xFFFF00BB, invalid)
-    elseif wgt.quick.error then
-      DrawStatusMessage(0xFF0000FF, wgt.quick.error)
-    elseif preview_err then
-      DrawStatusMessage(0xFF8080FF, preview_err)
-    end
-
     reaper.ImGui_SeparatorText(ctx, "Preview")
     reaper.ImGui_TextDisabled(ctx, "Rename " .. #preview_rows .. " " .. ((wgt.target or "items"):lower()))
     local table_flags = reaper.ImGui_TableFlags_Borders() | reaper.ImGui_TableFlags_RowBg() |
         reaper.ImGui_TableFlags_ScrollY()
-    local avail_w = reaper.ImGui_GetContentRegionAvail(ctx)
-    -- Grows 1:1 with however much taller than the window's own baseline
-    -- default height (Helpers.WindowDefaultHeight) the user has resized it
-    -- to be - clamped at 0 so the table never shrinks below its own
-    -- default when the window is smaller than that baseline.
+    local content_y0 = reaper.ImGui_GetCursorPosY(ctx)
+    local avail_w, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
+    -- Fills whatever room is actually left in this child after the table,
+    -- reserving exact space for the "Targets" section drawn below it. That
+    -- footer's real height (including the item-spacing between the table
+    -- and "Targets", which a per-widget estimate kept missing by a few px -
+    -- just enough for this child's content to overflow its available
+    -- height and leave a permanent vertical scrollbar) is measured AFTER
+    -- it's drawn - see the cursor-pos delta below - and reused here one
+    -- frame late. Self-corrects within a frame if the row count changes
+    -- (e.g. picking a Target), and floors at the original fixed baseline
+    -- so the table doesn't collapse to nothing (letting the child
+    -- overflow/scroll instead) once the window gets smaller than the
+    -- footer alone needs.
     local scale = acendan.ImGui_GetScale()
-    local extra_h = math.max(0, (wgt.window_h or Helpers.WindowDefaultHeight) - Helpers.WindowDefaultHeight)
-    local table_h = (QUICK_PREVIEW_TABLE_HEIGHT + extra_h) * scale
+    local footer_h = wgt.quick.targets_footer_h or
+        (reaper.ImGui_GetTextLineHeightWithSpacing(ctx) + 3 * reaper.ImGui_GetFrameHeightWithSpacing(ctx))
+    local table_h = math.max(QUICK_PREVIEW_TABLE_HEIGHT * scale, avail_h - footer_h)
     if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, table_h) then
       reaper.ImGui_TableSetupColumn(ctx, "Current Name")
       reaper.ImGui_TableSetupColumn(ctx, "New Name")
@@ -627,8 +585,80 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
       reaper.ImGui_EndTable(ctx)
     end
 
+    reaper.ImGui_Spacing(ctx)
+    -- A fresh enumeration table, NOT the `enumeration` local from the top of
+    -- this frame: that one was already consumed by PreviewRename above
+    -- (which runs unconditionally every frame to feed the live table), and
+    -- SanitizeName increments `.start` in place as it goes - reusing it here
+    -- would mean the real rename picks up wherever the preview pass left
+    -- the counter (e.g. starting at 4 for a 3-item preview that ran right
+    -- before this click), instead of starting fresh from the scheme's
+    -- actual Enumeration value.
+    local function DoRename()
+      wgt.quick.error = nil
+      local apply_enumeration = BuildEnumeration(data)
+      local apply_name = BuildFullName(wgt.quick.text, apply_enumeration)
+      Helpers.ApplyQuickName(wgt.target, wgt.mode, apply_name, apply_enumeration)
+    end
+
+    -- Same styling (color, 1.5x font) and SameLine spacing as the classic
+    -- Scheme Naming tab's Rename/Export buttons (see TabNaming in the main
+    -- script) - kept visually consistent across both naming modes rather
+    -- than picking arbitrary new colors here.
+    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
+    if invalid then reaper.ImGui_BeginDisabled(ctx) end
+    acendan.ImGui_Button("Rename", DoRename, {86, 64, 110})
+    local _, button_h = reaper.ImGui_GetItemRectSize(ctx)
+    if invalid then reaper.ImGui_EndDisabled(ctx) end
+    reaper.ImGui_PopFont(ctx)
+    acendan.ImGui_Tooltip("Pro Tip: You can press the 'Enter' key to trigger renaming from the name field above.")
+
+    local has_export = Helpers.HasExportScript()
+    reaper.ImGui_SameLine(ctx, 0, 10)
+    if not has_export then reaper.ImGui_BeginDisabled(ctx) end
+    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
+    acendan.ImGui_Button("Export", Helpers.RunExportScript, {70, 160, 210})
+    reaper.ImGui_PopFont(ctx)
+    acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
+    if not has_export then reaper.ImGui_EndDisabled(ctx) end
+
+    -- Scoped to this window's own focus (resolves against the child window
+    -- created by BeginChild above, not a top-level window - a child becomes
+    -- Dear ImGui's "focused window" once an item inside it gains keyboard
+    -- focus, which this module's own SetKeyboardFocusHere auto-focus logic
+    -- above already ensures happens): a bare IsKeyReleased check is true
+    -- regardless of which window/tab currently has focus, which would fire
+    -- this alongside (or instead of) whichever the user actually meant to
+    -- submit - e.g. another floating window like the Scheme Visual Editor.
+    local enter_submit = not invalid and reaper.ImGui_IsWindowFocused(ctx) and
+        reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter())
+    if enter_submit then DoRename() end
+
+    -- SameLine puts this text at the button's top, not centered - the
+    -- button is drawn at BIG_FONT_SCALE (taller) while this status message
+    -- stays normal-sized, so nudge it down by half the height difference.
+    local function DrawStatusMessage(color, text)
+      reaper.ImGui_SameLine(ctx)
+      local text_h = reaper.ImGui_GetTextLineHeight(ctx)
+      reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + (button_h - text_h) / 2)
+      reaper.ImGui_TextColored(ctx, color, text)
+    end
+
+    if invalid then
+      DrawStatusMessage(0xFFFF00BB, invalid)
+    elseif wgt.quick.error then
+      DrawStatusMessage(0xFF0000FF, wgt.quick.error)
+    elseif preview_err then
+      DrawStatusMessage(0xFF8080FF, preview_err)
+    end
+
     reaper.ImGui_SeparatorText(ctx, "Targets")
     Helpers.LoadTargets()
+    -- Feeds next frame's footer_h above - measured as "everything drawn
+    -- from content_y0 onward, minus the table's own height" so the
+    -- item-spacing ImGui inserts after the table is folded into the
+    -- reserved footer rather than silently dropped.
+    wgt.quick.targets_footer_h = (reaper.ImGui_GetCursorPosY(ctx) - content_y0) - table_h
   end
   reaper.ImGui_EndChild(ctx)
 end

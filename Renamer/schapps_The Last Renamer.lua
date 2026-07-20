@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.10
+-- @version 1.11
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.11 UI/UX improvements
 --   v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
 --   v1.9 Fixing bug for entry display when dropdown lists are super long
 --   v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
@@ -1071,21 +1072,11 @@ function TabNaming()
   reaper.ImGui_PopFont(ctx)
   acendan.ImGui_Tooltip("Applies your name to the given target!\n\nPro Tip: You can press the 'Enter' key to trigger renaming from any of the fields above.")
 
-  local export_path = GetPreviousValue("opt_export_script", nil)
-  local has_export = export_path and export_path ~= "" and export_path ~= "false"
-  reaper.ImGui_SameLine(ctx, 0, 40)
+  local has_export = HasExportScript()
+  reaper.ImGui_SameLine(ctx, 0, 10)
   if not has_export then reaper.ImGui_BeginDisabled(ctx) end
   reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * 1.5)
-  acendan.ImGui_Button("Export", function()
-    if reaper.file_exists(export_path) then
-      local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
-      if cmd_id and cmd_id > 0 then
-        reaper.Main_OnCommandEx(cmd_id, 0, 0)
-      end
-    else
-      acendan.msg("Export script not found:\n\n" .. export_path, "Export")
-    end
-  end, {70, 160, 210})
+  acendan.ImGui_Button("Export", RunExportScript, {70, 160, 210})
   reaper.ImGui_PopFont(ctx)
   acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
   if not has_export then reaper.ImGui_EndDisabled(ctx) end
@@ -2205,6 +2196,26 @@ function ApplyQuickName(target, mode, name, enumeration)
   end
 end
 
+-- Shared by both tabs' Export buttons (see TabNaming and
+-- QuickNamingGui.DrawTabContent) so the button's enabled/disabled state and
+-- click behavior can't drift between the two.
+function HasExportScript()
+  local export_path = GetPreviousValue("opt_export_script", nil)
+  return export_path and export_path ~= "" and export_path ~= "false"
+end
+
+function RunExportScript()
+  local export_path = GetPreviousValue("opt_export_script", nil)
+  if reaper.file_exists(export_path) then
+    local cmd_id = reaper.AddRemoveReaScript(true, 0, export_path, false)
+    if cmd_id and cmd_id > 0 then
+      reaper.Main_OnCommandEx(cmd_id, 0, 0)
+    end
+  else
+    acendan.msg("Export script not found:\n\n" .. export_path, "Export")
+  end
+end
+
 function Rename(target, mode, name, enumeration)
   if not target or not mode then
     return "Missing renaming target!"
@@ -2702,8 +2713,9 @@ QuickNamingGui.init(NamePredictor, {
   LoadTargets          = LoadTargets,
   FindField            = FindField,
   PadZeroes            = PadZeroes,
-  WindowDefaultHeight  = WINDOW_SIZE.height,
   GetSelectedItemName  = GetSelectedItemName,
+  HasExportScript      = HasExportScript,
+  RunExportScript      = RunExportScript,
 }, acendan)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
