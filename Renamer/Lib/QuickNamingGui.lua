@@ -1,20 +1,22 @@
 -- @noindex
--- QuickNamingGui: the "Quick Naming" alternate window - one big free-type
+-- QuickNamingGui: the "Quick Naming" tab content - one big free-type
 -- text box instead of per-field widgets, with live scheme-aware
 -- autocomplete (inline ghost text previewing the top-ranked next value, plus
 -- an always-visible list of that field's other candidates underneath) and a
 -- live "Current Name / New Name" preview table. Advisory only: typed text is
 -- never forced to match the scheme.
 --
--- Mirrors SchemeVisualizer.lua's DrawWindow(ctx, data) -> open contract and
--- the SchemeEditor/SchemeEditorGui init(helpers) injection convention,
--- since dofile'd modules can't see the main script's locals/globals at the
--- time they're dofile'd.
+-- Rendered inline as one of the main window's tab-bar panes (see
+-- NamingModeTabItem in the main script) - not its own top-level window -
+-- via DrawTabContent(ctx, wgt), called with the same wgt table the classic
+-- Scheme Naming tab uses. Still follows the SchemeEditor/SchemeEditorGui
+-- init(helpers) injection convention, since dofile'd modules can't see the
+-- main script's locals/globals at the time they're dofile'd.
 
 local QuickNamingGui = {}
 
 local Predictor   -- NamePredictor module
-local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, GetPreviousValue }
+local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, WindowDefaultHeight, GetSelectedItemName }
 local acendan     -- shared style/tooltip/scale helper table (same one every other Lib module gets)
 
 function QuickNamingGui.init(name_predictor, helpers, acendan_helpers)
@@ -50,8 +52,8 @@ end
 -- below) still selects something despite the in-place edit.
 --
 -- Only ever attached together with InputTextFlags_CallbackAlways alone (see
--- DrawWindow below) - never combined with CallbackCharFilter below on the
--- same InputText call - so this function never needs to branch on
+-- DrawTabContent below) - never combined with CallbackCharFilter below on
+-- the same InputText call - so this function never needs to branch on
 -- EventFlag; whenever it runs, it's always this one event type.
 local function EscapeEelString(str)
   return (str:gsub("\\", "\\\\"):gsub('"', '\\"'))
@@ -72,10 +74,10 @@ local MAGIC_PATTERN_CHARS = "^$()%.[]*+-?"
 
 -- Builds the EEL body for a CharFilter-only callback (attached only via
 -- InputTextFlags_CallbackCharFilter, never combined with CallbackAlways
--- above - see DrawWindow below - so, symmetrically with MakeReplaceCallback,
--- this never needs an EventFlag check either): live-substitutes, as the
--- user types, each `find` entry that reduces to a single literal
--- (non-pattern-magic) character - e.g. a space - with `replace`, via the
+-- above - see DrawTabContent below - so, symmetrically with
+-- MakeReplaceCallback, this never needs an EventFlag check either):
+-- live-substitutes, as the user types, each `find` entry that reduces to a
+-- single literal (non-pattern-magic) character - e.g. a space - with `replace`, via the
 -- callback's EventChar variable (a plain character code, writable only
 -- during this event - "Modify EventChar to replace, or EventChar = 0 to
 -- discard"). Only a single-character find entry paired with a 0-or-1-
@@ -98,9 +100,9 @@ local function BuildCharFilterBody(data)
 end
 
 -- Compiled once per scheme and cached (see wgt.quick.char_filter_fn in
--- DrawWindow below), not per-call like MakeReplaceCallback - the character
--- mapping only depends on `body`, which is static for as long as the same
--- `data` table is in use.
+-- DrawTabContent below), not per-call like MakeReplaceCallback - the
+-- character mapping only depends on `body`, which is static for as long as
+-- the same `data` table is in use.
 local function MakeCharFilterCallback(ctx, body)
   local fn = reaper.ImGui_CreateFunctionFromEEL(body)
   reaper.ImGui_Attach(ctx, fn)
@@ -144,6 +146,25 @@ local function BuildFullName(typed_text, enumeration)
   return typed_text .. enumeration.sep .. enumeration.wildcard
 end
 
+-- Escapes a string for safe use inside a Lua pattern - same convention as
+-- SchemeEditor.lua's own EscapePattern, duplicated here rather than shared
+-- since this module has no other dependency on that one.
+local function EscapePattern(s)
+  return (s:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%1"))
+end
+
+-- Strips a trailing "<separator><digits>" token (e.g. "_01", "_12") from a
+-- captured item name - used by "Capture Name" below. Without this, the
+-- captured text would carry over whatever enumeration the item already
+-- had, and BuildFullName would then append a SECOND one on top of it
+-- (e.g. "Amb_Bed_01" captured, then renamed again, becomes
+-- "Amb_Bed_01_02" instead of "Amb_Bed_02"). Leaves the name untouched if
+-- it doesn't end in that shape (no separator, or no trailing digits).
+local function StripTrailingEnumeration(name, separator)
+  if not separator or separator == "" then return name end
+  return (name:gsub(EscapePattern(separator) .. "%d+$", ""))
+end
+
 -- Renders inline gray "ghost" completion text after the real InputText's
 -- typed content (VSCode-style). No caret-position API exists anywhere in
 -- ReaImGui's InputText binding, so this only ever completes the trailing
@@ -177,6 +198,15 @@ end
 
 local MAX_VISIBLE_OPTIONS = 6
 
+-- Default/baseline height (unscaled px, scaled at the call site) for the
+-- Preview table, at the window's own baseline default height
+-- (Helpers.WindowDefaultHeight). Grows 1:1 with however much taller than
+-- that baseline the user has resized the window (see the table-sizing code
+-- below) - so it stays a modest fraction of the window rather than
+-- monopolizing it at the default size, but still gets genuinely bigger if
+-- the window is expanded vertically, instead of just leaving unused space.
+local QUICK_PREVIEW_TABLE_HEIGHT = 110
+
 -- Always-visible list of the next field's candidate values, rendered inline
 -- below the input (not a popup - the ghost text above already covers the
 -- "type ahead" flow; this is the complementary "or just click one" flow,
@@ -185,9 +215,9 @@ local MAX_VISIBLE_OPTIONS = 6
 -- automatically since `candidates` is already partial-filtered by the
 -- caller (NamePredictor.Predict).
 -- `selected_idx` (1-based, or nil) is a fully manual highlight - Quick
--- Naming's own window is drawn with WindowFlags_NoNavInputs (see
--- DrawWindow), so Dear ImGui's built-in keyboard-nav focus-shifting never
--- runs inside it at all: Up/Down/Tab are only ever seen via our own
+-- Naming's own child region is drawn with WindowFlags_NoNavInputs (see
+-- DrawTabContent), so Dear ImGui's built-in keyboard-nav focus-shifting
+-- never runs inside it at all: Up/Down/Tab are only ever seen via our own
 -- IsKeyPressed polling, never consumed to hop focus between the input, this
 -- list, and the Rename button. (An earlier version tried to hand off to
 -- Dear ImGui's own nav system instead - SetKeyboardFocusHere into the first
@@ -221,17 +251,16 @@ local function AcceptCandidate(data, text, partial, candidate)
   return new_text
 end
 
--- Renders the "Quick Naming" window for the currently loaded scheme
+-- Renders Quick Naming's content for the currently loaded scheme
 -- (`wgt.data`) and the currently selected target/mode (`wgt.target`/
--- `wgt.mode`, same fields the classic Naming tab uses). Returns `open`:
--- false once the user closes the window - the caller should clear its own
--- show-flag and stop calling DrawWindow until it's reopened.
-function QuickNamingGui.DrawWindow(ctx, wgt)
-  if not wgt.data or not wgt.data.fields then return true end
-  -- targets_h: a reasonable guess for the very first frame, before the
-  -- Targets section has ever been measured (see the preview-table sizing
-  -- below) - immediately replaced with a real measurement afterward.
-  wgt.quick = wgt.quick or { text = "", targets_h = 120 }
+-- `wgt.mode`, same fields the classic Scheme Naming tab uses). Called every
+-- frame the "Quick Naming" tab is active; the caller (NamingModeTabItem in
+-- the main script) already owns the surrounding BeginTabItem/EndTabItem
+-- pair, so this only needs to draw content, not manage its own window
+-- lifetime - no return value.
+function QuickNamingGui.DrawTabContent(ctx, wgt)
+  if not wgt.data or not wgt.data.fields then return end
+  wgt.quick = wgt.quick or { text = "" }
 
   local data = wgt.data
   local enumeration = BuildEnumeration(data)
@@ -243,14 +272,28 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
   local full_name = BuildFullName(wgt.quick.text, enumeration)
   local preview_rows, preview_err = Helpers.PreviewRename(wgt.target, wgt.mode, full_name, enumeration)
 
-  acendan.ImGui_PushStyles()
-  reaper.ImGui_SetNextWindowSize(ctx, 560, 480, reaper.ImGui_Cond_FirstUseEver())
-  -- The window title doubles as Dear ImGui's identity for it - if this
-  -- string changed frame-to-frame (it used to include the live item count),
-  -- ImGui would see a *different* window on every selection change and
-  -- flicker-close/reopen it. Keep it stable; the item count is shown in the
-  -- body instead (near "Preview", below).
-  local title = "Quick Text Naming - " .. (data.title or "")
+  -- Wraps this tab's content in its own child region purely to scope
+  -- WindowFlags_NoNavInputs (unchanged rationale below) to just here,
+  -- without affecting the rest of the shared main window/tab bar.
+  -- Plain size_w=0/size_h=0 ("use remaining parent window size" on both
+  -- axes, per BeginChild's own doc) rather than an AutoResize child flag -
+  -- the main window is always plainly resizable (WINDOW_FLAGS has no
+  -- AlwaysAutoResize, see the main script) and its size is whatever the
+  -- user last manually resized it to (wgt.window_w/window_h, shared
+  -- uniformly across both naming-mode tabs), so there's always real
+  -- "remaining space" here for 0,0 to fill. An earlier version tried
+  -- ChildFlags_AutoResizeX|AutoResizeY here, which was wrong for a
+  -- different reason: several widgets below (the name InputText, the
+  -- Preview table) themselves ask for "however much available width there
+  -- currently is" via GetContentRegionAvail - inside an AutoResizeX child,
+  -- that created a self-shrinking feedback loop
+  -- (available width -> small content -> child shrinks to fit -> even less
+  -- available width next frame), squeezing everything into a narrow column
+  -- instead of filling the window. Plain 0,0 sizing also means this child
+  -- (and everything inside it) properly tracks the outer window if the
+  -- user manually resizes it, rather than staying pinned to its first
+  -- auto-computed size.
+  --
   -- NoNavInputs: "no keyboard/gamepad navigation within the window" (per
   -- its doc entry) - keeps Dear ImGui's own nav-highlight from wandering
   -- between the input/list/button in response to arrow keys, which is what
@@ -258,13 +301,18 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
   -- then straight past it to the Rename button. (An earlier revision of
   -- this comment claimed this flag also disables SetKeyboardFocusHere -
   -- that was a misread; the *item*-level ItemFlags_NoNav is the one whose
-  -- doc text mentions disabling SetKeyboardFocusHere, and this window-level
-  -- flag's own text doesn't say that at all. Switching away from it broke
-  -- nothing about focus restoration - it just brought back the wandering
+  -- doc text mentions disabling SetKeyboardFocusHere, and this flag's own
+  -- text doesn't say that at all. Switching away from it broke nothing
+  -- about focus restoration - it just brought back the wandering
   -- nav-highlight outline, so it's back.) Mouse clicks on every widget
   -- still work normally; this only affects keyboard/gamepad-driven focus.
-  local rv, open = reaper.ImGui_Begin(ctx, title, true, reaper.ImGui_WindowFlags_NoNavInputs())
-  if rv then
+  --
+  -- Per BeginChild's own doc ("Begin and BeginChild are the only odd ones
+  -- out"), EndChild must always be called regardless of this return value -
+  -- only the body below is skipped when not visible.
+  local visible = reaper.ImGui_BeginChild(ctx, "##quick_naming", 0, 0,
+      reaper.ImGui_ChildFlags_None(), reaper.ImGui_WindowFlags_NoNavInputs())
+  if visible then
     reaper.ImGui_SeparatorText(ctx, data.title or "Name")
     local prediction = Predictor.Predict(data.fields, data.separator, wgt.quick.text)
 
@@ -275,9 +323,14 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     -- early would size the ghost text using the wrong (smaller) font.
     reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
 
-    -- Reserve room for the "x" clear button and the enum badge, both drawn
-    -- after the input at normal (non-BIG_FONT_SCALE) size.
-    reaper.ImGui_SetNextItemWidth(ctx, reaper.ImGui_GetContentRegionAvail(ctx) - 120)
+    -- Reserve room for the Capture Name button, the "x" clear button, and
+    -- the enum badge, all drawn after the input at normal
+    -- (non-BIG_FONT_SCALE) size. Flat pixel budget rather than measured via
+    -- CalcTextSize, since measuring "Capture Name" accurately here would
+    -- mean doing it at the WRONG, currently-pushed BIG_FONT_SCALE font
+    -- (this call runs before PopFont below) - all three trailing labels are
+    -- short/stable, so a generous flat reservation is simpler and safe.
+    reaper.ImGui_SetNextItemWidth(ctx, reaper.ImGui_GetContentRegionAvail(ctx) - 250)
     -- Auto-focus the name box the moment the window (re)appears, or after a
     -- mouse click (on the options list or the "x" button) stole focus away
     -- from it (see needs_refocus in Accept()/ClearText() below) - both need
@@ -382,6 +435,25 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
       wgt.quick.list_nav_idx = nil
     end
 
+    -- Drops the currently selected item's raw take name into the box,
+    -- unparsed (unlike the classic tab's own "Capture Name", which parses a
+    -- selected item's name into the scheme's per-field values - meaningless
+    -- here, since Quick Naming has just one free-type box, not fields),
+    -- minus any trailing enumeration token (see StripTrailingEnumeration
+    -- above) - same pending_replace/want_focus mechanism as Accept()/
+    -- ClearText() above, since this is a mouse click, not a keystroke, and
+    -- needs the same in-place active-buffer rewrite to actually stick.
+    -- No-ops if nothing is selected (or it has no name), same as the
+    -- classic tab's own "Capture Name" button silently no-op-ing on no
+    -- selection.
+    local function CaptureName()
+      local name = Helpers.GetSelectedItemName()
+      if not name then return end
+      wgt.quick.pending_replace = StripTrailingEnumeration(name, data.separator)
+      wgt.quick.want_focus = true
+      wgt.quick.list_nav_idx = nil
+    end
+
     -- wgt.quick.list_nav_idx (manually driven by the Up/Down handling
     -- below) is whichever row is currently highlighted; it drives both the
     -- ghost text and what Tab accepts, defaulting to the top-ranked
@@ -430,6 +502,15 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     end
     reaper.ImGui_PopFont(ctx)
 
+    -- Sized to input_h on the height axis only (auto width, since "Capture"
+    -- needs more room than a single "x" glyph) so it still visually lines
+    -- up with the name box and the square clear button to its right.
+    reaper.ImGui_SameLine(ctx)
+    reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
+    if reaper.ImGui_Button(ctx, "Capture Name##quick_capture_name", 0, input_h) then CaptureName() end
+    reaper.ImGui_PopItemFlag(ctx)
+    acendan.ImGui_Tooltip("Captures the name of the currently selected item into the box above.")
+
     -- Same "x##<id> + NoTabStop + clear tooltip" convention
     -- SchemeEditorGui.ComboBox/AutoFillComboBox use for their own clear
     -- buttons, but sized to input_h (the name box's own height, captured
@@ -468,11 +549,14 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     reaper.ImGui_PopFont(ctx)
     acendan.ImGui_Tooltip("Pro Tip: You can press the 'Enter' key to trigger renaming from the name field above.")
 
-    -- Scoped to this window's own focus, same reasoning as the matching fix
-    -- in the classic tab's TabNaming()/TabMetadata(): a bare IsKeyReleased
-    -- check is true regardless of which floating window currently has
-    -- focus, which would fire this alongside (or instead of) whichever
-    -- window the user actually meant to submit.
+    -- Scoped to this window's own focus (resolves against the child window
+    -- created by BeginChild above, not a top-level window - a child becomes
+    -- Dear ImGui's "focused window" once an item inside it gains keyboard
+    -- focus, which this module's own SetKeyboardFocusHere auto-focus logic
+    -- above already ensures happens): a bare IsKeyReleased check is true
+    -- regardless of which window/tab currently has focus, which would fire
+    -- this alongside (or instead of) whichever the user actually meant to
+    -- submit - e.g. another floating window like the Scheme Visual Editor.
     local enter_submit = not invalid and reaper.ImGui_IsWindowFocused(ctx) and
         reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter())
 
@@ -489,15 +573,6 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
       local apply_enumeration = BuildEnumeration(data)
       local apply_name = BuildFullName(wgt.quick.text, apply_enumeration)
       Helpers.ApplyQuickName(wgt.target, wgt.mode, apply_name, apply_enumeration)
-      -- ApplyQuickName sets wgt.quick.error as a side effect - nil on
-      -- success, an error string on failure (see Rename() in the main
-      -- script). `open` is this function's own local (from the
-      -- reaper.ImGui_Begin call above), so - unlike the classic tab, which
-      -- needs a wgt.__pending_close flag to reach Main()'s own `open` local
-      -- from a separate function - this can just close the window directly.
-      if not wgt.quick.error and Helpers.GetPreviousValue("opt_auto_close_on_rename", false) == "true" then
-        open = false
-      end
     end
     -- SameLine puts this text at the button's top, not centered - the
     -- button is drawn at BIG_FONT_SCALE (taller) while this status message
@@ -521,29 +596,15 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
     reaper.ImGui_TextDisabled(ctx, "Rename " .. #preview_rows .. " " .. ((wgt.target or "items"):lower()))
     local table_flags = reaper.ImGui_TableFlags_Borders() | reaper.ImGui_TableFlags_RowBg() |
         reaper.ImGui_TableFlags_ScrollY()
-    -- Reserve room below the table for the Targets section using its
-    -- *actual* rendered height from last frame (measured below, via
-    -- BeginGroup/EndGroup + GetItemRectSize), not a hand-estimated formula -
-    -- an earlier version guessed "separator + 3 widget rows", but
-    -- SeparatorText's real height apparently doesn't match GetTextLine
-    -- HeightWithSpacing exactly, so the guess under-reserved by a small,
-    -- constant amount - enough to make the window's own scrollbar appear
-    -- permanently, regardless of how tall the window was resized, since
-    -- the shortfall was a fixed pixel error rather than something that
-    -- scales away with more space. Measuring instead of guessing self-
-    -- corrects within a frame no matter what LoadTargets() ends up drawing.
-    local avail_w, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
-    -- ItemSpacing is pushed as {4, 4} * ui_scale (see acendan.ImGui_Styles.vars
-    -- in the main script) - ImGui inserts exactly one such gap between the
-    -- end of this table and the start of the Targets group below (BeginGroup
-    -- counts as the next item), and that gap isn't part of either's own
-    -- measured height. Left unsubtracted, the table+gap+group total overflows
-    -- avail_h by that fixed amount every frame - a constant pixel error that
-    -- doesn't shrink as the window grows, which is exactly what previously
-    -- made the window's own scrollbar appear permanently regardless of how
-    -- tall it was resized.
-    local item_spacing_y = 4 * acendan.ImGui_GetScale()
-    if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, avail_h - wgt.quick.targets_h - item_spacing_y) then
+    local avail_w = reaper.ImGui_GetContentRegionAvail(ctx)
+    -- Grows 1:1 with however much taller than the window's own baseline
+    -- default height (Helpers.WindowDefaultHeight) the user has resized it
+    -- to be - clamped at 0 so the table never shrinks below its own
+    -- default when the window is smaller than that baseline.
+    local scale = acendan.ImGui_GetScale()
+    local extra_h = math.max(0, (wgt.window_h or Helpers.WindowDefaultHeight) - Helpers.WindowDefaultHeight)
+    local table_h = (QUICK_PREVIEW_TABLE_HEIGHT + extra_h) * scale
+    if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, table_h) then
       reaper.ImGui_TableSetupColumn(ctx, "Current Name")
       reaper.ImGui_TableSetupColumn(ctx, "New Name")
       reaper.ImGui_TableHeadersRow(ctx)
@@ -566,18 +627,10 @@ function QuickNamingGui.DrawWindow(ctx, wgt)
       reaper.ImGui_EndTable(ctx)
     end
 
-    reaper.ImGui_BeginGroup(ctx)
     reaper.ImGui_SeparatorText(ctx, "Targets")
     Helpers.LoadTargets()
-    reaper.ImGui_EndGroup(ctx)
-    local _, targets_h = reaper.ImGui_GetItemRectSize(ctx)
-    wgt.quick.targets_h = targets_h
-
-    reaper.ImGui_End(ctx)
   end
-  acendan.ImGui_PopStyles()
-
-  return open
+  reaper.ImGui_EndChild(ctx)
 end
 
 return QuickNamingGui

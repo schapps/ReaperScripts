@@ -541,8 +541,14 @@ local SCRIPT_NAME = ({ reaper.get_action_context() })[2]:match("([^/\\_]+)%.lua$
 local SCRIPT_DIR  = ({ reaper.get_action_context() })[2]:sub(1,
   ({ reaper.get_action_context() })[2]:find(SEP .. "[^" .. SEP .. "]*$"))
 
-local WINDOW_SIZE  = { width = 500, height = 100 }
-local WINDOW_FLAGS = reaper.ImGui_WindowFlags_NoCollapse() | reaper.ImGui_WindowFlags_AlwaysAutoResize()
+-- Fallback size for the very first launch ever (before any resize has been
+-- persisted) - see wgt.window_w/window_h in Init()/Main(), which track and
+-- restore whatever size the user last manually resized the window to,
+-- shared uniformly across both naming modes (no per-mode auto-sizing - the
+-- window is plainly resizable, same size regardless of which tab is active,
+-- and simply remembers the user's own last resize across sessions).
+local WINDOW_SIZE  = { width = 500, height = 700 }
+local WINDOW_FLAGS = reaper.ImGui_WindowFlags_NoCollapse()
 local CONFIG_FLAGS = reaper.ImGui_ConfigFlags_DockingEnable() | reaper.ImGui_ConfigFlags_NavEnableKeyboard()
 local SLIDER_FLAGS = reaper.ImGui_SliderFlags_AlwaysClamp()
 local FLT_MIN, FLT_MAX = reaper.ImGui_NumericLimits_Float()
@@ -593,7 +599,14 @@ function Init()
   wgt.serialize = {}
   wgt.values   = {}
   wgt.last_selected_item = nil
-  wgt.show_quick_naming = GetPreviousValue("opt_quick_naming_open", false) == "true"
+  wgt.naming_mode          = GetPreviousValue("opt_naming_mode", "scheme")
+  wgt.naming_mode_restored = false
+  -- Whatever the user last manually resized the window to (any session),
+  -- shared uniformly across both naming modes - see the size-tracking
+  -- block near the top of Main(), right after Begin(), which keeps these
+  -- in sync with the window's actual live size and persists on change.
+  wgt.window_w = tonumber(GetPreviousValue("opt_window_w", WINDOW_SIZE.width))
+  wgt.window_h = tonumber(GetPreviousValue("opt_window_h", WINDOW_SIZE.height))
 
   wgt.targets = {}
   wgt.targets.Regions = { "Selected", "All", "Time Selection", "Edit Cursor" }
@@ -605,7 +618,7 @@ function Init()
   ctx = reaper.ImGui_CreateContext(SCRIPT_NAME, CONFIG_FLAGS)
   acendan.ImGui_SetFont()
   local scale = acendan.ImGui_GetScale()
-  reaper.ImGui_SetNextWindowSize(ctx, 0, WINDOW_SIZE.height * scale)
+  reaper.ImGui_SetNextWindowSize(ctx, wgt.window_w * scale, wgt.window_h * scale)
   acendan.ImGui_SetScale(scale)
 end
 
@@ -1070,9 +1083,12 @@ function TabNaming()
     reaper.ImGui_TextColored(ctx, 0xFF0000FF, wgt.error)
   elseif reaper.ImGui_IsWindowFocused(ctx) and reaper.ImGui_IsKeyReleased(ctx, reaper.ImGui_Key_Enter()) then
     -- Scoped to this window's own focus: IsKeyReleased alone is unscoped
-    -- (true regardless of which floating window has focus), which meant
-    -- pressing Enter while typing in the separate Quick Naming window would
-    -- ALSO fire this classic tab's rename using its own (unrelated) wgt.name.
+    -- (true regardless of which floating window has focus), which would
+    -- otherwise let pressing Enter while typing in another floating window
+    -- (e.g. the Scheme Visual Editor) ALSO fire this tab's rename using its
+    -- own (unrelated) wgt.name. Naming Mode tabs (Scheme Naming/Quick
+    -- Naming) share this same window and only ever run one at a time, so
+    -- they're already mutually exclusive without needing this guard.
     ApplyName()
   end
 
@@ -1237,7 +1253,7 @@ function TabSettings()
   local rv, auto_close = reaper.ImGui_Checkbox(ctx, "Auto Close on Rename", auto_close == "true" and true or false)
   if rv then SetCurrentValue("opt_auto_close_on_rename", auto_close) end
   acendan.ImGui_Tooltip(
-    "Automatically close the window after a successful rename, in both the main window and Quick Naming.")
+    "Automatically close the window after a successful rename, from either Scheme Naming or Predictive Naming.")
 
   local enable_meta = GetPreviousValue("opt_enable_meta", false)
   local rv, enable_meta = reaper.ImGui_Checkbox(ctx, "Enable Metadata Tab", enable_meta == "true" and true or false)
@@ -1485,19 +1501,27 @@ function Main()
   local rv, open = reaper.ImGui_Begin(ctx, "The Last Renamer - Schapps Edition", true, WINDOW_FLAGS)
   if not rv then return open end
 
-  if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
-    TabItem("Naming", TabNaming)
+  -- Tracks whatever size the user has manually resized the window to (no
+  -- per-mode auto-sizing - the window is plainly resizable, same size
+  -- regardless of which naming-mode tab is active) and persists it on
+  -- change, so the next launch reopens at that same size. The >1 threshold
+  -- avoids spurious extstate writes from float rounding jitter when the
+  -- size hasn't actually changed.
+  local win_w, win_h = reaper.ImGui_GetWindowSize(ctx)
+  local scale = acendan.ImGui_GetScale()
+  local unscaled_w, unscaled_h = win_w / scale, win_h / scale
+  if math.abs(unscaled_w - wgt.window_w) > 1 or math.abs(unscaled_h - wgt.window_h) > 1 then
+    wgt.window_w, wgt.window_h = unscaled_w, unscaled_h
+    SetCurrentValue("opt_window_w", unscaled_w)
+    SetCurrentValue("opt_window_h", unscaled_h)
+  end
 
-    -- No TabItemFlags_Trailing here (unlike the "?" button below) - that
-    -- flag pins a tab to the trailing edge of the bar regardless of call
-    -- order, which is what previously pushed "Quick" out to the far right.
-    -- Calling it here, as a normal tab, places it between Naming and
-    -- Metadata/Settings instead.
-    if reaper.ImGui_TabItemButton(ctx, wgt.show_quick_naming and "[Quick]" or "Quick") then
-      wgt.show_quick_naming = not wgt.show_quick_naming
-      SetCurrentValue("opt_quick_naming_open", wgt.show_quick_naming)
-    end
-    acendan.ImGui_Tooltip("Opens Quick Naming: a free-type name box with live, scheme-aware autocomplete suggestions.")
+  if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
+    local do_restore_naming_mode = not wgt.naming_mode_restored
+
+    NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode)
+    NamingModeTabItem("quick", "Predictive Naming",
+        function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode)
 
     TabItem("Metadata", TabMetadata, "opt_enable_meta")
     TabItem("Settings", TabSettings)
@@ -1508,6 +1532,7 @@ function Main()
     end
 
     reaper.ImGui_EndTabBar(ctx)
+    wgt.naming_mode_restored = true
   end
 
   if reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Escape()) and
@@ -1531,14 +1556,6 @@ function Main()
     local editor_open, editor_reload = SchemeVisualizer.DrawWindow(ctx, wgt.data)
     if not editor_open then wgt.show_visual_editor = false end
     if editor_reload then wgt.__pending_reload = editor_reload end
-  end
-
-  if wgt.show_quick_naming and wgt.data then
-    local quick_open = QuickNamingGui.DrawWindow(ctx, wgt)
-    if not quick_open then
-      wgt.show_quick_naming = false
-      SetCurrentValue("opt_quick_naming_open", false)
-    end
   end
 
   if open then reaper.defer(Main) else return end
@@ -2023,6 +2040,20 @@ local function FillFields(fields, parent, parts, state)
   end
 end
 
+-- Quick Naming's counterpart to AutoFillFromItem below - that one parses a
+-- selected item's name into the scheme's own per-field values, which only
+-- makes sense for Scheme Naming's structured fields. Quick Naming has just
+-- one free-type text box, so its own "Capture Name" button only needs the
+-- raw take name itself, unparsed, for the user to drop in and edit further.
+function GetSelectedItemName()
+  local item = reaper.GetSelectedMediaItem(0, 0)
+  if not item then return nil end
+  local take = reaper.GetActiveTake(item)
+  if not take then return nil end
+  local _, name = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
+  return name ~= "" and name or nil
+end
+
 function AutoFillFromItem(item, force)
   if not wgt.data or not wgt.data.fields or not wgt.data.separator then return end
   local take = reaper.GetActiveTake(item)
@@ -2074,6 +2105,44 @@ function TabItem(name, tab, setting)
   end
 end
 
+-- Like TabItem() above, but for one of the two mutually-exclusive naming-
+-- mode tabs (Scheme Naming / Quick Naming). `do_restore` is a single
+-- snapshot of "has the remembered mode already been restored this launch",
+-- taken ONCE per frame by the caller before either naming-mode tab runs -
+-- so only the one matching wgt.naming_mode ever forces itself selected via
+-- TabItemFlags_SetSelected, and only on that one-shot frame. Every frame
+-- after that, do_restore is false, so this never re-fights whatever the
+-- user actually clicks - selection is then driven purely by BeginTabItem's
+-- own click-driven return value. Persisting to wgt.naming_mode/
+-- opt_naming_mode is ALSO gated on `not do_restore` (see below) - never
+-- write back on the restore frame itself, only on genuine later clicks.
+function NamingModeTabItem(mode_key, name, tab, do_restore)
+  local flags = (do_restore and wgt.naming_mode == mode_key) and
+      reaper.ImGui_TabItemFlags_SetSelected() or reaper.ImGui_TabItemFlags_None()
+  -- p_open must be `false` (not nil) to skip the close button while still
+  -- reaching the `flags` argument - passing nil for an in/out bool ref
+  -- parameter isn't the same as omitting it in this API (confirmed against
+  -- other real ReaImGui scripts' BeginTabItem calls with flags).
+  if reaper.ImGui_BeginTabItem(ctx, name, false, flags) then
+    -- Gated on `not do_restore`: on the one-shot restore frame, Dear
+    -- ImGui's tab bar may report a DIFFERENT tab as active than the one
+    -- SetSelected asked for (e.g. its own "first registered tab wins"
+    -- default winning a same-frame race before the override fully lands) -
+    -- if that happened and this branch weren't gated, it would treat that
+    -- mismatch as a genuine user click and immediately overwrite/persist
+    -- the just-loaded wgt.naming_mode back to the WRONG value, permanently
+    -- erasing the remembered mode on every single launch. Only real,
+    -- post-restore clicks (do_restore already false by then) should ever
+    -- update or persist the mode.
+    if not do_restore and wgt.naming_mode ~= mode_key then
+      wgt.naming_mode = mode_key
+      SetCurrentValue("opt_naming_mode", mode_key)
+    end
+    tab()
+    reaper.ImGui_EndTabItem(ctx)
+  end
+end
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~ RENAMING ~~~~~~~~~
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2103,7 +2172,15 @@ end
 function ApplyQuickName(target, mode, name, enumeration)
   reaper.Undo_BeginBlock()
   wgt.quick.error = Rename(target, mode, name, enumeration)
-  reaper.Undo_EndBlock("The Last Renamer - Quick Naming", -1)
+  reaper.Undo_EndBlock("The Last Renamer - Predictive Naming", -1)
+  -- Rename() returns nil on success. Quick Naming no longer has its own
+  -- sub-window to close now that it's a tab in the shared main window, so
+  -- this closes the WHOLE window via the same wgt.__pending_close flag
+  -- ApplyName() uses (consumed once in Main() right before its End()) -
+  -- mirroring the classic tab's behavior exactly.
+  if not wgt.quick.error and GetPreviousValue("opt_auto_close_on_rename", false) == "true" then
+    wgt.__pending_close = true
+  end
 end
 
 function Rename(target, mode, name, enumeration)
@@ -2598,12 +2675,13 @@ NamePredictor.init({
   Capitalize    = Capitalize,
 })
 QuickNamingGui.init(NamePredictor, {
-  PreviewRename     = PreviewRename,
-  ApplyQuickName    = ApplyQuickName,
-  LoadTargets       = LoadTargets,
-  FindField         = FindField,
-  PadZeroes         = PadZeroes,
-  GetPreviousValue  = GetPreviousValue,
+  PreviewRename        = PreviewRename,
+  ApplyQuickName       = ApplyQuickName,
+  LoadTargets          = LoadTargets,
+  FindField            = FindField,
+  PadZeroes            = PadZeroes,
+  WindowDefaultHeight  = WINDOW_SIZE.height,
+  GetSelectedItemName  = GetSelectedItemName,
 }, acendan)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
