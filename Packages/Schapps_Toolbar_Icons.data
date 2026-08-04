@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.17
+-- @version 1.18
 -- @changelog
---    Adding toolbar icons for ReaStart Dashboard
+--    Adding toolbar icons for ReaDepot
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
