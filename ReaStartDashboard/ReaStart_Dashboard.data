@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.20
+-- @version 0.30
 -- @changelog
---    v0.20 - Lots of features additions including perforce support, directory tab
+--    v0.20 - Bringing Track templates tab presentation to parity
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
