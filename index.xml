@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="8c9cf282cf59458a98173d5b8235f68b19b735b6">
+<index version="1" name="SPS Scripts" commit="9fdf0e568a1864f92321f81ddd2a1973c582c95a">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -5896,6 +5896,13 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/reaper_reastart.dll</source>
         <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/reaper_reastart.dylib</source>
         <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/132c0f20e1125ea9a6114759e5e733543dad47c1/ReaStartDashboard/fa-solid-900.ttf</source>
+      </version>
+      <version name="0.20" author="Stephen Schappler" time="2026-08-05T23:04:00Z">
+        <changelog><![CDATA[v0.20 - Lots of features additions including perforce support, directory tab]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/9fdf0e568a1864f92321f81ddd2a1973c582c95a/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/9fdf0e568a1864f92321f81ddd2a1973c582c95a/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/9fdf0e568a1864f92321f81ddd2a1973c582c95a/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/9fdf0e568a1864f92321f81ddd2a1973c582c95a/ReaStartDashboard/ReaStartDashboardLogo.png</source>
       </version>
     </reapack>
   </category>
