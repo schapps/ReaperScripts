@@ -1019,6 +1019,7 @@ function M.CommitDeleteWildcard(source_path, name)
   return Editor.CommitDeleteWildcard(source_path, name)
 end
 
+<<<<<<< HEAD
 -- Proxies for SchemeEditor's root-settings-management functions - same
 -- rationale as the wildcard proxies above.
 function M.ListRootSettings(source_path)
@@ -1035,6 +1036,13 @@ end
 
 function M.CommitRemoveRootKey(source_path, key)
   return Editor.CommitRemoveRootKey(source_path, key)
+=======
+-- Delegates a dropdown-option drag-reorder (Visual Editor inspector) to the
+-- base editor, so SchemeVisualizer.lua only ever talks to this module - same
+-- thin-wrapper policy as the wildcard commits above.
+function M.CommitReorderOption(field, source_path, from_index, to_index)
+  return Editor.CommitReorderItemTo(field, source_path, from_index, to_index)
+>>>>>>> dbda23f (updating reastart dashboard and last renamer work)
 end
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
