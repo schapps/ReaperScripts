@@ -1,12 +1,15 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.30
+-- @version 0.50
 -- @changelog
---    v0.20 - Bringing Track templates tab presentation to parity
+--    v0.50 - Tons of UI improvements, new Geist font
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
 --    [extension] fa-solid-900.ttf > ReaStart/
+--    [extension] Geist-Bold.ttf > ReaStart/
+--    [extension] Geist-Regular.ttf > ReaStart/
+--    [extension] GeistMono-Regular.ttf > ReaStart/
 --    [extension] ReaStartDashboardLogo.png > ReaStart/
 -- @about
 --    # ReaStart Dashboard
