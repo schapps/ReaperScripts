@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 0.50
+-- @version 0.60
 -- @changelog
---    v0.50 - Tons of UI improvements, new Geist font
+--    v0.60 - Set default font size to 18, Add tag number feedback and about section
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
