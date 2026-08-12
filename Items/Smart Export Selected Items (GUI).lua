@@ -1,15 +1,19 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.0
+-- @version 1.1
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
---   and folder browsing. Run the companion headless script to re-export using
---   the last-active template without the GUI appearing.
+--   and folder browsing.
+--   Note: the companion "Smart Export Selected Items" (headless) script no
+--   longer reads templates set here -- as of its v2.3 it only uses its own
+--   sidecar config file (see "Smart Export Selected Items - Configure").
 --   SWS extension is required.
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
 --   05/28/26 v1.0 - Initial release
+--   08/11/26 v1.1 - Corrected stale doc comment: headless script no longer shares
+--                   settings with this GUI's templates via ExtState
 
 -- ============================================================
 -- Dependency checks
