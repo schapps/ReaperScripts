@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.18
+-- @version 1.19
 -- @changelog
---    Adding toolbar icons for ReaDepot
+--    Adding toolbar icons
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png

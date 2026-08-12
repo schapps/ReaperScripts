@@ -1,8 +1,8 @@
 -- @description Schapps Track Icons
 -- @author Stephen Schappler
--- @version 1.10
+-- @version 1.11
 -- @changelog
---    Adding quad track icon for new script
+--    Adding more track icons
 -- @provides
 --    [data] track_icons/*.png
 
