@@ -1,9 +1,10 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.1
+-- @version 1.3
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
---   and folder browsing.
+--   folder browsing, and per-template auto-downmix of highly-correlated
+--   stereo items to mono before export.
 --   Note: the companion "Smart Export Selected Items" (headless) script no
 --   longer reads templates set here -- as of its v2.3 it only uses its own
 --   sidecar config file (see "Smart Export Selected Items - Configure").
@@ -14,6 +15,9 @@
 --   05/28/26 v1.0 - Initial release
 --   08/11/26 v1.1 - Corrected stale doc comment: headless script no longer shares
 --                   settings with this GUI's templates via ExtState
+--   08/11/26 v1.2 - Added per-template stereo-correlation mono downmix (checkbox +
+--                   threshold), matching the headless script's v2.2 feature
+--   08/11/26 v1.3 - Default tail changed from 2000ms to 0ms for new templates
 
 -- ============================================================
 -- Dependency checks
@@ -50,13 +54,15 @@ local theme = dofile(theme_path)
 -- Template I/O
 -- ============================================================
 local DEFAULTS = {
-  name                 = "Default",
-  render_output_dir    = "",
-  render_output_pattern= "$project\\$item",
-  normalize_enabled    = false,
-  normalize_mode       = "lufs_i",
-  normalize_target_db  = -24.0,
-  tail_ms              = 2000,
+  name                   = "Default",
+  render_output_dir      = "",
+  render_output_pattern  = "$project\\$item",
+  normalize_enabled      = false,
+  normalize_mode         = "lufs_i",
+  normalize_target_db    = -24.0,
+  tail_ms                = 0,
+  mono_downmix_enabled   = true,
+  mono_downmix_threshold = 0.9,
 }
 
 local function ensure_tpl_dir()
@@ -79,6 +85,8 @@ local function save_template(t)
   f:write("normalize_mode        = " .. string.format("%q", t.normalize_mode)        .. "\n")
   f:write("normalize_target_db   = " .. tostring(t.normalize_target_db)              .. "\n")
   f:write("tail_ms               = " .. tostring(t.tail_ms)                          .. "\n")
+  f:write("mono_downmix_enabled   = " .. tostring(t.mono_downmix_enabled)             .. "\n")
+  f:write("mono_downmix_threshold = " .. tostring(t.mono_downmix_threshold)           .. "\n")
   f:close()
 end
 
@@ -150,6 +158,79 @@ local function normalize_bits(t)
   local bits = 0x1  -- enable
   if t.normalize_mode == "lufs_m" then bits = bits | 0x8 end
   return bits
+end
+
+-- ============================================================
+-- Stereo correlation / mono downmix
+-- ============================================================
+local CORRELATION_ANALYSIS_SAMPLERATE = 8000
+local CORRELATION_BLOCK_FRAMES        = 8192
+local CORRELATION_DEBUG_LOG           = false  -- prints correlation results to the ReaScript console; set to true to debug
+
+-- Returns Pearson correlation coefficient (-1..1) of L/R channels across the
+-- full range of audio available from the take's audio accessor, or nil if it
+-- couldn't be computed.
+local function compute_stereo_correlation(take)
+  local accessor = reaper.CreateTakeAudioAccessor(take)
+  if not accessor then return nil end
+
+  -- Query the accessor's own valid time range rather than assuming it lines up
+  -- with the item's project-time D_POSITION/D_LENGTH -- passing project-time
+  -- positions directly yields 0 samples every call.
+  local start_pos = reaper.GetAudioAccessorStartTime(accessor)
+  local end_pos    = reaper.GetAudioAccessorEndTime(accessor)
+
+  if CORRELATION_DEBUG_LOG then
+    reaper.ShowConsoleMsg(string.format("[Smart Export]   accessor range: %.3fs - %.3fs\n", start_pos, end_pos))
+  end
+
+  local samplerate   = CORRELATION_ANALYSIS_SAMPLERATE
+  local num_channels  = 2
+  local block_frames  = CORRELATION_BLOCK_FRAMES
+  local samplebuffer  = reaper.new_array(block_frames * num_channels)
+
+  local sum_l, sum_r, sum_l2, sum_r2, sum_lr, n = 0.0, 0.0, 0.0, 0.0, 0.0, 0
+  local pos = start_pos
+
+  while pos < end_pos do
+    samplebuffer.clear()
+    local ret = reaper.GetAudioAccessorSamples(accessor, samplerate, num_channels, pos, block_frames, samplebuffer)
+    if ret == -1 then break end
+    if ret == 1 then
+      -- GetAudioAccessorSamples' return value is a status flag (0/1/-1), NOT a
+      -- frame count, so clamp how many frames of this block fall inside our
+      -- analysis window ourselves.
+      local frames_in_range = math.min(block_frames, math.floor((end_pos - pos) * samplerate))
+      if frames_in_range > 0 then
+        local buf = samplebuffer.table()
+        for f = 0, frames_in_range - 1 do
+          local l = buf[f * num_channels + 1]
+          local r = buf[f * num_channels + 2]
+          sum_l  = sum_l  + l
+          sum_r  = sum_r  + r
+          sum_l2 = sum_l2 + l * l
+          sum_r2 = sum_r2 + r * r
+          sum_lr = sum_lr + l * r
+          n = n + 1
+        end
+      end
+    end
+    pos = pos + (block_frames / samplerate)
+  end
+
+  reaper.DestroyAudioAccessor(accessor)
+
+  if n < 2 then return nil end
+
+  local denom_l = n * sum_l2 - sum_l * sum_l
+  local denom_r = n * sum_r2 - sum_r * sum_r
+  local denom = math.sqrt(denom_l * denom_r)
+  if denom == 0 then
+    -- Both channels constant (e.g. silence/DC): identical constants = fully
+    -- correlated, differing constants = uncorrelated.
+    return (denom_l == 0 and denom_r == 0) and 1.0 or 0.0
+  end
+  return (n * sum_lr - sum_l * sum_r) / denom
 end
 
 -- ============================================================
@@ -225,6 +306,8 @@ local function run_export(t)
     return
   end
 
+  reaper.Undo_BeginBlock()  -- moved earlier so chanmode writes below are bundled
+
   local selected_guids = {}
   for i = 0, num_selected - 1 do
     local item = reaper.GetSelectedMediaItem(0, i)
@@ -251,6 +334,25 @@ local function run_export(t)
       end
       local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
       local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+
+      if t.mono_downmix_enabled and src_ch == 2 then
+        local corr = compute_stereo_correlation(take)
+        if CORRELATION_DEBUG_LOG then
+          local _, dbg_name = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
+          reaper.ShowConsoleMsg(string.format(
+            "[Smart Export] '%s' @ %.3fs: correlation = %s (threshold %.2f)%s\n",
+            dbg_name ~= "" and dbg_name or "(untitled take)",
+            pos,
+            corr and string.format("%.4f", corr) or "nil (accessor/analysis failed)",
+            t.mono_downmix_threshold,
+            (corr and corr >= t.mono_downmix_threshold) and "  -> DOWNMIXING TO MONO" or ""
+          ))
+        end
+        if corr and corr >= t.mono_downmix_threshold then
+          reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", 2)
+        end
+      end
+
       local _, name = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
       table.insert(item_list, {
         item = item, take = take,
@@ -269,10 +371,9 @@ local function run_export(t)
       table.concat(mismatches, "\n")
         .. "\n\nSet the track channel count to match multichannel items before exporting.",
       "Item/Track Channel Mismatch", 0)
+    reaper.Undo_EndBlock('Smart Render Selected Items (aborted)', -1)
     return
   end
-
-  reaper.Undo_BeginBlock()
 
   local by_name = {}
   for _, info in ipairs(item_list) do
@@ -350,12 +451,14 @@ local templates     = {}
 local active_idx    = 1
 
 -- Live edit buffers (synced from/to active template)
-local dir_buf       = ""
-local pattern_buf   = ""
-local norm_en       = false
-local norm_mode     = "lufs_i"
-local norm_db_buf   = "-24.0"
-local tail_buf      = "2000"
+local dir_buf         = ""
+local pattern_buf     = ""
+local norm_en         = false
+local norm_mode       = "lufs_i"
+local norm_db_buf     = "-24.0"
+local tail_buf        = "0"
+local mono_downmix_en = true
+local mono_thresh_buf = "0.9"
 
 -- Rename modal state
 local rename_pending    = false
@@ -375,21 +478,25 @@ local open = true
 -- Buffer helpers
 -- ============================================================
 local function sync_buffers_from(t)
-  dir_buf     = t.render_output_dir
-  pattern_buf = t.render_output_pattern
-  norm_en     = t.normalize_enabled
-  norm_mode   = t.normalize_mode
-  norm_db_buf = tostring(t.normalize_target_db)
-  tail_buf    = tostring(t.tail_ms)
+  dir_buf         = t.render_output_dir
+  pattern_buf     = t.render_output_pattern
+  norm_en         = t.normalize_enabled
+  norm_mode       = t.normalize_mode
+  norm_db_buf     = tostring(t.normalize_target_db)
+  tail_buf        = tostring(t.tail_ms)
+  mono_downmix_en = t.mono_downmix_enabled
+  mono_thresh_buf = tostring(t.mono_downmix_threshold)
 end
 
 local function flush_buffers_to(t)
-  t.render_output_dir     = dir_buf
-  t.render_output_pattern = pattern_buf
-  t.normalize_enabled     = norm_en
-  t.normalize_mode        = norm_mode
-  t.normalize_target_db   = tonumber(norm_db_buf) or t.normalize_target_db
-  t.tail_ms               = tonumber(tail_buf)    or t.tail_ms
+  t.render_output_dir      = dir_buf
+  t.render_output_pattern  = pattern_buf
+  t.normalize_enabled      = norm_en
+  t.normalize_mode         = norm_mode
+  t.normalize_target_db    = tonumber(norm_db_buf)   or t.normalize_target_db
+  t.tail_ms                = tonumber(tail_buf)      or t.tail_ms
+  t.mono_downmix_enabled   = mono_downmix_en
+  t.mono_downmix_threshold = tonumber(mono_thresh_buf) or t.mono_downmix_threshold
 end
 
 -- ============================================================
@@ -549,6 +656,13 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Filename")
 
+      -- Token hint
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+      ImGui.Text(ctx, "Tokens: $item  $project  $projectpath  $user  $date")
+      ImGui.PopStyleColor(ctx)
+
       -- Normalize
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
@@ -584,14 +698,25 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Tail (ms)")
 
+      -- Mono Downmix
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_mono_en = ImGui.Checkbox(ctx, "##mono_en", mono_downmix_en)
+      mono_downmix_en = new_mono_en
+      ImGui.SameLine(ctx)
+      if not mono_downmix_en then ImGui.BeginDisabled(ctx, true) end
+      ImGui.SetNextItemWidth(ctx, 58)
+      local _, new_thresh = ImGui.InputText(ctx, "##mono_thresh", mono_thresh_buf,
+        ImGui.InputTextFlags_CharsDecimal)
+      mono_thresh_buf = new_thresh
+      ImGui.SameLine(ctx)
+      ImGui.Text(ctx, "correlation threshold")
+      if not mono_downmix_en then ImGui.EndDisabled(ctx) end
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Mono Downmix")
+
       ImGui.EndTable(ctx)
     end
-
-    -- Token hint
-    ImGui.Spacing(ctx)
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    ImGui.Text(ctx, "Tokens: $item  $project  $projectpath  $user  $date")
-    ImGui.PopStyleColor(ctx)
 
     ImGui.Spacing(ctx)
     ImGui.Separator(ctx)
