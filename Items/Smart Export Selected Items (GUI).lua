@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.3
+-- @version 1.4
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -18,6 +18,8 @@
 --   08/11/26 v1.2 - Added per-template stereo-correlation mono downmix (checkbox +
 --                   threshold), matching the headless script's v2.2 feature
 --   08/11/26 v1.3 - Default tail changed from 2000ms to 0ms for new templates
+--   08/12/26 v1.4 - Correlated stereo downmix now uses mono (left) take channel mode
+--                   instead of mono (mixdown), so only the left channel is kept.
 
 -- ============================================================
 -- Dependency checks
@@ -349,7 +351,7 @@ local function run_export(t)
           ))
         end
         if corr and corr >= t.mono_downmix_threshold then
-          reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", 2)
+          reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", 3)
         end
       end
 
