@@ -2,7 +2,7 @@
 -- @author Stephen Schappler
 -- @version 1.0
 -- @changelog
---    v1.0 - First complete release
+--    v1.1 - Adding quick search and project health monitor features
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
