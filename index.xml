@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e">
+<index version="1" name="SPS Scripts" commit="21010bbcc0190029dec5ecc09e8041ec6baa7911">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -6644,6 +6644,16 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/Geist-Regular.ttf</source>
         <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/GeistMono-Regular.ttf</source>
         <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/ReaStartDashboardLogo.png</source>
+      </version>
+      <version name="1.1.1" author="Stephen Schappler" time="2026-08-17T17:59:17Z">
+        <changelog><![CDATA[v1.1.1 - Aligning health check parameters more closely with Reaper]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Bold.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/Geist-Bold.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/Geist-Regular.ttf</source>
+        <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/GeistMono-Regular.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/ReaStartDashboardLogo.png</source>
       </version>
     </reapack>
   </category>
