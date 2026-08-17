@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.1.1
 -- @changelog
---    v1.1 - Adding quick search and project health monitor features
+--    v1.1.1 - Aligning health check parameters more closely with Reaper
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
