@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.25
+-- @version 1.29
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -16,6 +16,28 @@
 --                    checkbox (default on, matching prior behavior). When
 --                    off, the dialog stays open after rendering instead of
 --                    closing.
+--   08/22/26 v1.26 - Directory and Filename inputs now use the monospace
+--                    font too, matching the resolved-path preview rows.
+--   08/22/26 v1.27 - Added per-template Sample Rate (44.1/48/88.2/96/176.4/
+--                    192kHz, default 96kHz) and Bit Depth (16/24/32-bit
+--                    float, default 24-bit) dropdowns at the top of the
+--                    RENDER section, replacing the previously hardcoded
+--                    96kHz/24-bit. Bit depth is applied via a per-depth
+--                    RENDER_FORMAT blob (byte layout confirmed against
+--                    Ultraschall's documented REAPER render-config format
+--                    and cross-checked against this machine's own saved
+--                    render presets in reaper-render.ini, which use the
+--                    same 24-bit blob this script already hardcoded).
+--   08/22/26 v1.28 - Added per-template "2nd Pass Render" checkbox (default
+--                    off) after Render via Master, mapping to RENDER_SETTINGS
+--                    bit 0x800 -- confirmed against Ultraschall's documented
+--                    render-preset bitfield (various_checkboxes2 &2048).
+--   08/22/26 v1.29 - Added a "Color" submenu to the tab right-click context
+--                    menu (alongside Rename/Delete): an embedded ColorPicker3
+--                    plus "Clear Color", persisted per-template. Colored
+--                    templates get a thin accent bar on the tab's left edge
+--                    (visible whether or not the tab is active) so they stay
+--                    identifiable at a glance.
 
 -- ============================================================
 -- Dependency checks
@@ -58,13 +80,17 @@ local DEFAULTS = {
   normalize_enabled      = false,
   normalize_mode         = "lufs_i",
   normalize_target_db    = -24.0,
+  sample_rate            = 96000,
+  bit_depth              = 24,
   tail_ms                = 0,
   mono_downmix_enabled   = true,
   mono_downmix_threshold = 0.9,
   mono_downmix_mode      = "left",
   open_folder_after      = false,
   render_via_master      = true,
+  second_pass_render     = false,
   close_after_render     = true,
+  tab_color              = 0,
 }
 
 -- I_CHANMODE values for each mono downmix mode option
@@ -93,13 +119,17 @@ local function save_template(t)
   f:write("normalize_enabled     = " .. tostring(t.normalize_enabled)                .. "\n")
   f:write("normalize_mode        = " .. string.format("%q", t.normalize_mode)        .. "\n")
   f:write("normalize_target_db   = " .. tostring(t.normalize_target_db)              .. "\n")
+  f:write("sample_rate           = " .. tostring(t.sample_rate)                      .. "\n")
+  f:write("bit_depth             = " .. tostring(t.bit_depth)                        .. "\n")
   f:write("tail_ms               = " .. tostring(t.tail_ms)                          .. "\n")
   f:write("mono_downmix_enabled   = " .. tostring(t.mono_downmix_enabled)             .. "\n")
   f:write("mono_downmix_threshold = " .. tostring(t.mono_downmix_threshold)           .. "\n")
   f:write("mono_downmix_mode      = " .. string.format("%q", t.mono_downmix_mode)     .. "\n")
   f:write("open_folder_after      = " .. tostring(t.open_folder_after)                .. "\n")
   f:write("render_via_master      = " .. tostring(t.render_via_master)                .. "\n")
+  f:write("second_pass_render     = " .. tostring(t.second_pass_render)               .. "\n")
   f:write("close_after_render     = " .. tostring(t.close_after_render)               .. "\n")
+  f:write("tab_color              = " .. tostring(t.tab_color)                        .. "\n")
   f:close()
 end
 
@@ -271,6 +301,23 @@ end
 -- ============================================================
 -- Render settings + export
 -- ============================================================
+-- Base64-encoded RENDER_FORMAT blobs for WAV output at each supported bit
+-- depth. Layout (per Ultraschall's documented REAPER render-config format):
+-- bytes 1-4 "evaw" (WAV fourCC reversed), byte 5 = bit depth (16/24/32,
+-- where 32 means 32-bit float per REAPER's own WAV encoder), byte 6 = 0x06
+-- (BWF chunk + project filename in BWF data), byte 7 = 0 (force WAV, not
+-- RF64/Wave64). Only byte 5 varies with bit depth; bytes 6-7 match this
+-- script's original fixed 24-bit default so behavior otherwise doesn't change.
+local RENDER_FORMAT_BLOBS = {
+  [16] = "ZXZhdxAGAA==",
+  [24] = "ZXZhdxgGAA==",
+  [32] = "ZXZhdyAGAA==",
+}
+
+local SAMPLE_RATE_OPTIONS = {44100, 48000, 88200, 96000, 176400, 192000}
+local BIT_DEPTH_OPTIONS = {16, 24, 32}
+local BIT_DEPTH_LABELS = {[16] = "16-bit", [24] = "24-bit", [32] = "32-bit Float"}
+
 local function apply_render_settings(t)
   local SETTINGS_MASK = 0x7FFF
   -- multichannel tracks to multichannel files (0x4) + mono media to mono files (0x10)
@@ -278,12 +325,15 @@ local function apply_render_settings(t)
   local BASE_RENDER_SETTINGS = 0x4 | 0x10 | 0x200
   local SOURCE_SELECTED_ITEMS             = 0x20  -- selected media items
   local SOURCE_SELECTED_ITEMS_VIA_MASTER  = 0x40  -- selected media items via master
+  local SECOND_PASS_RENDER                = 0x800 -- 2nd pass render
   local source_bit = t.render_via_master and SOURCE_SELECTED_ITEMS_VIA_MASTER or SOURCE_SELECTED_ITEMS
   local render_settings = BASE_RENDER_SETTINGS | source_bit
+  if t.second_pass_render then render_settings = render_settings | SECOND_PASS_RENDER end
 
-  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT',  'ZXZhdxgGAA==', true)
+  local format_blob = RENDER_FORMAT_BLOBS[t.bit_depth] or RENDER_FORMAT_BLOBS[24]
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT',  format_blob, true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '',             true)
-  reaper.GetSetProjectInfo(0, 'RENDER_SRATE',    96000, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_SRATE',    t.sample_rate, true)
   reaper.GetSetProjectInfo(0, 'RENDER_CHANNELS', 2,     true)
   reaper.GetSetProjectInfo(0, 'RENDER_DITHER',   0,     true)
 
@@ -629,12 +679,15 @@ local pattern_buf     = ""
 local norm_en         = false
 local norm_mode       = "lufs_i"
 local norm_db_buf     = "-24.0"
+local sample_rate     = 96000
+local bit_depth       = 24
 local tail_buf        = "0"
 local mono_downmix_en = true
 local mono_thresh_buf = "0.9"
 local mono_downmix_mode = "left"
 local open_folder_en  = false
 local render_via_master_en = true
+local second_pass_render_en = false
 local close_after_render_en = true
 
 -- Rename modal state
@@ -666,12 +719,15 @@ local function sync_buffers_from(t)
   norm_en         = t.normalize_enabled
   norm_mode       = t.normalize_mode
   norm_db_buf     = tostring(t.normalize_target_db)
+  sample_rate     = t.sample_rate
+  bit_depth       = t.bit_depth
   tail_buf        = tostring(t.tail_ms)
   mono_downmix_en   = t.mono_downmix_enabled
   mono_thresh_buf   = tostring(t.mono_downmix_threshold)
   mono_downmix_mode = t.mono_downmix_mode
   open_folder_en    = t.open_folder_after
   render_via_master_en = t.render_via_master
+  second_pass_render_en = t.second_pass_render
   close_after_render_en = t.close_after_render
 end
 
@@ -681,12 +737,15 @@ local function flush_buffers_to(t)
   t.normalize_enabled      = norm_en
   t.normalize_mode         = norm_mode
   t.normalize_target_db    = tonumber(norm_db_buf)   or t.normalize_target_db
+  t.sample_rate            = sample_rate
+  t.bit_depth              = bit_depth
   t.tail_ms                = tonumber(tail_buf)      or t.tail_ms
   t.mono_downmix_enabled   = mono_downmix_en
   t.mono_downmix_threshold = tonumber(mono_thresh_buf) or t.mono_downmix_threshold
   t.mono_downmix_mode      = mono_downmix_mode
   t.open_folder_after      = open_folder_en
   t.render_via_master      = render_via_master_en
+  t.second_pass_render     = second_pass_render_en
   t.close_after_render     = close_after_render_en
 end
 
@@ -764,15 +823,23 @@ local function loop()
         -- new_open    = false when the user clicks the × close button
         local tab_visible, new_open = ImGui.BeginTabItem(ctx, t.name, true, 0)
 
+        -- GetItemRectMin/Max here refer to the tab item itself, so both
+        -- accent draws below must run immediately after BeginTabItem.
+        local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
+        local tab_max_x, tab_max_y = ImGui.GetItemRectMax(ctx)
+        local draw_list = ImGui.GetWindowDrawList(ctx)
+
+        -- Per-template custom color: a thin bar along the tab's left edge,
+        -- visible whether or not the tab is active, so templates stay
+        -- identifiable by color even when not selected.
+        if t.tab_color ~= 0 then
+          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_min_x + 3, tab_max_y, t.tab_color)
+        end
+
         -- Accent top-border on the active tab -- only needed as a fallback
         -- when this ReaImGui build has no native Col_TabSelectedOverline
-        -- (pushed above), which already draws this for us. GetItemRectMin/
-        -- Max here refer to the tab item itself, so this must run
-        -- immediately after BeginTabItem.
+        -- (pushed above), which already draws this for us.
         if tab_visible and not col_tab_overline then
-          local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
-          local tab_max_x = select(1, ImGui.GetItemRectMax(ctx))
-          local draw_list = ImGui.GetWindowDrawList(ctx)
           ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_max_x, tab_min_y + 2, 0xA08FE2FF)
         end
 
@@ -783,6 +850,20 @@ local function loop()
             rename_idx      = i
             rename_buf      = t.name
             rename_dup_err  = false
+          end
+          if ImGui.BeginMenu(ctx, "Color") then
+            local rgb = (t.tab_color >> 8) & 0xFFFFFF
+            local color_changed, new_rgb = ImGui.ColorPicker3(ctx, "##tab_color_picker", rgb)
+            if color_changed then
+              t.tab_color = (new_rgb << 8) | 0xFF
+              save_template(t)
+            end
+            ImGui.Separator(ctx)
+            if ImGui.MenuItem(ctx, "Clear Color", nil, false, t.tab_color ~= 0) then
+              t.tab_color = 0
+              save_template(t)
+            end
+            ImGui.EndMenu(ctx)
           end
           local can_delete = #templates > 1
           if not can_delete then ImGui.BeginDisabled(ctx, true) end
@@ -974,6 +1055,30 @@ local function loop()
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
       ImGui.SetNextItemWidth(ctx, -1)
+      if ImGui.BeginCombo(ctx, "##sample_rate", ("%d Hz"):format(sample_rate), 0) then
+        for _, sr in ipairs(SAMPLE_RATE_OPTIONS) do
+          if ImGui.Selectable(ctx, ("%d Hz"):format(sr), sample_rate == sr, 0) then sample_rate = sr end
+        end
+        ImGui.EndCombo(ctx)
+      end
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Sample Rate")
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
+      if ImGui.BeginCombo(ctx, "##bit_depth", BIT_DEPTH_LABELS[bit_depth] or (bit_depth .. "-bit"), 0) then
+        for _, bd in ipairs(BIT_DEPTH_OPTIONS) do
+          if ImGui.Selectable(ctx, BIT_DEPTH_LABELS[bd], bit_depth == bd, 0) then bit_depth = bd end
+        end
+        ImGui.EndCombo(ctx)
+      end
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Bit Depth")
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
       local _, new_tail = ImGui.InputText(ctx, "##tail", tail_buf,
         ImGui.InputTextFlags_CharsDecimal)
       tail_buf = new_tail
@@ -992,6 +1097,18 @@ local function loop()
         "When checked, selected items are rendered through the master bus (and any "
         .. "master track processing/FX). When unchecked, items are rendered directly, "
         .. "bypassing the master bus.")
+      ImGui.PopTextWrapPos(ctx)
+      ImGui.EndTooltip(ctx)
+    end
+
+    local _, new_second_pass_render_en = ImGui.Checkbox(ctx, "2nd Pass Render", second_pass_render_en)
+    second_pass_render_en = new_second_pass_render_en
+    if ImGui.IsItemHovered(ctx) then
+      ImGui.BeginTooltip(ctx)
+      ImGui.PushTextWrapPos(ctx, ImGui.GetFontSize(ctx) * 30)
+      ImGui.Text(ctx,
+        "Renders each item twice and keeps the second pass. Fixes plugins with lookahead "
+        .. "or adaptive processing that sound different (or wrong) on a cold first render.")
       ImGui.PopTextWrapPos(ctx)
       ImGui.EndTooltip(ctx)
     end
@@ -1078,7 +1195,9 @@ local function loop()
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
       ImGui.SetNextItemWidth(ctx, -1)
+      ImGui.PushFont(ctx, mono_font, 13)
       local _, new_dir = ImGui.InputText(ctx, "##dir", dir_buf)
+      ImGui.PopFont(ctx)
       dir_buf = new_dir
       ImGui.TableSetColumnIndex(ctx, 1)
       if has_browse then
@@ -1093,7 +1212,9 @@ local function loop()
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
       ImGui.SetNextItemWidth(ctx, -1)
+      ImGui.PushFont(ctx, mono_font, 13)
       local _, new_pat = ImGui.InputText(ctx, "##pattern", pattern_buf)
+      ImGui.PopFont(ctx)
       pattern_buf = new_pat
       ImGui.TableSetColumnIndex(ctx, 1)
       if ImGui.Button(ctx, "Wildcards", -1, 0) then
