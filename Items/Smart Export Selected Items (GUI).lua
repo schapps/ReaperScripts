@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.29
+-- @version 1.33
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -38,6 +38,45 @@
 --                    templates get a thin accent bar on the tab's left edge
 --                    (visible whether or not the tab is active) so they stay
 --                    identifiable at a glance.
+--   08/22/26 v1.30 - Added a per-template render Format dropdown (WAV
+--                    default, plus AIFF/CAF/FLAC/MP3/OGG Opus/OGG Vorbis/
+--                    WavPack/Video FFmpeg/Video AVF) as the first field in
+--                    the RENDER section. Bit Depth now shows only for
+--                    formats with a real PCM depth option (WAV/AIFF/CAF/
+--                    FLAC/WavPack, with format-appropriate choices -- FLAC
+--                    tops out at 24-bit) and is clamped to a valid value on
+--                    format switch; hidden entirely for the lossy and video
+--                    formats, which render with REAPER's own per-format
+--                    defaults via a bare 4-byte fourCC (documented as valid
+--                    for "use default settings," avoiding the need to
+--                    hand-encode MP3/OGG's bitrate/quality floats or
+--                    ffmpeg/AVF's codec/resolution sub-fields). All fourCC
+--                    and bit-depth byte values are from Ultraschall's
+--                    documented REAPER render-config format, the same
+--                    already-verified source used for WAV in v1.27. The
+--                    resolved-path preview's file extension now follows the
+--                    selected format too (video formats' extension is a
+--                    best guess since we don't override their container).
+--   08/22/26 v1.31 - Added 10px padding around the left rail's content
+--                    (Indent/Unindent, with tables/Render button/separator
+--                    sized to LEFT_CONTENT_W instead of the full rail width)
+--                    so nothing touches the rail's edges anymore.
+--   08/22/26 v1.32 - Added 8px top padding to both columns (a Dummy spacer
+--                    right after each BeginGroup, so they stay aligned) and
+--                    widened the left rail 240->270px (window 920->950) to
+--                    stop "Sample Rate"'s label from clipping against the
+--                    label column's stretch width.
+--   08/22/26 v1.33 - Expanded the Wildcards menu from 5 flat entries to
+--                    REAPER's full render-pattern wildcard set (~90 tokens
+--                    across 9 category submenus, with a hover tooltip
+--                    description per token), extracted from the strings
+--                    embedded in the shipped REAPER binary itself since
+--                    there's no ReaScript API to query them. That process
+--                    also caught a real bug: "$projectpath", offered by the
+--                    old flat menu, was never an actual REAPER wildcard --
+--                    the real token is "$projectdirectory" -- so it would
+--                    have rendered as literal text in real exports. Fixed
+--                    in both the menu and the preview's approximation.
 
 -- ============================================================
 -- Dependency checks
@@ -80,6 +119,7 @@ local DEFAULTS = {
   normalize_enabled      = false,
   normalize_mode         = "lufs_i",
   normalize_target_db    = -24.0,
+  render_format          = "wav",
   sample_rate            = 96000,
   bit_depth              = 24,
   tail_ms                = 0,
@@ -119,6 +159,7 @@ local function save_template(t)
   f:write("normalize_enabled     = " .. tostring(t.normalize_enabled)                .. "\n")
   f:write("normalize_mode        = " .. string.format("%q", t.normalize_mode)        .. "\n")
   f:write("normalize_target_db   = " .. tostring(t.normalize_target_db)              .. "\n")
+  f:write("render_format         = " .. string.format("%q", t.render_format)         .. "\n")
   f:write("sample_rate           = " .. tostring(t.sample_rate)                      .. "\n")
   f:write("bit_depth             = " .. tostring(t.bit_depth)                        .. "\n")
   f:write("tail_ms               = " .. tostring(t.tail_ms)                          .. "\n")
@@ -301,22 +342,77 @@ end
 -- ============================================================
 -- Render settings + export
 -- ============================================================
--- Base64-encoded RENDER_FORMAT blobs for WAV output at each supported bit
--- depth. Layout (per Ultraschall's documented REAPER render-config format):
--- bytes 1-4 "evaw" (WAV fourCC reversed), byte 5 = bit depth (16/24/32,
--- where 32 means 32-bit float per REAPER's own WAV encoder), byte 6 = 0x06
--- (BWF chunk + project filename in BWF data), byte 7 = 0 (force WAV, not
--- RF64/Wave64). Only byte 5 varies with bit depth; bytes 6-7 match this
--- script's original fixed 24-bit default so behavior otherwise doesn't change.
-local RENDER_FORMAT_BLOBS = {
-  [16] = "ZXZhdxAGAA==",
-  [24] = "ZXZhdxgGAA==",
-  [32] = "ZXZhdyAGAA==",
+-- Render format registry. RENDER_FORMAT blob layout is per Ultraschall's
+-- documented REAPER render-config format (dc-runtime/misc_docs/
+-- RENDER_How_RenderCFG-Base64-strings_are_encoded.txt): 4-byte fourCC
+-- (literal on-disk byte order, e.g. WAV is "evaw") followed by format-
+-- specific bytes, base64-encoded. Formats with a real PCM bit-depth option
+-- get a precomputed blob per depth (bytes beyond the depth byte use the
+-- doc's documented "off/default" values -- 0 = unchecked/none, or the doc's
+-- own stated default like FLAC's compression=5 -- same low-risk approach
+-- already used for WAV's blobs, cross-checked against this machine's own
+-- saved presets in reaper-render.ini). Formats without a bit-depth control
+-- get just the bare 4-byte fourCC, which REAPER documents as valid for
+-- "use this format's default settings" -- avoids hand-encoding MP3/OGG's
+-- bitrate/quality floats or ffmpeg/AVF's many codec/resolution sub-fields,
+-- which the same doc flags as complex or only partially documented.
+local SAMPLE_RATE_OPTIONS = {44100, 48000, 88200, 96000, 176400, 192000}
+
+local BIT_DEPTH_LABELS_PCM   = {[16] = "16-bit", [24] = "24-bit", [32] = "32-bit"}
+local BIT_DEPTH_LABELS_FLOAT = {[16] = "16-bit", [24] = "24-bit", [32] = "32-bit Float"}
+
+local RENDER_FORMATS = {
+  wav = {
+    label = "WAV", file_ext = ".wav",
+    bit_depths = {16, 24, 32}, bit_depth_labels = BIT_DEPTH_LABELS_FLOAT,
+    blobs = {[16] = "ZXZhdxAGAA==", [24] = "ZXZhdxgGAA==", [32] = "ZXZhdyAGAA=="},
+  },
+  aiff = {
+    label = "AIFF", file_ext = ".aiff",
+    bit_depths = {16, 24, 32}, bit_depth_labels = BIT_DEPTH_LABELS_PCM,
+    blobs = {[16] = "ZmZpYRAAAA==", [24] = "ZmZpYRgAAA==", [32] = "ZmZpYSAAAA=="},
+  },
+  caf = {
+    label = "CAF", file_ext = ".caf",
+    bit_depths = {16, 24, 32}, bit_depth_labels = BIT_DEPTH_LABELS_FLOAT,
+    blobs = {[16] = "ZmZhYxAAAA==", [24] = "ZmZhYxgAAA==", [32] = "ZmZhYyAAAA=="},
+  },
+  flac = {
+    label = "FLAC", file_ext = ".flac",
+    bit_depths = {16, 24}, bit_depth_labels = BIT_DEPTH_LABELS_PCM,
+    blobs = {[16] = "Y2FsZhAAAAAFAAAA", [24] = "Y2FsZhgAAAAFAAAA"},
+  },
+  wavpack = {
+    label = "WavPack", file_ext = ".wv",
+    bit_depths = {16, 24, 32}, bit_depth_labels = BIT_DEPTH_LABELS_FLOAT,
+    blobs = {
+      [16] = "a3B2dwAAAAAAAAAAAAAAAAA=",
+      [24] = "a3B2dwAAAAABAAAAAAAAAAA=",
+      [32] = "a3B2dwAAAAADAAAAAAAAAAA=",
+    },
+  },
+  mp3 = { label = "MP3", file_ext = ".mp3", fourcc = "l3pm" },
+  opus = { label = "OGG Opus", file_ext = ".opus", fourcc = "SggO" },
+  vorbis = { label = "OGG Vorbis", file_ext = ".ogg", fourcc = "vggo" },
+  -- Video formats: extension is a best guess -- REAPER's actual output
+  -- container/extension depends on its own remembered per-format defaults
+  -- since we don't override sub-codec/container options here.
+  ffmpeg = { label = "Video (FFmpeg)", file_ext = ".mp4", fourcc = "PMFF" },
+  avf = { label = "Video (AVF)", file_ext = ".mov", fourcc = "FVAX" },
 }
 
-local SAMPLE_RATE_OPTIONS = {44100, 48000, 88200, 96000, 176400, 192000}
-local BIT_DEPTH_OPTIONS = {16, 24, 32}
-local BIT_DEPTH_LABELS = {[16] = "16-bit", [24] = "24-bit", [32] = "32-bit Float"}
+-- Declaration order = dropdown order.
+local RENDER_FORMAT_ORDER = {
+  "wav", "aiff", "caf", "flac", "mp3", "opus", "vorbis", "wavpack", "ffmpeg", "avf",
+}
+
+local function render_format_blob(format_id, bit_depth)
+  local fmt = RENDER_FORMATS[format_id] or RENDER_FORMATS.wav
+  if fmt.blobs then
+    return fmt.blobs[bit_depth] or fmt.blobs[24] or fmt.blobs[fmt.bit_depths[1]]
+  end
+  return fmt.fourcc
+end
 
 local function apply_render_settings(t)
   local SETTINGS_MASK = 0x7FFF
@@ -330,7 +426,7 @@ local function apply_render_settings(t)
   local render_settings = BASE_RENDER_SETTINGS | source_bit
   if t.second_pass_render then render_settings = render_settings | SECOND_PASS_RENDER end
 
-  local format_blob = RENDER_FORMAT_BLOBS[t.bit_depth] or RENDER_FORMAT_BLOBS[24]
+  local format_blob = render_format_blob(t.render_format, t.bit_depth)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT',  format_blob, true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '',             true)
   reaper.GetSetProjectInfo(0, 'RENDER_SRATE',    t.sample_rate, true)
@@ -505,9 +601,11 @@ end
 
 -- ============================================================
 -- Export path preview
--- Approximates how $item/$project/$projectpath/$user/$date will
--- resolve, for display only -- REAPER itself resolves the real
--- render pattern at render time.
+-- Approximates how a handful of the most common wildcards
+-- ($item/$project/$projectdirectory/$user/$date) will resolve, for display
+-- only -- REAPER itself resolves the real render pattern (including every
+-- other wildcard offered in the Wildcards menu) at render time. Any token
+-- not specifically handled below is left as literal text in the preview.
 -- ============================================================
 local PATH_SEP = reaper.GetOS():find("Win") and "\\" or "/"
 local PREVIEW_MAX_ROWS = 25
@@ -524,11 +622,13 @@ local function resolve_preview_pattern(pattern, item_name)
   local user = os.getenv("USER") or os.getenv("USERNAME") or ""
   local date = os.date("%Y-%m-%d")
   local resolved = pattern
-  resolved = resolved:gsub("%$projectpath", (proj_path:gsub("%%", "%%%%")))
-  resolved = resolved:gsub("%$project",     (proj_name:gsub("%%", "%%%%")))
-  resolved = resolved:gsub("%$item",        (item_name:gsub("%%", "%%%%")))
-  resolved = resolved:gsub("%$user",        (user:gsub("%%", "%%%%")))
-  resolved = resolved:gsub("%$date",        date)
+  -- $projectdirectory must be substituted before $project since the latter
+  -- is a prefix of the former.
+  resolved = resolved:gsub("%$projectdirectory", (proj_path:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$project",          (proj_name:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$item",             (item_name:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$user",             (user:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$date",             date)
   return resolved
 end
 
@@ -614,7 +714,7 @@ end
 -- PREVIEW_MAX_ROWS. Each row is {dir_short, filename, ext, ch} where ch is
 -- the channel count the exported file is expected to have -- 1 if the mono
 -- downmix prediction applies, otherwise the source's own channel count.
-local function build_preview_rows(dir, pattern, mono_en, threshold)
+local function build_preview_rows(dir, pattern, mono_en, threshold, file_ext)
   local resolved_dir = dir ~= "" and dir or reaper.GetProjectPath()
   local infos = get_selected_item_infos()
   local mono_flags = get_preview_mono_flags(infos, mono_en, threshold)
@@ -623,7 +723,7 @@ local function build_preview_rows(dir, pattern, mono_en, threshold)
   local mono_total = 0
   for i = 1, math.min(#infos, PREVIEW_MAX_ROWS) do
     local info = infos[i]
-    local full_path = resolved_dir .. PATH_SEP .. resolve_preview_pattern(pattern, info.name) .. ".wav"
+    local full_path = resolved_dir .. PATH_SEP .. resolve_preview_pattern(pattern, info.name) .. file_ext
     local dir_part, file_part = split_preview_path(full_path)
     local fname, ext = file_part:match("^(.-)(%.[^.]*)$")
     local is_mono = mono_flags[i] or false
@@ -656,6 +756,160 @@ local function channel_chip_style(ch)
 end
 
 -- ============================================================
+-- Render filename wildcards
+-- Full token list + one-line descriptions, grouped under the same category
+-- names REAPER's own render-pattern Wildcards menu uses. There's no
+-- ReaScript API to query REAPER's wildcard list, so these were extracted
+-- from the strings embedded in the shipped REAPER binary itself (its
+-- Wildcard Help dialog text) rather than guessed -- this is also how the
+-- earlier "$projectpath" token (never a real REAPER wildcard -- the actual
+-- token is "$projectdirectory") was caught and fixed.
+-- Each entry is {token, description} or {token, description, insert} when
+-- what should be inserted into the pattern differs from the display token
+-- (the three Logic/Control Flow wildcards take a user-typed argument, so
+-- only their "$name(" prefix is inserted).
+-- ============================================================
+local WILDCARD_CATEGORIES = {
+  {
+    name = "Project Information",
+    tokens = {
+      {"$project", "Project name"},
+      {"$title", "Project title (from Project Settings/Notes dialog)"},
+      {"$author", "Project author (from Project Settings/Notes dialog)"},
+      {"$projectnotes", "Project notes (from Project Settings/Notes dialog)"},
+      {"$projectdirectory", "Project directory on disk"},
+      {"$tempo", "Project tempo"},
+      {"$timesignature", "Project time signature, formatted as 4/4"},
+      {"$playrate", "Project play rate"},
+    },
+  },
+  {
+    name = "Track Information",
+    tokens = {
+      {"$track", "Track name"},
+      {"$trackname", "Track name, including slash characters"},
+      {"$tracknumber", "1 for the first track, 2 for the second..."},
+      {"$tracknameornumber", "Track name if it has one, otherwise \"Track N\""},
+      {"$parenttrack", "Parent track name"},
+      {"$seltrack", "First selected unmuted track"},
+      {"$folders", "Track folder structure"},
+      {"$fx", "FX list"},
+    },
+  },
+  {
+    name = "Media Item Information",
+    tokens = {
+      {"$item", "Media item take name"},
+      {"$itemnumber", "1 for the first media item on a track, 2 for the second..."},
+      {"$itemnotes", "Media item notes"},
+      {"$takemarker", "Media item take marker (first take marker within the item)"},
+      {"$lane", "Media item lane number"},
+      {"$trackitem", "Currently-playing media item on selected track"},
+      {"$selitem", "Selected media item, blank if multiple selected"},
+      {"$note", "Note name (C0 for the first file rendered, C#0 for the second...)"},
+      {"$natural", "Note name using only natural notes (C0, D0, ...)"},
+    },
+  },
+  {
+    name = "Regions/Markers",
+    tokens = {
+      {"$region", "Region name or ID number"},
+      {"$regionname", "Region name"},
+      {"$regionnumber", "Region ID number"},
+      {"$regionpos", "Time position within region"},
+      {"$regionprev", "Previous region"},
+      {"$regionnext", "Next region"},
+      {"$regioncountdown", "Count down N beats until next region, then display it"},
+      {"$marker", "Marker name or ID number"},
+      {"$markername", "Marker name"},
+      {"$markernumber", "Marker ID number"},
+      {"$markerpos", "Time position since last marker"},
+      {"$markerprev", "Previous marker"},
+      {"$markernext", "Next marker"},
+      {"$markercountdown", "Count down N beats until next marker, then display it"},
+    },
+  },
+  {
+    name = "Position/Length",
+    tokens = {
+      {"$start", "Start time, ruler time format"},
+      {"$end", "End time, ruler time format"},
+      {"$length", "Length, ruler time format"},
+      {"$startbeats", "Start time as measures.beats"},
+      {"$endbeats", "End time as measures.beats"},
+      {"$lengthbeats", "Length as measures.beats"},
+      {"$starttc", "Start time as HH.MM.SS.FF"},
+      {"$endtc", "End time as HH.MM.SS.FF"},
+      {"$startframes", "Start time as absolute frames"},
+      {"$endframes", "End time as absolute frames"},
+      {"$lengthframes", "Length as absolute frames"},
+      {"$startseconds", "Start time as total seconds"},
+      {"$endseconds", "End time as total seconds"},
+      {"$lengthseconds", "Length as total seconds"},
+      {"$lenhh", "Length as hours"},
+      {"$lenmm", "Length as minutes modulo hours"},
+      {"$lenss", "Length as seconds modulo minutes"},
+      {"$lentt", "Length as milliseconds modulo seconds"},
+      {"$projectpos", "Project time position, ruler time format"},
+      {"$projectlength", "Project length, ruler time format"},
+      {"$timesel", "Project time selection, ruler time format"},
+      {"$preroll", "Current pre-roll in beats"},
+    },
+  },
+  {
+    name = "Output Format",
+    tokens = {
+      {"$format", "Render format (example: wav)"},
+      {"$samplerate", "Sample rate in Hz"},
+      {"$sampleratek", "Sample rate in kHz"},
+      {"$bitdepth", "Bit depth, if available"},
+      {"$channels", "Number of render channels"},
+      {"$chid", "Render channel number (or e.g. $chid(L,R,C,LFE,Ls,Rs))"},
+      {"$filenumber", "1 for the first file rendered, 2 for the second..."},
+      {"$filecount", "The total number of rendered files"},
+      {"$namenumber", "1 for the first region/item with the same name, 2 for the second..."},
+      {"$timelineorder", "1 for the first item/region on the timeline, 2 for the second..."},
+      {"$timelineorder_track", "Same as $timelineorder, but numbered per-track"},
+    },
+  },
+  {
+    name = "Date/Time",
+    tokens = {
+      {"$date", "Date"},
+      {"$time", "Time"},
+      {"$datetime", "Date and time"},
+      {"$year", "Year"},
+      {"$year2", "Last 2 digits of the year"},
+      {"$month", "Month number"},
+      {"$monthname", "Month name"},
+      {"$day", "Day of the month"},
+      {"$dayname", "Day of the week"},
+      {"$hour", "Hour of the day, 24-hour format"},
+      {"$hour12", "Hour of the day, 12-hour format"},
+      {"$ampm", "\"am\" if before noon, \"pm\" if after noon"},
+      {"$minute", "Minute of the hour"},
+      {"$second", "Second of the minute"},
+      {"$uniqueid", "N-character random hexadecimal string (N between 8 and 16)"},
+    },
+  },
+  {
+    name = "Computer Information",
+    tokens = {
+      {"$user", "User name"},
+      {"$computer", "Computer name"},
+    },
+  },
+  {
+    name = "Logic/Control Flow",
+    tokens = {
+      {"$ifprev(text)", "\"text\" if the previous wildcard resolves to anything", "$ifprev("},
+      {"$ifnext(text)", "\"text\" if the following wildcard resolves to anything", "$ifnext("},
+      {"$ifboth(text)", "\"text\" if the previous and following wildcards both resolve", "$ifboth("},
+    },
+  },
+}
+
+-- ============================================================
 -- ImGui context
 -- ============================================================
 local script_title = "SMART EXPORT ITEMS"
@@ -679,6 +933,7 @@ local pattern_buf     = ""
 local norm_en         = false
 local norm_mode       = "lufs_i"
 local norm_db_buf     = "-24.0"
+local render_format   = "wav"
 local sample_rate     = 96000
 local bit_depth       = 24
 local tail_buf        = "0"
@@ -719,6 +974,7 @@ local function sync_buffers_from(t)
   norm_en         = t.normalize_enabled
   norm_mode       = t.normalize_mode
   norm_db_buf     = tostring(t.normalize_target_db)
+  render_format   = t.render_format
   sample_rate     = t.sample_rate
   bit_depth       = t.bit_depth
   tail_buf        = tostring(t.tail_ms)
@@ -737,6 +993,7 @@ local function flush_buffers_to(t)
   t.normalize_enabled      = norm_en
   t.normalize_mode         = norm_mode
   t.normalize_target_db    = tonumber(norm_db_buf)   or t.normalize_target_db
+  t.render_format          = render_format
   t.sample_rate            = sample_rate
   t.bit_depth              = bit_depth
   t.tail_ms                = tonumber(tail_buf)      or t.tail_ms
@@ -808,8 +1065,8 @@ local function loop()
     color_count = color_count + 1
   end
 
-  local WIN_W = 920
-  ImGui.SetNextWindowSizeConstraints(ctx, 600, 0, 3000, 10000)
+  local WIN_W = 950
+  ImGui.SetNextWindowSizeConstraints(ctx, 630, 0, 3000, 10000)
   ImGui.SetNextWindowSize(ctx, WIN_W, 0, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, script_title, true, WIN_FLAGS)
 
@@ -931,8 +1188,11 @@ local function loop()
     end
 
     -- ── Left column: settings rail ───────────────────────────
-    local LEFT_COL_W = 240
-    local CTL_W       = 150  -- fixed control width; label column stretches to fill the rest
+    local LEFT_COL_W     = 270
+    local LEFT_PAD       = 10  -- breathing room between the rail's edges and its content
+    local TOP_PAD        = 8   -- matching breathing room above the first row
+    local LEFT_CONTENT_W = LEFT_COL_W - LEFT_PAD * 2
+    local CTL_W          = 150  -- fixed control width; label column stretches to fill the rest
 
     -- avail_h is "from here to the bottom of the window at its current size"
     -- -- used to stretch both the rail background and the field/footer split
@@ -945,14 +1205,20 @@ local function loop()
     end
 
     ImGui.BeginGroup(ctx)
+    -- Indent shifts every subsequent item's left edge by LEFT_PAD; paired
+    -- with sizing content to LEFT_CONTENT_W (LEFT_COL_W minus padding on
+    -- both sides) instead of the full rail width, so nothing touches the
+    -- rail's edges. Must be un-indented before EndGroup below.
+    ImGui.Indent(ctx, LEFT_PAD)
+    ImGui.Dummy(ctx, 0, TOP_PAD)
 
-    -- outer_size_w pins each table to LEFT_COL_W -- without it, a table with
-    -- a WidthStretch column stretches to fill the *whole window* (a
+    -- outer_size_w pins each table to LEFT_CONTENT_W -- without it, a table
+    -- with a WidthStretch column stretches to fill the *whole window* (a
     -- BeginGroup doesn't constrain child width), shoving the right column
     -- off past the window edge and making the preview text wrap to
     -- near-zero width.
     local function begin_field_table(id)
-      local ok = ImGui.BeginTable(ctx, id, 2, 0, LEFT_COL_W, 0)
+      local ok = ImGui.BeginTable(ctx, id, 2, 0, LEFT_CONTENT_W, 0)
       if ok then
         ImGui.TableSetupColumn(ctx, "##ctl",   ImGui.TableColumnFlags_WidthFixed, CTL_W)
         ImGui.TableSetupColumn(ctx, "##label", ImGui.TableColumnFlags_WidthStretch)
@@ -1052,6 +1318,33 @@ local function loop()
     ImGui.PopStyleColor(ctx)
 
     if begin_field_table("##render_fields") then
+      local fmt = RENDER_FORMATS[render_format] or RENDER_FORMATS.wav
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
+      if ImGui.BeginCombo(ctx, "##render_format", fmt.label, 0) then
+        for _, fid in ipairs(RENDER_FORMAT_ORDER) do
+          local opt = RENDER_FORMATS[fid]
+          if ImGui.Selectable(ctx, opt.label, render_format == fid, 0) then
+            render_format = fid
+            fmt = opt
+            -- Clamp bit depth to a valid option for the newly selected
+            -- format (e.g. switching WAV[32] -> FLAC, which tops out at 24).
+            -- Every bit-depth-capable format includes 24, so that's always
+            -- a safe fallback.
+            if fmt.bit_depths then
+              local valid = false
+              for _, bd in ipairs(fmt.bit_depths) do if bd == bit_depth then valid = true end end
+              if not valid then bit_depth = 24 end
+            end
+          end
+        end
+        ImGui.EndCombo(ctx)
+      end
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Format")
+
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
       ImGui.SetNextItemWidth(ctx, -1)
@@ -1064,17 +1357,20 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Sample Rate")
 
-      ImGui.TableNextRow(ctx)
-      ImGui.TableSetColumnIndex(ctx, 0)
-      ImGui.SetNextItemWidth(ctx, -1)
-      if ImGui.BeginCombo(ctx, "##bit_depth", BIT_DEPTH_LABELS[bit_depth] or (bit_depth .. "-bit"), 0) then
-        for _, bd in ipairs(BIT_DEPTH_OPTIONS) do
-          if ImGui.Selectable(ctx, BIT_DEPTH_LABELS[bd], bit_depth == bd, 0) then bit_depth = bd end
+      if fmt.bit_depths then
+        ImGui.TableNextRow(ctx)
+        ImGui.TableSetColumnIndex(ctx, 0)
+        ImGui.SetNextItemWidth(ctx, -1)
+        local bd_labels = fmt.bit_depth_labels
+        if ImGui.BeginCombo(ctx, "##bit_depth", bd_labels[bit_depth] or (bit_depth .. "-bit"), 0) then
+          for _, bd in ipairs(fmt.bit_depths) do
+            if ImGui.Selectable(ctx, bd_labels[bd], bit_depth == bd, 0) then bit_depth = bd end
+          end
+          ImGui.EndCombo(ctx)
         end
-        ImGui.EndCombo(ctx)
+        ImGui.TableSetColumnIndex(ctx, 1)
+        ImGui.Text(ctx, "Bit Depth")
       end
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Bit Depth")
 
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
@@ -1131,7 +1427,7 @@ local function loop()
 
     local _, footer_top_y = ImGui.GetCursorScreenPos(ctx)
 
-    -- Separator above the Render button -- drawn manually at LEFT_COL_W
+    -- Separator above the Render button -- drawn manually at LEFT_CONTENT_W
     -- rather than via ImGui.Separator(), which (like Button/Table before it)
     -- spans the *window's* full content width inside a bare BeginGroup, not
     -- the rail's intended width.
@@ -1139,7 +1435,7 @@ local function loop()
     do
       local sx, sy = ImGui.GetCursorScreenPos(ctx)
       local draw_list = ImGui.GetWindowDrawList(ctx)
-      ImGui.DrawList_AddRectFilled(draw_list, sx, sy, sx + LEFT_COL_W, sy + 1, 0x3A3F45FF)
+      ImGui.DrawList_AddRectFilled(draw_list, sx, sy, sx + LEFT_CONTENT_W, sy + 1, 0x3A3F45FF)
     end
     ImGui.Dummy(ctx, 0, 1)
     ImGui.Spacing(ctx)
@@ -1147,16 +1443,16 @@ local function loop()
     -- Render button -- only the click is captured here; the actual
     -- run_export() call is deferred until after the right column has been
     -- fully drawn, so REAPER's native render engine never runs mid-frame
-    -- with more ImGui widgets still queued behind it.
+    -- with more ImGui widgets still queued behind it. Width is explicit
+    -- (LEFT_CONTENT_W) rather than -1, which -- like Table/Separator above --
+    -- would fill to the window's edge instead of the rail's padded width.
     local no_items = n_items == 0
     if no_items then ImGui.BeginDisabled(ctx, true) end
-    local BTN_PAD_X = 4
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + BTN_PAD_X)
     ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0xA08FE2FF)
     ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0xB3A6E8FF)
     ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x8D7ACCFF)
     ImGui.PushFont(ctx, nil, ImGui.GetFontSize(ctx) * 1.3)
-    local do_render = ImGui.Button(ctx, "Render", LEFT_COL_W - BTN_PAD_X * 2, 0)
+    local do_render = ImGui.Button(ctx, "Render", LEFT_CONTENT_W, 0)
       or (not no_items and (
             ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
             or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
@@ -1166,7 +1462,7 @@ local function loop()
 
     local status_text = ("%d %s selected"):format(n_items, n_items == 1 and "item" or "items")
     local status_w = ImGui.CalcTextSize(ctx, status_text)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + (LEFT_COL_W - status_w) / 2)
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + (LEFT_CONTENT_W - status_w) / 2)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
     ImGui.Text(ctx, status_text)
     ImGui.PopStyleColor(ctx)
@@ -1174,12 +1470,18 @@ local function loop()
     local _, footer_bottom_y = ImGui.GetCursorScreenPos(ctx)
     left_footer_h = footer_bottom_y - footer_top_y
 
+    ImGui.Unindent(ctx, LEFT_PAD)
     ImGui.EndGroup(ctx)
 
     -- ── Right column: output dir/filename + live preview ────
-    ImGui.SameLine(ctx, 0, 20)
+    -- Gap is 20 + LEFT_PAD: the left group's measured bounding box now ends
+    -- LEFT_PAD short of the tint rect's actual right edge (content is
+    -- inset), so SameLine's offset (measured from that bounding box) needs
+    -- the extra LEFT_PAD to keep a consistent 20px gap from the visible rail.
+    ImGui.SameLine(ctx, 0, 20 + LEFT_PAD)
 
     ImGui.BeginGroup(ctx)
+    ImGui.Dummy(ctx, 0, TOP_PAD)  -- keeps this column's content aligned with the left rail's
 
     local has_browse = reaper.JS_Dialog_BrowseForFolder ~= nil
 
@@ -1221,9 +1523,18 @@ local function loop()
         ImGui.OpenPopup(ctx, "##wildcards_popup")
       end
       if ImGui.BeginPopup(ctx, "##wildcards_popup") then
-        for _, tok in ipairs({"$item", "$project", "$projectpath", "$user", "$date"}) do
-          if ImGui.Selectable(ctx, tok, false, 0) then
-            pattern_buf = pattern_buf .. tok
+        for _, cat in ipairs(WILDCARD_CATEGORIES) do
+          if ImGui.BeginMenu(ctx, cat.name) then
+            for _, tok in ipairs(cat.tokens) do
+              local display, desc, insert = tok[1], tok[2], tok[3]
+              if ImGui.MenuItem(ctx, display) then
+                pattern_buf = pattern_buf .. (insert or display)
+              end
+              if ImGui.IsItemHovered(ctx) then
+                ImGui.SetTooltip(ctx, desc)
+              end
+            end
+            ImGui.EndMenu(ctx)
           end
         end
         ImGui.EndPopup(ctx)
@@ -1239,8 +1550,9 @@ local function loop()
     ImGui.Spacing(ctx)
 
     local mono_threshold = tonumber(mono_thresh_buf) or 0.9
+    local preview_file_ext = (RENDER_FORMATS[render_format] or RENDER_FORMATS.wav).file_ext
     local preview_rows, preview_total, preview_mono_total =
-      build_preview_rows(dir_buf, pattern_buf, mono_downmix_en, mono_threshold)
+      build_preview_rows(dir_buf, pattern_buf, mono_downmix_en, mono_threshold, preview_file_ext)
 
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
     ImGui.Text(ctx, "RESOLVED PATHS")
