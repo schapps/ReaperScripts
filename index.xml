@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="87f0749ec567f69c5d04ca493dda53a9dab85c42">
+<index version="1" name="SPS Scripts" commit="b88d90eaa74034fa181ee860ce1220445bbf0c78">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -55,6 +55,30 @@
                 per-frame]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/ReaImGuiTheme.lua</source>
         <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.8" author="Stephen Schappler" time="2026-08-22T21:57:13Z">
+        <changelog><![CDATA[08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
+                table of glyph constants), theme.PushIconFont/PopIconFont,
+                theme.IconText, and theme.IconButton. The icon font
+                ships as Fonts/fa-solid-900.ttf alongside this file and
+                is lazily created/cached per-ctx like the bold font
+                below, since ReaImGui has no font-merge mode -- icon
+                glyphs always come from a separate font pushed around
+                the draw call, not blended into the body-text font.
+                theme.IconButton/theme.IconButtonSize size the button
+                square to the requested icon size (default: current
+                font size) plus frame padding, so a larger icon grows
+                its button instead of clipping, and callers can still
+                align one (e.g. right-justify) without pre-measuring.
+08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/line-md--play-filled.png</source>
+        <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/Fonts/fa-solid-900.ttf</source>
+        <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/Fonts/LICENSE.txt</source>
       </version>
     </reapack>
   </category>
