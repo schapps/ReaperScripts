@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="53ed41e76d0c8def5e14122fbfadde047193ebab">
+<index version="1" name="SPS Scripts" commit="87f0749ec567f69c5d04ca493dda53a9dab85c42">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -46,6 +46,15 @@
 03/28/25 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Common/ReaImGuiTheme.lua</source>
         <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.7" author="Stephen Schappler" time="2026-08-22T21:10:18Z">
+        <changelog><![CDATA[08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/line-md--play-filled.png</source>
       </version>
     </reapack>
   </category>
@@ -522,6 +531,14 @@
                  have rendered as literal text in real exports. Fixed
                  in both the menu and the preview's approximation.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/53ed41e76d0c8def5e14122fbfadde047193ebab/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.36" author="Stephen Schappler" time="2026-08-22T21:10:18Z">
+        <changelog><![CDATA[08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items - Configure.lua" type="script" desc="Smart Export Selected Items - Configure">
