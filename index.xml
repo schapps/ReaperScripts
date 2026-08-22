@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="71337b0a4ceba85014557f976bba5e9247acb955">
+<index version="1" name="SPS Scripts" commit="d326b305868273e7875b00d60725a592f201c424">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -425,6 +425,35 @@
                  off, the dialog stays open after rendering instead of
                  closing.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.29" author="Stephen Schappler" time="2026-08-22T17:28:22Z">
+        <changelog><![CDATA[08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
+                 checkbox (default on, matching prior behavior). When
+                 off, the dialog stays open after rendering instead of
+                 closing.
+08/22/26 v1.26 - Directory and Filename inputs now use the monospace
+                 font too, matching the resolved-path preview rows.
+08/22/26 v1.27 - Added per-template Sample Rate (44.1/48/88.2/96/176.4/
+                 192kHz, default 96kHz) and Bit Depth (16/24/32-bit
+                 float, default 24-bit) dropdowns at the top of the
+                 RENDER section, replacing the previously hardcoded
+                 96kHz/24-bit. Bit depth is applied via a per-depth
+                 RENDER_FORMAT blob (byte layout confirmed against
+                 Ultraschall's documented REAPER render-config format
+                 and cross-checked against this machine's own saved
+                 render presets in reaper-render.ini, which use the
+                 same 24-bit blob this script already hardcoded).
+08/22/26 v1.28 - Added per-template "2nd Pass Render" checkbox (default
+                 off) after Render via Master, mapping to RENDER_SETTINGS
+                 bit 0x800 -- confirmed against Ultraschall's documented
+                 render-preset bitfield (various_checkboxes2 &2048).
+08/22/26 v1.29 - Added a "Color" submenu to the tab right-click context
+                 menu (alongside Rename/Delete): an embedded ColorPicker3
+                 plus "Clear Color", persisted per-template. Colored
+                 templates get a thin accent bar on the tab's left edge
+                 (visible whether or not the tab is active) so they stay
+                 identifiable at a glance.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d326b305868273e7875b00d60725a592f201c424/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items - Configure.lua" type="script" desc="Smart Export Selected Items - Configure">
