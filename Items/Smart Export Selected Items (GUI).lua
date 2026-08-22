@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.33
+-- @version 1.36
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -12,71 +12,11 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
---   08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
---                    checkbox (default on, matching prior behavior). When
---                    off, the dialog stays open after rendering instead of
---                    closing.
---   08/22/26 v1.26 - Directory and Filename inputs now use the monospace
---                    font too, matching the resolved-path preview rows.
---   08/22/26 v1.27 - Added per-template Sample Rate (44.1/48/88.2/96/176.4/
---                    192kHz, default 96kHz) and Bit Depth (16/24/32-bit
---                    float, default 24-bit) dropdowns at the top of the
---                    RENDER section, replacing the previously hardcoded
---                    96kHz/24-bit. Bit depth is applied via a per-depth
---                    RENDER_FORMAT blob (byte layout confirmed against
---                    Ultraschall's documented REAPER render-config format
---                    and cross-checked against this machine's own saved
---                    render presets in reaper-render.ini, which use the
---                    same 24-bit blob this script already hardcoded).
---   08/22/26 v1.28 - Added per-template "2nd Pass Render" checkbox (default
---                    off) after Render via Master, mapping to RENDER_SETTINGS
---                    bit 0x800 -- confirmed against Ultraschall's documented
---                    render-preset bitfield (various_checkboxes2 &2048).
---   08/22/26 v1.29 - Added a "Color" submenu to the tab right-click context
---                    menu (alongside Rename/Delete): an embedded ColorPicker3
---                    plus "Clear Color", persisted per-template. Colored
---                    templates get a thin accent bar on the tab's left edge
---                    (visible whether or not the tab is active) so they stay
---                    identifiable at a glance.
---   08/22/26 v1.30 - Added a per-template render Format dropdown (WAV
---                    default, plus AIFF/CAF/FLAC/MP3/OGG Opus/OGG Vorbis/
---                    WavPack/Video FFmpeg/Video AVF) as the first field in
---                    the RENDER section. Bit Depth now shows only for
---                    formats with a real PCM depth option (WAV/AIFF/CAF/
---                    FLAC/WavPack, with format-appropriate choices -- FLAC
---                    tops out at 24-bit) and is clamped to a valid value on
---                    format switch; hidden entirely for the lossy and video
---                    formats, which render with REAPER's own per-format
---                    defaults via a bare 4-byte fourCC (documented as valid
---                    for "use default settings," avoiding the need to
---                    hand-encode MP3/OGG's bitrate/quality floats or
---                    ffmpeg/AVF's codec/resolution sub-fields). All fourCC
---                    and bit-depth byte values are from Ultraschall's
---                    documented REAPER render-config format, the same
---                    already-verified source used for WAV in v1.27. The
---                    resolved-path preview's file extension now follows the
---                    selected format too (video formats' extension is a
---                    best guess since we don't override their container).
---   08/22/26 v1.31 - Added 10px padding around the left rail's content
---                    (Indent/Unindent, with tables/Render button/separator
---                    sized to LEFT_CONTENT_W instead of the full rail width)
---                    so nothing touches the rail's edges anymore.
---   08/22/26 v1.32 - Added 8px top padding to both columns (a Dummy spacer
---                    right after each BeginGroup, so they stay aligned) and
---                    widened the left rail 240->270px (window 920->950) to
---                    stop "Sample Rate"'s label from clipping against the
---                    label column's stretch width.
---   08/22/26 v1.33 - Expanded the Wildcards menu from 5 flat entries to
---                    REAPER's full render-pattern wildcard set (~90 tokens
---                    across 9 category submenus, with a hover tooltip
---                    description per token), extracted from the strings
---                    embedded in the shipped REAPER binary itself since
---                    there's no ReaScript API to query them. That process
---                    also caught a real bug: "$projectpath", offered by the
---                    old flat menu, was never an actual REAPER wildcard --
---                    the real token is "$projectdirectory" -- so it would
---                    have rendered as literal text in real exports. Fixed
---                    in both the menu and the preview's approximation.
+--   08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+--                    into the shared theme as theme.PrimaryButton(ctx,
+--                    label, width, height) (ReaImGuiTheme.lua v1.7), so
+--                    other scripts can reuse the same "main action" button
+--                    look. Render button here now just calls it.
 
 -- ============================================================
 -- Dependency checks
@@ -915,8 +855,11 @@ local WILDCARD_CATEGORIES = {
 local script_title = "SMART EXPORT ITEMS"
 local ctx = ImGui.CreateContext(script_title)
 
+-- CreateFont(family, flags) -- size is chosen per-use via PushFont's own
+-- size argument, not baked in here. (The Render button's bold font is
+-- owned by theme.PrimaryButton, which creates and caches it per-ctx.)
 local mono_font_name = reaper.GetOS():find("Win") and "Consolas" or "Menlo"
-local mono_font = ImGui.CreateFont(mono_font_name, 13)
+local mono_font = ImGui.CreateFont(mono_font_name)
 ImGui.Attach(ctx, mono_font)
 
 local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
@@ -1448,16 +1391,10 @@ local function loop()
     -- would fill to the window's edge instead of the rail's padded width.
     local no_items = n_items == 0
     if no_items then ImGui.BeginDisabled(ctx, true) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0xA08FE2FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0xB3A6E8FF)
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x8D7ACCFF)
-    ImGui.PushFont(ctx, nil, ImGui.GetFontSize(ctx) * 1.3)
-    local do_render = ImGui.Button(ctx, "Render", LEFT_CONTENT_W, 0)
+    local do_render = theme.PrimaryButton(ctx, "Render", LEFT_CONTENT_W, 0)
       or (not no_items and (
             ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
             or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
-    ImGui.PopFont(ctx)
-    ImGui.PopStyleColor(ctx, 3)
     if no_items then ImGui.EndDisabled(ctx) end
 
     local status_text = ("%d %s selected"):format(n_items, n_items == 1 and "item" or "items")

@@ -1,25 +1,17 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
 -- @provides
 --   line-md--play-filled.png > line-md--play-filled.png
 -- @changelog
---   08/22/26 - v1.6 Added theme.Chip(ctx, label, text_color, border_color):
---                   a small bordered/rounded label for tagging list rows
---                   (status, category, etc.), drawn via the window draw
---                   list since ImGui has no native chip widget
---   08/22/26 - v1.5 Fixed active/unfocused tab colors silently no-op'ing on
---                   newer ReaImGui builds, which renamed Col_TabActive ->
---                   Col_TabSelected, Col_TabUnfocused -> Col_TabDimmed, and
---                   Col_TabUnfocusedActive -> Col_TabDimmedSelected; both
---                   old and new names are now pushed so whichever exists on
---                   the running build applies
---   05/07/26 - v1.4 Adjusting colors
---   05/05/26 - v1.3 Adjusting colors
---   03/28/25 - v1.0 Initial release
+--   08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+--                   purple/bold/1.3x-size "main action" button style (e.g. a
+--                   Render or Rename button), lazily creating and caching one
+--                   bold font per ctx since fonts must be created once, not
+--                   per-frame
 
 local ImGui = require "imgui" "0.10"
 
@@ -130,6 +122,43 @@ function theme.Chip(ctx, label, text_color, border_color)
   ImGui.DrawList_AddText(draw_list, x0 + PAD_X, y0 + PAD_Y, text_color, label)
 
   ImGui.Dummy(ctx, x1 - x0, y1 - y0)
+end
+
+-- ============================================================
+-- PrimaryButton: the accent-colored, bold, oversized button style used for
+-- a screen's main action (Render, Rename, etc.) -- purple fill with dark
+-- text, at 1.3x the current font size.
+--
+-- Needs a bold font object, which (unlike colors/vars) must be created
+-- once per ImGui context rather than every frame, so one is lazily created
+-- and cached here per-ctx on first use. Keyed with weak references so the
+-- cache doesn't keep a closed script's context (and its font) alive.
+-- ============================================================
+local bold_font_cache = setmetatable({}, {__mode = "k"})
+
+local function get_bold_font(ctx)
+  local font = bold_font_cache[ctx]
+  if not font then
+    font = ImGui.CreateFont("sans-serif", ImGui.FontFlags_Bold)
+    ImGui.Attach(ctx, font)
+    bold_font_cache[ctx] = font
+  end
+  return font
+end
+
+function theme.PrimaryButton(ctx, label, width, height)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0xA08FE2FF)
+  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered,  0xB3A6E8FF)
+  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,   0x8D7ACCFF)
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text,           0x222222FF)
+  ImGui.PushFont(ctx, get_bold_font(ctx), ImGui.GetFontSize(ctx) * 1.3)
+
+  local clicked = ImGui.Button(ctx, label, width or 0, height or 0)
+
+  ImGui.PopFont(ctx)
+  ImGui.PopStyleColor(ctx, 4)
+
+  return clicked
 end
 
 return theme
