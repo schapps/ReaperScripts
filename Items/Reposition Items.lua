@@ -202,7 +202,7 @@ local function loop()
 
     local too_few = reaper.CountSelectedMediaItems(0) < 2
     if too_few then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Reposition", -1, 0) then reposition_items() end
+    if theme.PrimaryButton(ctx, "Reposition", -1, 0) then reposition_items() end
     if too_few then ImGui.EndDisabled(ctx) end
 
     if status_msg ~= "" then

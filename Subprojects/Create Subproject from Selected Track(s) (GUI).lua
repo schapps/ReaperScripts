@@ -386,7 +386,7 @@ local function loop()
     -- Create button (disabled when no tracks are selected)
     local no_tracks = reaper.CountSelectedTracks(0) == 0
     if no_tracks then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Create", -1, 0) then
+    if theme.PrimaryButton(ctx, "Create", -1, 0) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)

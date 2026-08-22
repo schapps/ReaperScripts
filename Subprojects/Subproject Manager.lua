@@ -589,14 +589,13 @@ local function loop()
     ImGui.Text(ctx, "SUBPROJECT ITEMS")
     ImGui.PopStyleColor(ctx)
     ImGui.SameLine(ctx)
+    local settings_icon_size = ImGui.GetFontSize(ctx) * 1.4
     do
       local cur_x   = ImGui.GetCursorPosX(ctx)
       local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
-      local tw      = select(1, ImGui.CalcTextSize(ctx, "⚙"))
-      local fpx     = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding))
-      ImGui.SetCursorPosX(ctx, cur_x + avail_w - tw - fpx * 2)
+      ImGui.SetCursorPosX(ctx, cur_x + avail_w - theme.IconButtonSize(ctx, settings_icon_size))
     end
-    if ImGui.SmallButton(ctx, "⚙##settings") then
+    if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings", nil, nil, settings_icon_size) then
       ImGui.OpenPopup(ctx, "##settings_popup")
     end
     if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Settings") end
