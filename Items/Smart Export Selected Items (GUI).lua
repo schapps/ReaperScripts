@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.4
+-- @version 1.25
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -12,14 +12,10 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
---   05/28/26 v1.0 - Initial release
---   08/11/26 v1.1 - Corrected stale doc comment: headless script no longer shares
---                   settings with this GUI's templates via ExtState
---   08/11/26 v1.2 - Added per-template stereo-correlation mono downmix (checkbox +
---                   threshold), matching the headless script's v2.2 feature
---   08/11/26 v1.3 - Default tail changed from 2000ms to 0ms for new templates
---   08/12/26 v1.4 - Correlated stereo downmix now uses mono (left) take channel mode
---                   instead of mono (mixdown), so only the left channel is kept.
+--   08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
+--                    checkbox (default on, matching prior behavior). When
+--                    off, the dialog stays open after rendering instead of
+--                    closing.
 
 -- ============================================================
 -- Dependency checks
@@ -65,6 +61,17 @@ local DEFAULTS = {
   tail_ms                = 0,
   mono_downmix_enabled   = true,
   mono_downmix_threshold = 0.9,
+  mono_downmix_mode      = "left",
+  open_folder_after      = false,
+  render_via_master      = true,
+  close_after_render     = true,
+}
+
+-- I_CHANMODE values for each mono downmix mode option
+local MONO_DOWNMIX_CHANMODE = {
+  left     = 3,
+  right    = 4,
+  downmix  = 2,
 }
 
 local function ensure_tpl_dir()
@@ -89,6 +96,10 @@ local function save_template(t)
   f:write("tail_ms               = " .. tostring(t.tail_ms)                          .. "\n")
   f:write("mono_downmix_enabled   = " .. tostring(t.mono_downmix_enabled)             .. "\n")
   f:write("mono_downmix_threshold = " .. tostring(t.mono_downmix_threshold)           .. "\n")
+  f:write("mono_downmix_mode      = " .. string.format("%q", t.mono_downmix_mode)     .. "\n")
+  f:write("open_folder_after      = " .. tostring(t.open_folder_after)                .. "\n")
+  f:write("render_via_master      = " .. tostring(t.render_via_master)                .. "\n")
+  f:write("close_after_render     = " .. tostring(t.close_after_render)               .. "\n")
   f:close()
 end
 
@@ -262,7 +273,13 @@ end
 -- ============================================================
 local function apply_render_settings(t)
   local SETTINGS_MASK = 0x7FFF
-  local render_settings = 596  -- selected items via master + embed metadata + mono→mono + multichannel
+  -- multichannel tracks to multichannel files (0x4) + mono media to mono files (0x10)
+  -- + embed metadata (0x200)
+  local BASE_RENDER_SETTINGS = 0x4 | 0x10 | 0x200
+  local SOURCE_SELECTED_ITEMS             = 0x20  -- selected media items
+  local SOURCE_SELECTED_ITEMS_VIA_MASTER  = 0x40  -- selected media items via master
+  local source_bit = t.render_via_master and SOURCE_SELECTED_ITEMS_VIA_MASTER or SOURCE_SELECTED_ITEMS
+  local render_settings = BASE_RENDER_SETTINGS | source_bit
 
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT',  'ZXZhdxgGAA==', true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '',             true)
@@ -351,7 +368,8 @@ local function run_export(t)
           ))
         end
         if corr and corr >= t.mono_downmix_threshold then
-          reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", 3)
+          local chanmode = MONO_DOWNMIX_CHANMODE[t.mono_downmix_mode] or MONO_DOWNMIX_CHANMODE.left
+          reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", chanmode)
         end
       end
 
@@ -436,15 +454,168 @@ local function run_export(t)
 end
 
 -- ============================================================
+-- Export path preview
+-- Approximates how $item/$project/$projectpath/$user/$date will
+-- resolve, for display only -- REAPER itself resolves the real
+-- render pattern at render time.
+-- ============================================================
+local PATH_SEP = reaper.GetOS():find("Win") and "\\" or "/"
+local PREVIEW_MAX_ROWS = 25
+
+local function get_preview_project_tokens()
+  local proj_fn = reaper.GetProjectName(0, "")
+  local proj_name = proj_fn ~= "" and (proj_fn:gsub("%.[Rr][Pp][Pp]$", "")) or "untitled"
+  local proj_path = reaper.GetProjectPath()
+  return proj_name, proj_path
+end
+
+local function resolve_preview_pattern(pattern, item_name)
+  local proj_name, proj_path = get_preview_project_tokens()
+  local user = os.getenv("USER") or os.getenv("USERNAME") or ""
+  local date = os.date("%Y-%m-%d")
+  local resolved = pattern
+  resolved = resolved:gsub("%$projectpath", (proj_path:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$project",     (proj_name:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$item",        (item_name:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$user",        (user:gsub("%%", "%%%%")))
+  resolved = resolved:gsub("%$date",        date)
+  return resolved
+end
+
+local function get_selected_item_infos()
+  local infos = {}
+  local n = reaper.CountSelectedMediaItems(0)
+  for i = 0, n - 1 do
+    local item = reaper.GetSelectedMediaItem(0, i)
+    local take = reaper.GetActiveTake(item)
+    if take and not reaper.TakeIsMIDI(take) then
+      local _, name = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
+      local source = reaper.GetMediaItemTake_Source(take)
+      table.insert(infos, {
+        name   = name ~= "" and name or "(untitled take)",
+        take   = take,
+        src_ch = source and reaper.GetMediaSourceNumChannels(source) or 0,
+        guid   = reaper.BR_GetMediaItemGUID(item),
+      })
+    end
+  end
+  return infos
+end
+
+-- Abbreviates a resolved directory to "…/<parent>/<last>/" so preview rows
+-- stay short without wrapping (matches the design's ellipsis-truncated dir).
+local function shorten_dir_for_preview(dir)
+  local segments = {}
+  for seg in dir:gmatch("[^/\\]+") do segments[#segments + 1] = seg end
+  if #segments == 0 then return "" end
+  local tail_n = math.min(2, #segments)
+  local parts = {}
+  for i = #segments - tail_n + 1, #segments do parts[#parts + 1] = segments[i] end
+  return "\u{2026}" .. PATH_SEP .. table.concat(parts, PATH_SEP) .. PATH_SEP
+end
+
+-- Mono-downmix prediction cache: correlation analysis is real audio work
+-- (CreateTakeAudioAccessor + block reads), so it's only recomputed when the
+-- previewed selection/threshold actually change, and only for the rows
+-- actually shown (PREVIEW_MAX_ROWS) -- never every frame, and never for a
+-- huge selection -- so the live preview can't hitch.
+local preview_mono_sig   = nil
+local preview_mono_cache = {}
+
+local function get_preview_mono_flags(infos, mono_en, threshold)
+  if not mono_en then return {} end
+  local sig_parts = { tostring(threshold) }
+  for i = 1, math.min(#infos, PREVIEW_MAX_ROWS) do
+    sig_parts[#sig_parts + 1] = infos[i].guid
+  end
+  local sig = table.concat(sig_parts, "|")
+  if sig == preview_mono_sig then return preview_mono_cache end
+
+  local flags = {}
+  for i = 1, math.min(#infos, PREVIEW_MAX_ROWS) do
+    local info = infos[i]
+    if info.src_ch == 2 then
+      local corr = compute_stereo_correlation(info.take)
+      flags[i] = corr ~= nil and corr >= threshold
+    else
+      flags[i] = false
+    end
+  end
+  preview_mono_sig   = sig
+  preview_mono_cache = flags
+  return flags
+end
+
+-- Splits a full resolved path into (dir, filename+ext) on the last separator
+-- -- the resolved pattern can itself contain separators (e.g. the default
+-- "$project\$item" pattern nests into a subfolder), and REAPER render
+-- patterns may mix '/' and '\' regardless of OS.
+local function split_preview_path(full_path)
+  local last_sep = nil
+  for j = #full_path, 1, -1 do
+    local c = full_path:sub(j, j)
+    if c == "/" or c == "\\" then last_sep = j break end
+  end
+  if not last_sep then return "", full_path end
+  return full_path:sub(1, last_sep - 1), full_path:sub(last_sep + 1)
+end
+
+-- Returns (rows, total_item_count, mono_total) where rows is capped at
+-- PREVIEW_MAX_ROWS. Each row is {dir_short, filename, ext, ch} where ch is
+-- the channel count the exported file is expected to have -- 1 if the mono
+-- downmix prediction applies, otherwise the source's own channel count.
+local function build_preview_rows(dir, pattern, mono_en, threshold)
+  local resolved_dir = dir ~= "" and dir or reaper.GetProjectPath()
+  local infos = get_selected_item_infos()
+  local mono_flags = get_preview_mono_flags(infos, mono_en, threshold)
+
+  local rows = {}
+  local mono_total = 0
+  for i = 1, math.min(#infos, PREVIEW_MAX_ROWS) do
+    local info = infos[i]
+    local full_path = resolved_dir .. PATH_SEP .. resolve_preview_pattern(pattern, info.name) .. ".wav"
+    local dir_part, file_part = split_preview_path(full_path)
+    local fname, ext = file_part:match("^(.-)(%.[^.]*)$")
+    local is_mono = mono_flags[i] or false
+    if is_mono then mono_total = mono_total + 1 end
+    table.insert(rows, {
+      dir_short = shorten_dir_for_preview(dir_part),
+      filename  = fname or file_part,
+      ext       = ext or "",
+      ch        = is_mono and 1 or (info.src_ch > 0 and info.src_ch or 2),
+    })
+  end
+
+  return rows, #infos, mono_total
+end
+
+-- Channel-count chip styling (text color, border color) per output channel
+-- count -- purple/blue/orange/green/yellow for mono/stereo/quad/5.1/7.1,
+-- with a neutral gray fallback for anything else. Rendered via the shared
+-- theme.Chip primitive.
+local CHANNEL_CHIP_STYLES = {
+  [1] = { label = "MONO",   text = 0xA08FE2FF, border = 0x4A4160FF },
+  [2] = { label = "STEREO", text = 0x6FA8E8FF, border = 0x2E3F58FF },
+  [4] = { label = "QUAD",   text = 0xE2A25FFF, border = 0x5A4530FF },
+  [6] = { label = "5.1",    text = 0x7FC98CFF, border = 0x33472FFF },
+  [8] = { label = "7.1",    text = 0xE0D46AFF, border = 0x55502AFF },
+}
+
+local function channel_chip_style(ch)
+  return CHANNEL_CHIP_STYLES[ch] or { label = ch .. "CH", text = 0xA0A0A0FF, border = 0x3A3F45FF }
+end
+
+-- ============================================================
 -- ImGui context
 -- ============================================================
-local script_title = "SMART EXPORT"
+local script_title = "SMART EXPORT ITEMS"
 local ctx = ImGui.CreateContext(script_title)
 
-local WIN_FLAGS = ImGui.WindowFlags_NoScrollbar
-               | ImGui.WindowFlags_NoCollapse
-               | ImGui.WindowFlags_AlwaysAutoResize
-               | ImGui.WindowFlags_NoScrollWithMouse
+local mono_font_name = reaper.GetOS():find("Win") and "Consolas" or "Menlo"
+local mono_font = ImGui.CreateFont(mono_font_name, 13)
+ImGui.Attach(ctx, mono_font)
+
+local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
 
 -- ============================================================
 -- Template state
@@ -461,6 +632,10 @@ local norm_db_buf     = "-24.0"
 local tail_buf        = "0"
 local mono_downmix_en = true
 local mono_thresh_buf = "0.9"
+local mono_downmix_mode = "left"
+local open_folder_en  = false
+local render_via_master_en = true
+local close_after_render_en = true
 
 -- Rename modal state
 local rename_pending    = false
@@ -476,6 +651,12 @@ local delete_idx     = 1
 local last_active_idx = 0  -- sentinel; forces first-frame buffer sync
 local open = true
 
+-- Height of the left rail's "status text + Render button" footer block,
+-- measured one frame late so the spacer above it can push it flush to the
+-- bottom of the rail (matches the design, where Render always sits at the
+-- rail's bottom edge regardless of window height).
+local left_footer_h = 0
+
 -- ============================================================
 -- Buffer helpers
 -- ============================================================
@@ -486,8 +667,12 @@ local function sync_buffers_from(t)
   norm_mode       = t.normalize_mode
   norm_db_buf     = tostring(t.normalize_target_db)
   tail_buf        = tostring(t.tail_ms)
-  mono_downmix_en = t.mono_downmix_enabled
-  mono_thresh_buf = tostring(t.mono_downmix_threshold)
+  mono_downmix_en   = t.mono_downmix_enabled
+  mono_thresh_buf   = tostring(t.mono_downmix_threshold)
+  mono_downmix_mode = t.mono_downmix_mode
+  open_folder_en    = t.open_folder_after
+  render_via_master_en = t.render_via_master
+  close_after_render_en = t.close_after_render
 end
 
 local function flush_buffers_to(t)
@@ -499,6 +684,10 @@ local function flush_buffers_to(t)
   t.tail_ms                = tonumber(tail_buf)      or t.tail_ms
   t.mono_downmix_enabled   = mono_downmix_en
   t.mono_downmix_threshold = tonumber(mono_thresh_buf) or t.mono_downmix_threshold
+  t.mono_downmix_mode      = mono_downmix_mode
+  t.open_folder_after      = open_folder_en
+  t.render_via_master      = render_via_master_en
+  t.close_after_render     = close_after_render_en
 end
 
 -- ============================================================
@@ -537,9 +726,31 @@ init_templates()
 -- ============================================================
 local function loop()
   local color_count, var_count = theme.Push(ctx)
+  -- Flatten the active tab into the panel below it (instead of the shared
+  -- theme's teal fill, which never actually applied here -- see below) with
+  -- a purple accent line on top, closer to the design's minimal tab
+  -- treatment. Scoped to this script only.
+  --
+  -- This build of ReaImGui renamed the tab color enums (Col_TabActive ->
+  -- Col_TabSelected, Col_TabUnfocused -> Col_TabDimmed, etc.) and added a
+  -- native Col_TabSelectedOverline for the accent line -- ReaImGuiTheme.lua
+  -- still pushes the *old* names via the same rawget guard used here, which
+  -- means they've been silently no-op'ing and every tab has been rendering
+  -- in Dear ImGui's default blue. Try the current name first, fall back to
+  -- the old one for older ReaImGui installs.
+  local col_tab_selected = rawget(ImGui, "Col_TabSelected") or rawget(ImGui, "Col_TabActive")
+  if col_tab_selected then
+    ImGui.PushStyleColor(ctx, col_tab_selected, 0x282828FF)
+    color_count = color_count + 1
+  end
+  local col_tab_overline = rawget(ImGui, "Col_TabSelectedOverline")
+  if col_tab_overline then
+    ImGui.PushStyleColor(ctx, col_tab_overline, 0xA08FE2FF)
+    color_count = color_count + 1
+  end
 
-  local WIN_W = 500
-  ImGui.SetNextWindowSizeConstraints(ctx, WIN_W, 0, WIN_W, 10000)
+  local WIN_W = 920
+  ImGui.SetNextWindowSizeConstraints(ctx, 600, 0, 3000, 10000)
   ImGui.SetNextWindowSize(ctx, WIN_W, 0, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, script_title, true, WIN_FLAGS)
 
@@ -552,6 +763,18 @@ local function loop()
         -- tab_visible = this tab's content should be drawn this frame
         -- new_open    = false when the user clicks the × close button
         local tab_visible, new_open = ImGui.BeginTabItem(ctx, t.name, true, 0)
+
+        -- Accent top-border on the active tab -- only needed as a fallback
+        -- when this ReaImGui build has no native Col_TabSelectedOverline
+        -- (pushed above), which already draws this for us. GetItemRectMin/
+        -- Max here refer to the tab item itself, so this must run
+        -- immediately after BeginTabItem.
+        if tab_visible and not col_tab_overline then
+          local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
+          local tab_max_x = select(1, ImGui.GetItemRectMax(ctx))
+          local draw_list = ImGui.GetWindowDrawList(ctx)
+          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_max_x, tab_min_y + 2, 0xA08FE2FF)
+        end
 
         -- Right-click → context menu (must be called right after BeginTabItem)
         if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. i) then
@@ -626,71 +849,128 @@ local function loop()
       ImGui.EndTabBar(ctx)
     end
 
-    -- ── Settings fields ──────────────────────────────────────
-    if ImGui.BeginTable(ctx, "##fields", 2) then
-      ImGui.TableSetupColumn(ctx, "##input", ImGui.TableColumnFlags_WidthStretch)
-      ImGui.TableSetupColumn(ctx, "##label", ImGui.TableColumnFlags_WidthFixed, 110)
+    -- ── Left column: settings rail ───────────────────────────
+    local LEFT_COL_W = 240
+    local CTL_W       = 150  -- fixed control width; label column stretches to fill the rest
 
-      -- Output Dir
-      ImGui.TableNextRow(ctx)
-      ImGui.TableSetColumnIndex(ctx, 0)
-      local has_browse = reaper.JS_Dialog_BrowseForFolder ~= nil
-      local browse_w = has_browse and 80 or 0
-      ImGui.SetNextItemWidth(ctx, browse_w > 0 and -(browse_w + 6) or -1)
-      local _, new_dir = ImGui.InputText(ctx, "##dir", dir_buf)
-      dir_buf = new_dir
-      if has_browse then
-        ImGui.SameLine(ctx)
-        if ImGui.Button(ctx, "Browse\u{2026}", browse_w, 0) then
-          local ok, folder = reaper.JS_Dialog_BrowseForFolder("Select Export Folder", dir_buf)
-          if ok == 1 then dir_buf = folder end
-        end
+    -- avail_h is "from here to the bottom of the window at its current size"
+    -- -- used to stretch both the rail background and the field/footer split
+    -- all the way down, instead of just wrapping tightly around content.
+    local _, avail_h = ImGui.GetContentRegionAvail(ctx)
+    local lx0, ly0 = ImGui.GetCursorScreenPos(ctx)
+    do
+      local draw_list = ImGui.GetWindowDrawList(ctx)
+      ImGui.DrawList_AddRectFilled(draw_list, lx0, ly0, lx0 + LEFT_COL_W, ly0 + avail_h, 0x222222FF, 4)
+    end
+
+    ImGui.BeginGroup(ctx)
+
+    -- outer_size_w pins each table to LEFT_COL_W -- without it, a table with
+    -- a WidthStretch column stretches to fill the *whole window* (a
+    -- BeginGroup doesn't constrain child width), shoving the right column
+    -- off past the window edge and making the preview text wrap to
+    -- near-zero width.
+    local function begin_field_table(id)
+      local ok = ImGui.BeginTable(ctx, id, 2, 0, LEFT_COL_W, 0)
+      if ok then
+        ImGui.TableSetupColumn(ctx, "##ctl",   ImGui.TableColumnFlags_WidthFixed, CTL_W)
+        ImGui.TableSetupColumn(ctx, "##label", ImGui.TableColumnFlags_WidthStretch)
       end
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Output Dir")
+      return ok
+    end
 
-      -- Filename pattern
+    -- NORMALIZE section
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xC8C8C8FF)
+    local _, new_norm_en = ImGui.Checkbox(ctx, "NORMALIZE", norm_en)
+    ImGui.PopStyleColor(ctx)
+    norm_en = new_norm_en
+
+    if not norm_en then ImGui.BeginDisabled(ctx, true) end
+    if begin_field_table("##norm_fields") then
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
-      ImGui.SetNextItemWidth(ctx, -1)
-      local _, new_pat = ImGui.InputText(ctx, "##pattern", pattern_buf)
-      pattern_buf = new_pat
-      ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Filename")
-
-      -- Token hint
-      ImGui.TableNextRow(ctx)
-      ImGui.TableSetColumnIndex(ctx, 0)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-      ImGui.Text(ctx, "Tokens: $item  $project  $projectpath  $user  $date")
-      ImGui.PopStyleColor(ctx)
-
-      -- Normalize
-      ImGui.TableNextRow(ctx)
-      ImGui.TableSetColumnIndex(ctx, 0)
-      local _, new_norm_en = ImGui.Checkbox(ctx, "##norm_en", norm_en)
-      norm_en = new_norm_en
-      ImGui.SameLine(ctx)
-      if not norm_en then ImGui.BeginDisabled(ctx, true) end
       local mode_label = norm_mode == "lufs_m" and "LUFS-M" or "LUFS-I"
-      ImGui.SetNextItemWidth(ctx, 78)
+      ImGui.SetNextItemWidth(ctx, -1)
       if ImGui.BeginCombo(ctx, "##norm_mode", mode_label, 0) then
         if ImGui.Selectable(ctx, "LUFS-I", norm_mode == "lufs_i", 0) then norm_mode = "lufs_i" end
         if ImGui.Selectable(ctx, "LUFS-M", norm_mode == "lufs_m", 0) then norm_mode = "lufs_m" end
         ImGui.EndCombo(ctx)
       end
-      ImGui.SameLine(ctx)
-      ImGui.SetNextItemWidth(ctx, 58)
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Mode")
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
       local _, new_db = ImGui.InputText(ctx, "##norm_db", norm_db_buf,
         ImGui.InputTextFlags_CharsDecimal)
       norm_db_buf = new_db
-      ImGui.SameLine(ctx)
-      ImGui.Text(ctx, "dB")
-      if not norm_en then ImGui.EndDisabled(ctx) end
       ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Normalize")
+      ImGui.Text(ctx, "Target dB")
 
-      -- Tail
+      ImGui.EndTable(ctx)
+    end
+    if not norm_en then ImGui.EndDisabled(ctx) end
+
+    ImGui.Spacing(ctx)
+
+    -- MONO DOWNMIX section
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xC8C8C8FF)
+    local _, new_mono_en = ImGui.Checkbox(ctx, "MONO DOWNMIX", mono_downmix_en)
+    ImGui.PopStyleColor(ctx)
+    mono_downmix_en = new_mono_en
+    if ImGui.IsItemHovered(ctx) then
+      ImGui.BeginTooltip(ctx)
+      ImGui.PushTextWrapPos(ctx, ImGui.GetFontSize(ctx) * 30)
+      ImGui.Text(ctx,
+        "Before export, checks each stereo item's L/R correlation. If it meets or "
+        .. "exceeds the threshold (channels are near-identical, e.g. a mono source "
+        .. "recorded to a stereo pair), the take's channel mode is switched to the "
+        .. "selected mono option below so it renders as mono instead of true stereo.")
+      ImGui.PopTextWrapPos(ctx)
+      ImGui.EndTooltip(ctx)
+    end
+
+    if not mono_downmix_en then ImGui.BeginDisabled(ctx, true) end
+    if begin_field_table("##mono_fields") then
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
+      local _, new_thresh = ImGui.InputText(ctx, "##mono_thresh", mono_thresh_buf,
+        ImGui.InputTextFlags_CharsDecimal)
+      mono_thresh_buf = new_thresh
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Threshold")
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local mono_mode_label = ({
+        left    = "Take Left Channel",
+        right   = "Take Right Channel",
+        downmix = "Downmix",
+      })[mono_downmix_mode] or "Take Left Channel"
+      ImGui.SetNextItemWidth(ctx, -1)
+      if ImGui.BeginCombo(ctx, "##mono_mode", mono_mode_label, 0) then
+        if ImGui.Selectable(ctx, "Take Left Channel",  mono_downmix_mode == "left",    0) then mono_downmix_mode = "left"    end
+        if ImGui.Selectable(ctx, "Take Right Channel", mono_downmix_mode == "right",   0) then mono_downmix_mode = "right"   end
+        if ImGui.Selectable(ctx, "Downmix",            mono_downmix_mode == "downmix", 0) then mono_downmix_mode = "downmix" end
+        ImGui.EndCombo(ctx)
+      end
+      ImGui.TableSetColumnIndex(ctx, 1)
+      ImGui.Text(ctx, "Mode")
+
+      ImGui.EndTable(ctx)
+    end
+    if not mono_downmix_en then ImGui.EndDisabled(ctx) end
+
+    ImGui.Spacing(ctx)
+
+    -- RENDER section (plain divider -- not a toggle)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+    ImGui.Text(ctx, "RENDER")
+    ImGui.PopStyleColor(ctx)
+
+    if begin_field_table("##render_fields") then
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
       ImGui.SetNextItemWidth(ctx, -1)
@@ -700,22 +980,135 @@ local function loop()
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Tail (ms)")
 
-      -- Mono Downmix
+      ImGui.EndTable(ctx)
+    end
+
+    local _, new_via_master = ImGui.Checkbox(ctx, "Render via Master", render_via_master_en)
+    render_via_master_en = new_via_master
+    if ImGui.IsItemHovered(ctx) then
+      ImGui.BeginTooltip(ctx)
+      ImGui.PushTextWrapPos(ctx, ImGui.GetFontSize(ctx) * 30)
+      ImGui.Text(ctx,
+        "When checked, selected items are rendered through the master bus (and any "
+        .. "master track processing/FX). When unchecked, items are rendered directly, "
+        .. "bypassing the master bus.")
+      ImGui.PopTextWrapPos(ctx)
+      ImGui.EndTooltip(ctx)
+    end
+
+    local _, new_open_folder_en = ImGui.Checkbox(ctx, "Open Folder After Render", open_folder_en)
+    open_folder_en = new_open_folder_en
+
+    local _, new_close_after_render_en = ImGui.Checkbox(ctx, "Close Smart Export After Render", close_after_render_en)
+    close_after_render_en = new_close_after_render_en
+
+    -- Spacer pushes the Render button + status flush to the rail's bottom
+    -- edge (matches the design, where Render always sits at the bottom
+    -- regardless of window height) using last frame's measured footer
+    -- height -- known up front this frame, unlike the old right-panel tint,
+    -- so no one-frame lag is visible here.
+    local n_items = reaper.CountSelectedMediaItems(0)
+    local _, fields_bottom_y = ImGui.GetCursorScreenPos(ctx)
+    local spacer_h = avail_h - (fields_bottom_y - ly0) - left_footer_h
+    if spacer_h > 0 then ImGui.Dummy(ctx, 0, spacer_h) end
+
+    local _, footer_top_y = ImGui.GetCursorScreenPos(ctx)
+
+    -- Separator above the Render button -- drawn manually at LEFT_COL_W
+    -- rather than via ImGui.Separator(), which (like Button/Table before it)
+    -- spans the *window's* full content width inside a bare BeginGroup, not
+    -- the rail's intended width.
+    ImGui.Spacing(ctx)
+    do
+      local sx, sy = ImGui.GetCursorScreenPos(ctx)
+      local draw_list = ImGui.GetWindowDrawList(ctx)
+      ImGui.DrawList_AddRectFilled(draw_list, sx, sy, sx + LEFT_COL_W, sy + 1, 0x3A3F45FF)
+    end
+    ImGui.Dummy(ctx, 0, 1)
+    ImGui.Spacing(ctx)
+
+    -- Render button -- only the click is captured here; the actual
+    -- run_export() call is deferred until after the right column has been
+    -- fully drawn, so REAPER's native render engine never runs mid-frame
+    -- with more ImGui widgets still queued behind it.
+    local no_items = n_items == 0
+    if no_items then ImGui.BeginDisabled(ctx, true) end
+    local BTN_PAD_X = 4
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + BTN_PAD_X)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0xA08FE2FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered, 0xB3A6E8FF)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,  0x8D7ACCFF)
+    ImGui.PushFont(ctx, nil, ImGui.GetFontSize(ctx) * 1.3)
+    local do_render = ImGui.Button(ctx, "Render", LEFT_COL_W - BTN_PAD_X * 2, 0)
+      or (not no_items and (
+            ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
+            or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
+    ImGui.PopFont(ctx)
+    ImGui.PopStyleColor(ctx, 3)
+    if no_items then ImGui.EndDisabled(ctx) end
+
+    local status_text = ("%d %s selected"):format(n_items, n_items == 1 and "item" or "items")
+    local status_w = ImGui.CalcTextSize(ctx, status_text)
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + (LEFT_COL_W - status_w) / 2)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+    ImGui.Text(ctx, status_text)
+    ImGui.PopStyleColor(ctx)
+
+    local _, footer_bottom_y = ImGui.GetCursorScreenPos(ctx)
+    left_footer_h = footer_bottom_y - footer_top_y
+
+    ImGui.EndGroup(ctx)
+
+    -- ── Right column: output dir/filename + live preview ────
+    ImGui.SameLine(ctx, 0, 20)
+
+    ImGui.BeginGroup(ctx)
+
+    local has_browse = reaper.JS_Dialog_BrowseForFolder ~= nil
+
+    -- Directory / File name rows -- input | action button | right-aligned
+    -- label, sized to whatever width remains in the window (no outer_size_w:
+    -- unlike the left column's tables, nothing follows this on the line, so
+    -- "available width" here already stops at the window edge).
+    if ImGui.BeginTable(ctx, "##right_top", 3) then
+      ImGui.TableSetupColumn(ctx, "##input", ImGui.TableColumnFlags_WidthStretch)
+      ImGui.TableSetupColumn(ctx, "##btn",   ImGui.TableColumnFlags_WidthFixed, 80)
+      ImGui.TableSetupColumn(ctx, "##lbl",   ImGui.TableColumnFlags_WidthFixed, 72)
+
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
-      local _, new_mono_en = ImGui.Checkbox(ctx, "##mono_en", mono_downmix_en)
-      mono_downmix_en = new_mono_en
-      ImGui.SameLine(ctx)
-      if not mono_downmix_en then ImGui.BeginDisabled(ctx, true) end
-      ImGui.SetNextItemWidth(ctx, 58)
-      local _, new_thresh = ImGui.InputText(ctx, "##mono_thresh", mono_thresh_buf,
-        ImGui.InputTextFlags_CharsDecimal)
-      mono_thresh_buf = new_thresh
-      ImGui.SameLine(ctx)
-      ImGui.Text(ctx, "correlation threshold")
-      if not mono_downmix_en then ImGui.EndDisabled(ctx) end
+      ImGui.SetNextItemWidth(ctx, -1)
+      local _, new_dir = ImGui.InputText(ctx, "##dir", dir_buf)
+      dir_buf = new_dir
       ImGui.TableSetColumnIndex(ctx, 1)
-      ImGui.Text(ctx, "Mono Downmix")
+      if has_browse then
+        if ImGui.Button(ctx, "Browse\u{2026}", -1, 0) then
+          local ok, folder = reaper.JS_Dialog_BrowseForFolder("Select Export Folder", dir_buf)
+          if ok == 1 then dir_buf = folder end
+        end
+      end
+      ImGui.TableSetColumnIndex(ctx, 2)
+      ImGui.Text(ctx, "Directory")
+
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      ImGui.SetNextItemWidth(ctx, -1)
+      local _, new_pat = ImGui.InputText(ctx, "##pattern", pattern_buf)
+      pattern_buf = new_pat
+      ImGui.TableSetColumnIndex(ctx, 1)
+      if ImGui.Button(ctx, "Wildcards", -1, 0) then
+        ImGui.OpenPopup(ctx, "##wildcards_popup")
+      end
+      if ImGui.BeginPopup(ctx, "##wildcards_popup") then
+        for _, tok in ipairs({"$item", "$project", "$projectpath", "$user", "$date"}) do
+          if ImGui.Selectable(ctx, tok, false, 0) then
+            pattern_buf = pattern_buf .. tok
+          end
+        end
+        ImGui.EndPopup(ctx)
+      end
+      ImGui.TableSetColumnIndex(ctx, 2)
+      ImGui.Text(ctx, "File name")
 
       ImGui.EndTable(ctx)
     end
@@ -724,33 +1117,70 @@ local function loop()
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
-    -- Status
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    local n_items = reaper.CountSelectedMediaItems(0)
-    ImGui.Text(ctx, ("%d %s selected for export"):format(
-      n_items, n_items == 1 and "item" or "items"))
+    local mono_threshold = tonumber(mono_thresh_buf) or 0.9
+    local preview_rows, preview_total, preview_mono_total =
+      build_preview_rows(dir_buf, pattern_buf, mono_downmix_en, mono_threshold)
+
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+    ImGui.Text(ctx, "RESOLVED PATHS")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SameLine(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x6E6E6EFF)
+    local count_str = tostring(preview_total)
+    if mono_downmix_en and preview_mono_total > 0 then
+      count_str = ("%s  \u{00B7}  %d will downmix to mono"):format(count_str, preview_mono_total)
+    end
+    ImGui.Text(ctx, count_str)
     ImGui.PopStyleColor(ctx)
 
-    ImGui.Spacing(ctx)
+    -- Plain in-window rows (not a child window) -- avoids nesting a
+    -- BeginChild/EndChild pair, which triggered a ReaImGui window-stack
+    -- assertion here. Directories are abbreviated (shorten_dir_for_preview)
+    -- rather than wrapped, so mixed-color rows never need to wrap mid-line.
+    if #preview_rows == 0 then
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+      ImGui.Text(ctx, "No items selected.")
+      ImGui.PopStyleColor(ctx)
+    else
+      for _, row in ipairs(preview_rows) do
+        ImGui.PushFont(ctx, mono_font, 13)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+        ImGui.Text(ctx, row.dir_short)
+        ImGui.PopStyleColor(ctx)
+        ImGui.SameLine(ctx, 0, 0)
+        ImGui.Text(ctx, row.filename)
+        ImGui.SameLine(ctx, 0, 0)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+        ImGui.Text(ctx, row.ext)
+        ImGui.PopStyleColor(ctx)
+        ImGui.PopFont(ctx)
+        ImGui.SameLine(ctx)
+        local chip = channel_chip_style(row.ch)
+        theme.Chip(ctx, chip.label, chip.text, chip.border)
+      end
+      if preview_total > #preview_rows then
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+        ImGui.Text(ctx, ("...and %d more"):format(preview_total - #preview_rows))
+        ImGui.PopStyleColor(ctx)
+      end
+    end
 
-    -- Render button
-    local no_items = n_items == 0
-    if no_items then ImGui.BeginDisabled(ctx, true) end
+    ImGui.EndGroup(ctx)
 
-    local do_render = ImGui.Button(ctx, "Render", -1, 0)
-      or (not no_items and (
-            ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
-            or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
-
-    if no_items then ImGui.EndDisabled(ctx) end
-
+    -- The actual render call, deferred until every other widget this frame
+    -- (including everything in the right column above) has already been
+    -- drawn -- see the Render button comment in the left column above.
     if do_render then
       flush_buffers_to(templates[active_idx])
       local t = templates[active_idx]
       save_template(t)
       reaper.SetExtState("SmartExport", "active_template", t.name, true)
-      open = false
+      if t.close_after_render then open = false end
       run_export(t)
+      if t.open_folder_after then
+        local folder = t.render_output_dir ~= "" and t.render_output_dir or reaper.GetProjectPath()
+        reaper.CF_ShellExecute(folder)
+      end
     end
 
     ImGui.End(ctx)

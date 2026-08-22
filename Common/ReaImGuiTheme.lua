@@ -1,12 +1,22 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.6
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
 -- @provides
 --   line-md--play-filled.png > line-md--play-filled.png
 -- @changelog
+--   08/22/26 - v1.6 Added theme.Chip(ctx, label, text_color, border_color):
+--                   a small bordered/rounded label for tagging list rows
+--                   (status, category, etc.), drawn via the window draw
+--                   list since ImGui has no native chip widget
+--   08/22/26 - v1.5 Fixed active/unfocused tab colors silently no-op'ing on
+--                   newer ReaImGui builds, which renamed Col_TabActive ->
+--                   Col_TabSelected, Col_TabUnfocused -> Col_TabDimmed, and
+--                   Col_TabUnfocusedActive -> Col_TabDimmedSelected; both
+--                   old and new names are now pushed so whichever exists on
+--                   the running build applies
 --   05/07/26 - v1.4 Adjusting colors
 --   05/05/26 - v1.3 Adjusting colors
 --   03/28/25 - v1.0 Initial release
@@ -59,8 +69,18 @@ function theme.Push(ctx)
 
   add_color_name("Col_Tab", 0x23282DFF)
   add_color_name("Col_TabHovered", 0x333333FF)
+  -- Newer ReaImGui builds renamed these (Col_TabActive -> Col_TabSelected,
+  -- Col_TabUnfocused -> Col_TabDimmed, Col_TabUnfocusedActive ->
+  -- Col_TabDimmedSelected). add_color_name's rawget guard means only the
+  -- name that actually exists on the running build gets pushed, so both the
+  -- new and old name are listed here for compatibility -- without this,
+  -- these three were silently no-op'ing on newer builds and every active
+  -- tab fell back to Dear ImGui's default blue.
+  add_color_name("Col_TabSelected", 0x2C6B64FF)
   add_color_name("Col_TabActive", 0x2C6B64FF)
+  add_color_name("Col_TabDimmed", 0x1E2226FF)
   add_color_name("Col_TabUnfocused", 0x1E2226FF)
+  add_color_name("Col_TabDimmedSelected", 0x273035FF)
   add_color_name("Col_TabUnfocusedActive", 0x273035FF)
 
   local vars = {
@@ -90,6 +110,26 @@ function theme.Pop(ctx, color_count, var_count)
   if color_count and color_count > 0 then
     ImGui.PopStyleColor(ctx, color_count)
   end
+end
+
+-- ============================================================
+-- Chip: small bordered, rounded label -- e.g. a status/category tag on a
+-- list row. Not a native ImGui widget, so it's drawn directly on the
+-- window's draw list at the current cursor position, then an invisible
+-- Dummy of the same size is placed to advance the cursor -- so it composes
+-- with SameLine()/etc. like any other small widget.
+-- ============================================================
+function theme.Chip(ctx, label, text_color, border_color)
+  local PAD_X, PAD_Y = 5, 2
+  local text_w, text_h = ImGui.CalcTextSize(ctx, label)
+  local x0, y0 = ImGui.GetCursorScreenPos(ctx)
+  local x1, y1 = x0 + text_w + PAD_X * 2, y0 + text_h + PAD_Y * 2
+
+  local draw_list = ImGui.GetWindowDrawList(ctx)
+  ImGui.DrawList_AddRect(draw_list, x0, y0, x1, y1, border_color, 3)
+  ImGui.DrawList_AddText(draw_list, x0 + PAD_X, y0 + PAD_Y, text_color, label)
+
+  ImGui.Dummy(ctx, x1 - x0, y1 - y0)
 end
 
 return theme
