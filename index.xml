@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="bbc60572b7161fa5ce92e7d746259a2cab7b7de5">
+<index version="1" name="SPS Scripts" commit="2112bcbf52a104499293be85134fc91800e0dea9">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -29,6 +29,132 @@
 03/28/25 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Common/ReaImGuiTheme.lua</source>
         <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/73d7e0b00c5ad0cfabeb02dfb61e4ddd4e4125c9/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.6" author="Stephen Schappler" time="2026-08-22T16:12:58Z">
+        <changelog><![CDATA[08/22/26 - v1.6 Added theme.Chip(ctx, label, text_color, border_color):
+                a small bordered/rounded label for tagging list rows
+                (status, category, etc.), drawn via the window draw
+                list since ImGui has no native chip widget
+08/22/26 - v1.5 Fixed active/unfocused tab colors silently no-op'ing on
+                newer ReaImGui builds, which renamed Col_TabActive ->
+                Col_TabSelected, Col_TabUnfocused -> Col_TabDimmed, and
+                Col_TabUnfocusedActive -> Col_TabDimmedSelected; both
+                old and new names are now pushed so whichever exists on
+                the running build applies
+05/07/26 - v1.4 Adjusting colors
+05/05/26 - v1.3 Adjusting colors
+03/28/25 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.7" author="Stephen Schappler" time="2026-08-22T21:10:18Z">
+        <changelog><![CDATA[08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Common/line-md--play-filled.png</source>
+      </version>
+      <version name="1.8" author="Stephen Schappler" time="2026-08-22T21:57:13Z">
+        <changelog><![CDATA[08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
+                table of glyph constants), theme.PushIconFont/PopIconFont,
+                theme.IconText, and theme.IconButton. The icon font
+                ships as Fonts/fa-solid-900.ttf alongside this file and
+                is lazily created/cached per-ctx like the bold font
+                below, since ReaImGui has no font-merge mode -- icon
+                glyphs always come from a separate font pushed around
+                the draw call, not blended into the body-text font.
+                theme.IconButton/theme.IconButtonSize size the button
+                square to the requested icon size (default: current
+                font size) plus frame padding, so a larger icon grows
+                its button instead of clipping, and callers can still
+                align one (e.g. right-justify) without pre-measuring.
+08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/line-md--play-filled.png</source>
+        <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/Fonts/fa-solid-900.ttf</source>
+        <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/b88d90eaa74034fa181ee860ce1220445bbf0c78/Common/Fonts/LICENSE.txt</source>
+      </version>
+      <version name="1.22" author="Stephen Schappler" time="2026-08-23T17:46:52Z">
+        <changelog><![CDATA[08/23/26 - v1.22 Fixed theme.PrimaryButton's icon path: passing the
+                standard `-1` (fill available width) for `width` was
+                silently treated as "auto-size to content" instead,
+                since the check was `width > 0` -- any icon
+                PrimaryButton passing -1 (Create, Reposition) came
+                out narrower than intended. Now matches native
+                ImGui.Button's width semantics: nil/0 = auto, < 0 =
+                fill available width, > 0 = fixed width.
+08/23/26 - v1.21 Added theme.Icons.LEFT_RIGHT (fa-left-right).
+08/23/26 - v1.20 Added theme.Icons.SQUARE_PLUS (fa-square-plus).
+08/23/26 - v1.19 Added theme.Icons.FILE_WAVEFORM (fa-file-waveform).
+08/23/26 - v1.18 theme.PrimaryButton takes an optional 6th `icon`
+                arg (one of theme.Icons.*), drawn before the label.
+                Since there's no font-merge, this draws a blank-label
+                Button() for native hover/press + click behavior and
+                overlays the icon glyph + bold label text on top via
+                the draw list. Also added theme.Icons.PENCIL.
+08/23/26 - v1.17 Added theme.Icons.DOLLAR_SIGN (fa-dollar-sign).
+08/22/26 - v1.16 theme.PrimaryButton now takes an optional 5th `color`
+                arg to reuse the exact same bold/1.3x/dark-text style
+                in a different hue (hover/active shades auto-derived
+                via the new scale_rgb helper) -- e.g. Renamer's
+                Export button, which needed the same look as Rename
+                but a distinct color.
+08/22/26 - v1.15 Col_PopupBg (dropdown/combo popup background) was
+                0x202225FF -- same blue-tint pattern as the other
+                fixes here. Flattened to neutral 0x202020FF.
+08/22/26 - v1.14 Added theme.Icons.FILE_LINES (fa-file-lines) and
+                theme.Icons.CLOCK (fa-clock).
+08/22/26 - v1.13 Col_ScrollbarBg/Grab/Hovered/Active had the same
+                blue-tint pattern as the other fixes here (confirmed
+                by pixel-sampling a screenshot: the grab handle
+                rendered as (58,64,70), exactly the old
+                Col_ScrollbarGrab value). Flattened all four to
+                neutral greys, same relative brightness as before.
+08/22/26 - v1.12 Col_Border (the line ImGui draws under a tab bar,
+                among other places) was 0x3A3F45FF -- same blue-tint
+                pattern as the other fixes here. Flattened to neutral
+                0x3F3F3FFF.
+08/22/26 - v1.11 Col_Tab (base/inactive tab) was 0x23282DFF -- reads
+                as clearly blue in practice despite looking like a
+                plausible dark grey in hex (only a 10/255 R-to-B
+                spread, but very visible at this low a brightness).
+                Flattened to neutral 0x232323FF, matching the
+                Col_TabDimmed*/Col_FrameBg* fixes below.
+08/22/26 - v1.10 Col_TabDimmed/Unfocused and Col_TabDimmedSelected/
+                UnfocusedActive (tabs shown when the script's window
+                itself isn't focused) had the same blue-tint issue as
+                Col_FrameBg* below -- flattened to neutral greys.
+08/22/26 - v1.9 Col_FrameBgHovered/Active were slightly blue-tinted
+                (unequal R/G/B) -- changed to neutral greys, lighter
+                than Col_FrameBg, with no color cast.
+08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
+                table of glyph constants), theme.PushIconFont/PopIconFont,
+                theme.IconText, and theme.IconButton. The icon font
+                ships as Fonts/fa-solid-900.ttf alongside this file and
+                is lazily created/cached per-ctx like the bold font
+                below, since ReaImGui has no font-merge mode -- icon
+                glyphs always come from a separate font pushed around
+                the draw call, not blended into the body-text font.
+                theme.IconButton/theme.IconButtonSize size the button
+                square to the requested icon size (default: current
+                font size) plus frame padding, so a larger icon grows
+                its button instead of clipping, and callers can still
+                align one (e.g. right-justify) without pre-measuring.
+08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/line-md--play-filled.png</source>
+        <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/Fonts/fa-solid-900.ttf</source>
+        <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/Fonts/LICENSE.txt</source>
       </version>
     </reapack>
   </category>
@@ -252,6 +378,18 @@
 4/21/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/c90c4f58b21b24d85cde9365e59407d760413bf8/Items/Reposition%20Items.lua</source>
       </version>
+      <version name="1.5" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.5 Window title uppercased to match the other Schapps
+                ReaImGui scripts. Reposition button now uses the
+                shared theme's PrimaryButton style, with a
+                left-right icon.
+7/16/26 - v1.4 Adding "Order items by track order" option
+5/06/26 - v1.3 Removing Provides
+4/27/26 - v1.2 Adding provides for ReaImGui Theme
+4/21/26 - v1.1 adding option to shift automation with items 
+4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Items/Reposition%20Items.lua</source>
+      </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
       <metadata>
@@ -401,6 +539,132 @@
 08/12/26 v1.4 - Correlated stereo downmix now uses mono (left) take channel mode
                 instead of mono (mixdown), so only the left channel is kept.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/4711ee10c2e0218b3903696c3ee3eafdd7618e5f/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.25" author="Stephen Schappler" time="2026-08-22T16:12:58Z">
+        <changelog><![CDATA[08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
+                 checkbox (default on, matching prior behavior). When
+                 off, the dialog stays open after rendering instead of
+                 closing.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/71337b0a4ceba85014557f976bba5e9247acb955/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.29" author="Stephen Schappler" time="2026-08-22T17:28:22Z">
+        <changelog><![CDATA[08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
+                 checkbox (default on, matching prior behavior). When
+                 off, the dialog stays open after rendering instead of
+                 closing.
+08/22/26 v1.26 - Directory and Filename inputs now use the monospace
+                 font too, matching the resolved-path preview rows.
+08/22/26 v1.27 - Added per-template Sample Rate (44.1/48/88.2/96/176.4/
+                 192kHz, default 96kHz) and Bit Depth (16/24/32-bit
+                 float, default 24-bit) dropdowns at the top of the
+                 RENDER section, replacing the previously hardcoded
+                 96kHz/24-bit. Bit depth is applied via a per-depth
+                 RENDER_FORMAT blob (byte layout confirmed against
+                 Ultraschall's documented REAPER render-config format
+                 and cross-checked against this machine's own saved
+                 render presets in reaper-render.ini, which use the
+                 same 24-bit blob this script already hardcoded).
+08/22/26 v1.28 - Added per-template "2nd Pass Render" checkbox (default
+                 off) after Render via Master, mapping to RENDER_SETTINGS
+                 bit 0x800 -- confirmed against Ultraschall's documented
+                 render-preset bitfield (various_checkboxes2 &2048).
+08/22/26 v1.29 - Added a "Color" submenu to the tab right-click context
+                 menu (alongside Rename/Delete): an embedded ColorPicker3
+                 plus "Clear Color", persisted per-template. Colored
+                 templates get a thin accent bar on the tab's left edge
+                 (visible whether or not the tab is active) so they stay
+                 identifiable at a glance.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d326b305868273e7875b00d60725a592f201c424/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.33" author="Stephen Schappler" time="2026-08-22T18:50:59Z">
+        <changelog><![CDATA[08/22/26 v1.25 - Added per-template "Close Smart Export After Render"
+                 checkbox (default on, matching prior behavior). When
+                 off, the dialog stays open after rendering instead of
+                 closing.
+08/22/26 v1.26 - Directory and Filename inputs now use the monospace
+                 font too, matching the resolved-path preview rows.
+08/22/26 v1.27 - Added per-template Sample Rate (44.1/48/88.2/96/176.4/
+                 192kHz, default 96kHz) and Bit Depth (16/24/32-bit
+                 float, default 24-bit) dropdowns at the top of the
+                 RENDER section, replacing the previously hardcoded
+                 96kHz/24-bit. Bit depth is applied via a per-depth
+                 RENDER_FORMAT blob (byte layout confirmed against
+                 Ultraschall's documented REAPER render-config format
+                 and cross-checked against this machine's own saved
+                 render presets in reaper-render.ini, which use the
+                 same 24-bit blob this script already hardcoded).
+08/22/26 v1.28 - Added per-template "2nd Pass Render" checkbox (default
+                 off) after Render via Master, mapping to RENDER_SETTINGS
+                 bit 0x800 -- confirmed against Ultraschall's documented
+                 render-preset bitfield (various_checkboxes2 &2048).
+08/22/26 v1.29 - Added a "Color" submenu to the tab right-click context
+                 menu (alongside Rename/Delete): an embedded ColorPicker3
+                 plus "Clear Color", persisted per-template. Colored
+                 templates get a thin accent bar on the tab's left edge
+                 (visible whether or not the tab is active) so they stay
+                 identifiable at a glance.
+08/22/26 v1.30 - Added a per-template render Format dropdown (WAV
+                 default, plus AIFF/CAF/FLAC/MP3/OGG Opus/OGG Vorbis/
+                 WavPack/Video FFmpeg/Video AVF) as the first field in
+                 the RENDER section. Bit Depth now shows only for
+                 formats with a real PCM depth option (WAV/AIFF/CAF/
+                 FLAC/WavPack, with format-appropriate choices -- FLAC
+                 tops out at 24-bit) and is clamped to a valid value on
+                 format switch; hidden entirely for the lossy and video
+                 formats, which render with REAPER's own per-format
+                 defaults via a bare 4-byte fourCC (documented as valid
+                 for "use default settings," avoiding the need to
+                 hand-encode MP3/OGG's bitrate/quality floats or
+                 ffmpeg/AVF's codec/resolution sub-fields). All fourCC
+                 and bit-depth byte values are from Ultraschall's
+                 documented REAPER render-config format, the same
+                 already-verified source used for WAV in v1.27. The
+                 resolved-path preview's file extension now follows the
+                 selected format too (video formats' extension is a
+                 best guess since we don't override their container).
+08/22/26 v1.31 - Added 10px padding around the left rail's content
+                 (Indent/Unindent, with tables/Render button/separator
+                 sized to LEFT_CONTENT_W instead of the full rail width)
+                 so nothing touches the rail's edges anymore.
+08/22/26 v1.32 - Added 8px top padding to both columns (a Dummy spacer
+                 right after each BeginGroup, so they stay aligned) and
+                 widened the left rail 240->270px (window 920->950) to
+                 stop "Sample Rate"'s label from clipping against the
+                 label column's stretch width.
+08/22/26 v1.33 - Expanded the Wildcards menu from 5 flat entries to
+                 REAPER's full render-pattern wildcard set (~90 tokens
+                 across 9 category submenus, with a hover tooltip
+                 description per token), extracted from the strings
+                 embedded in the shipped REAPER binary itself since
+                 there's no ReaScript API to query them. That process
+                 also caught a real bug: "$projectpath", offered by the
+                 old flat menu, was never an actual REAPER wildcard --
+                 the real token is "$projectdirectory" -- so it would
+                 have rendered as literal text in real exports. Fixed
+                 in both the menu and the preview's approximation.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/53ed41e76d0c8def5e14122fbfadde047193ebab/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.36" author="Stephen Schappler" time="2026-08-22T21:10:18Z">
+        <changelog><![CDATA[08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.37" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 v1.37 - Browse and Wildcards are now icon buttons
+                 (folder-open / dollar-sign) instead of text buttons,
+                 sized via the shared theme's theme.IconButtonSize.
+                 Render button now shows a file-waveform icon before
+                 its label (theme.PrimaryButton's new optional icon
+                 argument, ReaImGuiTheme.lua v1.18).
+08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items - Configure.lua" type="script" desc="Smart Export Selected Items - Configure">
@@ -4081,6 +4345,275 @@
         <source type="data" file="toolbar_icons/200/toolbar_square_xypad_x.png">https://github.com/schapps/ReaperScripts/raw/b518d9fd034ff43ebac1dcdd2bbeeccd9754ba8a/Packages/toolbar_icons/200/toolbar_square_xypad_x.png</source>
         <source type="data" file="toolbar_icons/200/toolbar_square_xypad_y.png">https://github.com/schapps/ReaperScripts/raw/b518d9fd034ff43ebac1dcdd2bbeeccd9754ba8a/Packages/toolbar_icons/200/toolbar_square_xypad_y.png</source>
       </version>
+      <version name="1.20" author="Stephen Schappler" time="2026-08-16T19:24:28Z">
+        <changelog><![CDATA[Adding project health toolbar icon]]></changelog>
+        <source type="data" file="toolbar_icons/minoLINK.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/minoLINK.png</source>
+        <source type="data" file="toolbar_icons/subproject_manager.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/subproject_manager.png</source>
+        <source type="data" file="toolbar_icons/toolbar_readepot_toolbar.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_readepot_toolbar.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_NVK_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_NVK_folder.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_NVK_takes.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_NVK_takes.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_arrow_up.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_arrow_up.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_autoscroll.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_autoscroll.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_env_fx_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_env_fx_toggle.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_env_lanes_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_env_lanes_toggle.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_export.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_export2_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_export2_2.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_export3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_export3.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_export3_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_export3_2.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_ps5.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_ps5.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_rpp.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_rpp.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_blue.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_pink.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_purple.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_red.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_teal.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_twotone_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_twotone_white.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_folder_video.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_folder_video.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_fx_bypass_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_fx_bypass_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_fx_enable_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_fx_enable_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_haptics_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_haptics_mute.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_itemwidth.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_itemwidth.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_izotope.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_izotope.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_last_renamer_schapps_edition.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_last_renamer_schapps_edition.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_lastrenamer.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_lastrenamer.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_library_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_library_export.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_linktimeselectioneditcursor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_linktimeselectioneditcursor.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_loopmaker.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_loopmaker.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_mediaexplorer_fx_inactive_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_mediaexplorer_fx_inactive_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_mediaexplorer_fx_reset_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_mediaexplorer_fx_reset_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_mediaexplorer_fx_toggle_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_mediaexplorer_fx_toggle_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_plus.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_plus.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_plus_smaller.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_plus_smaller.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_quad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_quad.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_readepot.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_readepot.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_reastart_dashboard.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_reastart_dashboard.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_record_unarm_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_record_unarm_all.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_render_preset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_render_preset.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_resetitem.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_resetitem.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_resetlength.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_resetlength.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_sampler.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_sampler.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_select_items_by_name.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_select_items_by_name.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_shuffle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_shuffle.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_smart_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_smart_export.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_smart_export_gui.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_smart_export_gui.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_stereo.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_stereo.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_bounds.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_bounds.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_color.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_color.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_duplicate.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_duplicate.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_n.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_n.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_open.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_open.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_open_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_open_v2.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_open_v3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_open_v3.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_playsync.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_playsync.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_render.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_render.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_save.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_save.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_subproject_save_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_subproject_save_v2.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_sumtomono.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_sumtomono.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_surround.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_surround.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_surround_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_surround_track.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_blue.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_pink.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_purple.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_red.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_teal.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tag_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tag_white.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_tags.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_tags.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_take_marker_add.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_take_marker_add.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_take_marker_add_variations.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_take_marker_add_variations.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_take_marker_delete.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_take_marker_delete.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_ucs.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_ucs.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_update.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_update.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_variator.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_variator.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_video_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_video_mute.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_visibility_clear.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_visibility_clear.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_visibility_master_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_visibility_master_track.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_visibility_selection.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_visibility_selection.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_xypad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_xypad.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_xypad_reset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_xypad_reset.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_xypad_x.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_xypad_x.png</source>
+        <source type="data" file="toolbar_icons/toolbar_square_xypad_y.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbar_square_xypad_y.png</source>
+        <source type="data" file="toolbar_icons/toolbart_square_project_health_monitor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/toolbart_square_project_health_monitor.png</source>
+        <source type="data" file="toolbar_icons/150/minoLINK.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/minoLINK.png</source>
+        <source type="data" file="toolbar_icons/150/subproject_manager.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/subproject_manager.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_readepot_toolbar.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_readepot_toolbar.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_NVK_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_NVK_folder.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_NVK_takes.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_NVK_takes.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_arrow_up.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_arrow_up.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_autoscroll.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_autoscroll.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_env_fx_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_env_fx_toggle.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_env_lanes_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_env_lanes_toggle.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_export.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_export2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_export2.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_export2_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_export2_2.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_export3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_export3.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_export3_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_export3_2.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_ps5.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_ps5.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_rpp.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_rpp.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_blue.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_pink.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_purple.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_red.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_teal.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_twotone_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_twotone_white.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_folder_video.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_folder_video.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_fx_bypass_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_fx_bypass_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_fx_enable_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_fx_enable_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_haptics_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_haptics_mute.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_itemwidth.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_itemwidth.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_izotope.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_izotope.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_last_renamer_schapps_edition.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_last_renamer_schapps_edition.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_lastrenamer.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_lastrenamer.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_library_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_library_export.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_linktimeselectioneditcursor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_linktimeselectioneditcursor.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_loopmaker.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_loopmaker.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_mediaexplorer_fx_inactive_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_mediaexplorer_fx_inactive_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_mediaexplorer_fx_reset_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_mediaexplorer_fx_reset_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_mediaexplorer_fx_toggle_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_mediaexplorer_fx_toggle_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_plus.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_plus.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_plus_smaller.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_plus_smaller.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_project_health_monitor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_project_health_monitor.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_quad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_quad.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_readepot.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_readepot.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_reastart_dashboard.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_reastart_dashboard.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_record_unarm_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_record_unarm_all.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_render_preset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_render_preset.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_replicant.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_replicant.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_resetitem.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_resetitem.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_resetlength.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_resetlength.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_sampler.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_sampler.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_select_items_by_name.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_select_items_by_name.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_shuffle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_shuffle.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_smart_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_smart_export.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_smart_export_gui.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_smart_export_gui.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_stereo.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_stereo.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_bounds.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_bounds.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_color.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_color.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_duplicate.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_duplicate.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_n.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_n.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_open.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_open.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_open_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_open_v2.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_open_v3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_open_v3.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_playsync.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_playsync.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_render.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_render.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_save.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_save.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_subproject_save_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_subproject_save_v2.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_sumtomono.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_sumtomono.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_surround.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_surround.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_surround_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_surround_track.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_blue.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_pink.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_purple.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_red.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_teal.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tag_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tag_white.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_tags.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_tags.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_take_marker_add.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_take_marker_add.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_take_marker_add_variations.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_take_marker_add_variations.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_take_marker_delete.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_take_marker_delete.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_ucs.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_ucs.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_update.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_update.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_variator.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_variator.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_video_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_video_mute.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_visibility_clear.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_visibility_clear.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_visibility_master_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_visibility_master_track.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_visibility_selection.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_visibility_selection.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_xypad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_xypad.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_xypad_reset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_xypad_reset.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_xypad_x.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_xypad_x.png</source>
+        <source type="data" file="toolbar_icons/150/toolbar_square_xypad_y.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/150/toolbar_square_xypad_y.png</source>
+        <source type="data" file="toolbar_icons/200/minoLINK.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/minoLINK.png</source>
+        <source type="data" file="toolbar_icons/200/subproject_manager.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/subproject_manager.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_readepot_toolbar.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_readepot_toolbar.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_NVK_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_NVK_folder.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_NVK_takes.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_NVK_takes.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_arrow_up.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_arrow_up.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_autoscroll.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_autoscroll.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_env_fx_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_env_fx_toggle.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_env_lanes_toggle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_env_lanes_toggle.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_export.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_export2_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_export2_2.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_export3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_export3.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_export3_2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_export3_2.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_ps5.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_ps5.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_rpp.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_rpp.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_blue.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_pink.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_purple.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_red.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_teal.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_twotone_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_twotone_white.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_folder_video.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_folder_video.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_fx_bypass_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_fx_bypass_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_fx_enable_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_fx_enable_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_haptics_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_haptics_mute.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_itemwidth.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_itemwidth.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_izotope.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_izotope.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_last_renamer_schapps_edition.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_last_renamer_schapps_edition.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_lastrenamer.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_lastrenamer.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_library_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_library_export.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_linktimeselectioneditcursor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_linktimeselectioneditcursor.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_loopmaker.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_loopmaker.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_mediaexplorer_fx_inactive_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_mediaexplorer_fx_inactive_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_mediaexplorer_fx_reset_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_mediaexplorer_fx_reset_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_mediaexplorer_fx_toggle_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_mediaexplorer_fx_toggle_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_plus.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_plus.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_plus_smaller.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_plus_smaller.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_project_health_monitor.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_project_health_monitor.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_quad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_quad.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_readepot.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_readepot.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_reastart_dashboard.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_reastart_dashboard.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_record_unarm_all.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_record_unarm_all.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_render_preset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_render_preset.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_resetitem.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_resetitem.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_resetlength.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_resetlength.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_sampler.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_sampler.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_select_items_by_name.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_select_items_by_name.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_shuffle.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_shuffle.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_smart_export.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_smart_export.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_smart_export_gui.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_smart_export_gui.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_stereo.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_stereo.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_bounds.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_bounds.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_color.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_color.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_duplicate.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_duplicate.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_n.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_n.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_open.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_open.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_open_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_open_v2.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_open_v3.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_open_v3.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_playsync.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_playsync.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_render.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_render.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_save.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_save.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_subproject_save_v2.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_subproject_save_v2.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_sumtomono.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_sumtomono.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_surround.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_surround.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_surround_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_surround_track.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_blue.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_blue.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_pink.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_pink.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_purple.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_purple.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_red.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_red.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_teal.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_teal.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tag_white.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tag_white.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_tags.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_tags.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_take_marker_add.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_take_marker_add.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_take_marker_add_variations.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_take_marker_add_variations.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_take_marker_delete.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_take_marker_delete.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_ucs.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_ucs.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_update.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_update.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_variator.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_variator.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_video_mute.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_video_mute.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_visibility_clear.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_visibility_clear.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_visibility_master_track.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_visibility_master_track.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_visibility_selection.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_visibility_selection.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_xypad.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_xypad.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_xypad_reset.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_xypad_reset.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_xypad_x.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_xypad_x.png</source>
+        <source type="data" file="toolbar_icons/200/toolbar_square_xypad_y.png">https://github.com/schapps/ReaperScripts/raw/7ddfccb6d3f34ce90b5d37df45ac9865eca551a8/Packages/toolbar_icons/200/toolbar_square_xypad_y.png</source>
+      </version>
     </reapack>
     <reapack name="Schapps_Track_Icons.data" type="data" desc="Schapps Track Icons">
       <version name="1.0" author="Stephen Schappler" time="2025-08-11T17:28:26Z">
@@ -6366,6 +6899,26 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/089f19136886560db56735abbf1f1c506ca87d03/ReaStartDashboard/GeistMono-Regular.ttf</source>
         <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/089f19136886560db56735abbf1f1c506ca87d03/ReaStartDashboard/ReaStartDashboardLogo.png</source>
       </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-08-17T16:39:15Z">
+        <changelog><![CDATA[v1.1 - Adding quick search and project health monitor features]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Bold.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/Geist-Bold.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/Geist-Regular.ttf</source>
+        <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/GeistMono-Regular.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/5b18bead8d7a0839f8ee5883c371e3e7a07d9e0e/ReaStartDashboard/ReaStartDashboardLogo.png</source>
+      </version>
+      <version name="1.1.1" author="Stephen Schappler" time="2026-08-17T17:59:17Z">
+        <changelog><![CDATA[v1.1.1 - Aligning health check parameters more closely with Reaper]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Bold.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/Geist-Bold.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/Geist-Regular.ttf</source>
+        <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/GeistMono-Regular.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/21010bbcc0190029dec5ecc09e8041ec6baa7911/ReaStartDashboard/ReaStartDashboardLogo.png</source>
+      </version>
     </reapack>
   </category>
   <category name="Renamer">
@@ -6543,6 +7096,33 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/7add6b414baa8af615a3ffc422f6c1bdebf5845b/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/7add6b414baa8af615a3ffc422f6c1bdebf5845b/Renamer/Lib/yaml.lua</source>
       </version>
+      <version name="1.12" author="Aaron Cendan, modified by Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+      shared theme (Common/ReaImGuiTheme.lua), on both naming
+      modes
+v1.11 UI/UX improvements
+v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/yaml.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="Subprojects">
@@ -6629,6 +7209,19 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 3/31/26 - v1.1 Added in option to auto close subproject after creation
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/aab557946b95118aa46335bcd6f2837da35f730a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.8" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.8 Create button now uses the shared theme's
+                PrimaryButton style, with a square-plus icon.
+5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
@@ -7032,6 +7625,34 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/d4a412fa3835e66074c196fb14f0aae7a9839024/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.12" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.12 Settings button is now a proper icon button
+                (theme.IconButton, gear icon) instead of a SmallButton
+                showing a raw unicode gear character. Removed the
+                redundant "SUBPROJECT ITEMS" label above the table.
+05/28/26 - v1.11 Fixing column width display
+05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
+05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>

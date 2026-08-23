@@ -1,12 +1,16 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.11
+-- @version 1.12
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.12 Settings button is now a proper icon button
+--                   (theme.IconButton, gear icon) instead of a SmallButton
+--                   showing a raw unicode gear character. Removed the
+--                   redundant "SUBPROJECT ITEMS" label above the table.
 --   05/28/26 - v1.11 Fixing column width display
 --   05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
 --   05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
@@ -585,18 +589,13 @@ local function loop()
     local has_selection = #valid_selected > 0
 
     -- ── Subproject items table ───────────────────────────────────
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    ImGui.Text(ctx, "SUBPROJECT ITEMS")
-    ImGui.PopStyleColor(ctx)
-    ImGui.SameLine(ctx)
+    local settings_icon_size = ImGui.GetFontSize(ctx) * 1.4
     do
       local cur_x   = ImGui.GetCursorPosX(ctx)
       local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
-      local tw      = select(1, ImGui.CalcTextSize(ctx, "⚙"))
-      local fpx     = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding))
-      ImGui.SetCursorPosX(ctx, cur_x + avail_w - tw - fpx * 2)
+      ImGui.SetCursorPosX(ctx, cur_x + avail_w - theme.IconButtonSize(ctx, settings_icon_size))
     end
-    if ImGui.SmallButton(ctx, "⚙##settings") then
+    if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings", nil, nil, settings_icon_size) then
       ImGui.OpenPopup(ctx, "##settings_popup")
     end
     if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Settings") end

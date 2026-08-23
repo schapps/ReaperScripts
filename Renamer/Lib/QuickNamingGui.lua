@@ -18,11 +18,13 @@ local QuickNamingGui = {}
 local Predictor   -- NamePredictor module
 local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, GetSelectedItemName, HasExportScript, RunExportScript }
 local acendan     -- shared style/tooltip/scale helper table (same one every other Lib module gets)
+local theme       -- Common/ReaImGuiTheme.lua, for theme.PrimaryButton (Rename/Export)
 
-function QuickNamingGui.init(name_predictor, helpers, acendan_helpers)
+function QuickNamingGui.init(name_predictor, helpers, acendan_helpers, theme_module)
   Predictor = name_predictor
   Helpers   = helpers
   acendan   = acendan_helpers
+  theme     = theme_module
 end
 
 -- Rewrites an ACTIVE InputText's buffer content in place, via ReaImGui's
@@ -179,12 +181,12 @@ local function DrawGhostText(ctx, typed_text, remainder)
   if not remainder or remainder == "" then return end
   local x0, y0 = reaper.ImGui_GetItemRectMin(ctx)
   local x1 = select(1, reaper.ImGui_GetItemRectMax(ctx))
-  -- FramePadding is pushed as {4, 3} * ui_scale (see acendan.ImGui_Styles.vars
-  -- / .scalable in the main script) - x and y padding differ, and both scale
-  -- with the user's UI scale setting, so both must be read here rather than
-  -- assumed to be a single flat constant.
-  local scale = acendan.ImGui_GetScale()
-  local pad_x, pad_y = 4 * scale, 3 * scale
+  -- Read the actual current FramePadding rather than assuming a value --
+  -- this used to hardcode {4, 3} * ui_scale, which went stale (and threw
+  -- the ghost text noticeably out of vertical alignment with the real
+  -- typed text) the moment acendan.ImGui_Styles.vars' FramePadding was
+  -- changed to match the shared theme's {10, 6}.
+  local pad_x, pad_y = reaper.ImGui_GetStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding())
   local typed_w = reaper.ImGui_CalcTextSize(ctx, typed_text)
   local draw_x = x0 + pad_x + typed_w
   -- Suppress once there's no reliable room left to draw at - ReaImGui
@@ -315,12 +317,15 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     reaper.ImGui_SeparatorText(ctx, data.title or "Name")
     local prediction = Predictor.Predict(data.fields, data.separator, wgt.quick.text)
 
-    -- Matches the classic tab's big Rename/Export buttons (same 1.5x scale
-    -- of the current font). Stays pushed through the ghost-text draw below
-    -- too, not just the InputText itself, since DrawGhostText measures via
-    -- CalcTextSize against whatever font is currently active - popping
-    -- early would size the ghost text using the wrong (smaller) font.
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
+    -- Monospace, at 13px -- a literal, matching Smart Export Selected
+    -- Items' own mono_font pushes exactly (ImGui.PushFont(ctx, mono_font,
+    -- 13)), rather than GetFontSize(ctx) (whatever the ambient default
+    -- happens to be on this system, which may not actually be 13).
+    -- Stays pushed through the ghost-text draw below too, not just the
+    -- InputText itself, since DrawGhostText measures via CalcTextSize
+    -- against whatever font is currently active - popping early would
+    -- size the ghost text using the wrong font.
+    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
 
     -- Reserve room for the Capture Name button, the "x" clear button, and
     -- the enum badge, all drawn after the input at normal
@@ -513,9 +518,9 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     -- Same "x##<id> + NoTabStop + clear tooltip" convention
     -- SchemeEditorGui.ComboBox/AutoFillComboBox use for their own clear
     -- buttons, but sized to input_h (the name box's own height, captured
-    -- above) on both axes - square, and matching the box's BIG_FONT_SCALE
-    -- height - rather than SmallButton's tight, normal-size auto-fit, which
-    -- left it visibly shorter than the enlarged input next to it.
+    -- above) on both axes - square, matching the box's actual height -
+    -- rather than SmallButton's tight auto-fit, which left it visibly
+    -- shorter than the input next to it.
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
     if reaper.ImGui_Button(ctx, "x##quick_name_clear", input_h, input_h) then ClearText() end
@@ -527,7 +532,9 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     acendan.ImGui_Tooltip("Numbering is added automatically based on this scheme's Enumeration field.")
 
     if #candidates >= 1 then
-      reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
+      -- Monospace, 13px (literal, matching Smart Export) -- matches the
+      -- name input and preview table above/below it.
+      reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
       -- Clicking a row is a genuine mouse-driven focus loss (needs_refocus =
       -- true), unlike Tab above.
       DrawOptionsList(ctx, candidates, wgt.quick.list_nav_idx, function(c) Accept(c, true) end)
@@ -562,6 +569,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     local footer_h = wgt.quick.targets_footer_h or
         (reaper.ImGui_GetTextLineHeightWithSpacing(ctx) + 3 * reaper.ImGui_GetFrameHeightWithSpacing(ctx))
     local table_h = math.max(QUICK_PREVIEW_TABLE_HEIGHT * scale, avail_h - footer_h)
+    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
     if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, table_h) then
       reaper.ImGui_TableSetupColumn(ctx, "Current Name")
       reaper.ImGui_TableSetupColumn(ctx, "New Name")
@@ -584,6 +592,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
       end
       reaper.ImGui_EndTable(ctx)
     end
+    reaper.ImGui_PopFont(ctx)
 
     reaper.ImGui_Spacing(ctx)
     -- A fresh enumeration table, NOT the `enumeration` local from the top of
@@ -601,24 +610,34 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
       Helpers.ApplyQuickName(wgt.target, wgt.mode, apply_name, apply_enumeration)
     end
 
-    -- Same styling (color, 1.5x font) and SameLine spacing as the classic
-    -- Scheme Naming tab's Rename/Export buttons (see TabNaming in the main
-    -- script) - kept visually consistent across both naming modes rather
-    -- than picking arbitrary new colors here.
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
+    -- Same theme.PrimaryButton style (bold font, 1.3x size, dark text) and
+    -- SameLine spacing as the classic Scheme Naming tab's Rename/Export
+    -- buttons (see TabNaming in the main script) - kept visually
+    -- consistent across both naming modes.
     if invalid then reaper.ImGui_BeginDisabled(ctx) end
-    acendan.ImGui_Button("Rename", DoRename, {86, 64, 110})
+    if theme.PrimaryButton(ctx, "Rename", nil, nil, nil, theme.Icons.PENCIL) then
+      reaper.PreventUIRefresh(1)
+      reaper.Undo_BeginBlock()
+      DoRename()
+      reaper.Undo_EndBlock("Rename", -1)
+      reaper.PreventUIRefresh(-1)
+      reaper.UpdateArrange()
+    end
     local _, button_h = reaper.ImGui_GetItemRectSize(ctx)
     if invalid then reaper.ImGui_EndDisabled(ctx) end
-    reaper.ImGui_PopFont(ctx)
     acendan.ImGui_Tooltip("Pro Tip: You can press the 'Enter' key to trigger renaming from the name field above.")
 
     local has_export = Helpers.HasExportScript()
     reaper.ImGui_SameLine(ctx, 0, 10)
     if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * BIG_FONT_SCALE)
-    acendan.ImGui_Button("Export", Helpers.RunExportScript, {70, 160, 210})
-    reaper.ImGui_PopFont(ctx)
+    if theme.PrimaryButton(ctx, "Export", nil, nil, 0x94BAE3FF, theme.Icons.EXPORT) then
+      reaper.PreventUIRefresh(1)
+      reaper.Undo_BeginBlock()
+      Helpers.RunExportScript()
+      reaper.Undo_EndBlock("Export", -1)
+      reaper.PreventUIRefresh(-1)
+      reaper.UpdateArrange()
+    end
     acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
     if not has_export then reaper.ImGui_EndDisabled(ctx) end
 

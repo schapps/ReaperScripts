@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.7
+-- @version 1.8
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,8 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.8 Create button now uses the shared theme's
+--                   PrimaryButton style, with a square-plus icon.
 --   5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
 --   5/07/26 - v1.6 Color Changes
 --   5/06/26 - v1.5 Removing Provides
@@ -386,7 +388,7 @@ local function loop()
     -- Create button (disabled when no tracks are selected)
     local no_tracks = reaper.CountSelectedTracks(0) == 0
     if no_tracks then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Create", -1, 0) then
+    if theme.PrimaryButton(ctx, "Create", -1, 0, nil, theme.Icons.SQUARE_PLUS) then
       open = false
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)

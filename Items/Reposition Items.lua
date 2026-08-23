@@ -1,6 +1,6 @@
 -- @description Reposition Items
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   Spaces selected items relative to each other. The first item stays in place.
 --   "End" mode: gap between each item's end and the next item's start.
@@ -9,6 +9,10 @@
 --   "Order items by track order" chains items track-by-track instead of by time position.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.5 Window title uppercased to match the other Schapps
+--                   ReaImGui scripts. Reposition button now uses the
+--                   shared theme's PrimaryButton style, with a
+--                   left-right icon.
 --   7/16/26 - v1.4 Adding "Order items by track order" option
 --   5/06/26 - v1.3 Removing Provides
 --   4/27/26 - v1.2 Adding provides for ReaImGui Theme
@@ -31,7 +35,7 @@ if not reaper.file_exists(theme_path) then
 end
 local theme = dofile(theme_path)
 
-local ctx        = ImGui.CreateContext("Reposition Items")
+local ctx        = ImGui.CreateContext("REPOSITION ITEMS")
 local WIN_FLAGS  = ImGui.WindowFlags_NoScrollbar
                  | ImGui.WindowFlags_NoCollapse
                  | ImGui.WindowFlags_AlwaysAutoResize
@@ -137,7 +141,7 @@ end
 
 local function loop()
   local color_count, var_count = theme.Push(ctx)
-  local visible, open = ImGui.Begin(ctx, "Reposition Items", true, WIN_FLAGS)
+  local visible, open = ImGui.Begin(ctx, "REPOSITION ITEMS", true, WIN_FLAGS)
 
   if visible then
     ImGui.Text(ctx, "Reference")
@@ -202,7 +206,7 @@ local function loop()
 
     local too_few = reaper.CountSelectedMediaItems(0) < 2
     if too_few then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Reposition", -1, 0) then reposition_items() end
+    if theme.PrimaryButton(ctx, "Reposition", -1, 0, nil, theme.Icons.LEFT_RIGHT) then reposition_items() end
     if too_few then ImGui.EndDisabled(ctx) end
 
     if status_msg ~= "" then

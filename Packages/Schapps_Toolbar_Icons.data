@@ -1,8 +1,8 @@
 -- @description Schapps Toolbar Icons
 -- @author Stephen Schappler
--- @version 1.19
+-- @version 1.20
 -- @changelog
---    Adding toolbar icons
+--    Adding project health toolbar icon
 -- @provides
 --    [data] toolbar_icons/*.png
 --    [data] toolbar_icons/150/*.png
