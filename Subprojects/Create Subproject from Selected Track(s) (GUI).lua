@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.7
+-- @version 1.8
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,8 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.8 Create button now uses the shared theme's
+--                   PrimaryButton style, with a square-plus icon.
 --   5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
 --   5/07/26 - v1.6 Color Changes
 --   5/06/26 - v1.5 Removing Provides

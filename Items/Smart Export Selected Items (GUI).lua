@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.36
+-- @version 1.37
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -12,6 +12,12 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 v1.37 - Browse and Wildcards are now icon buttons
+--                    (folder-open / dollar-sign) instead of text buttons,
+--                    sized via the shared theme's theme.IconButtonSize.
+--                    Render button now shows a file-waveform icon before
+--                    its label (theme.PrimaryButton's new optional icon
+--                    argument, ReaImGuiTheme.lua v1.18).
 --   08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
 --                    into the shared theme as theme.PrimaryButton(ctx,
 --                    label, width, height) (ReaImGuiTheme.lua v1.7), so

@@ -1,12 +1,16 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.11
+-- @version 1.12
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.12 Settings button is now a proper icon button
+--                   (theme.IconButton, gear icon) instead of a SmallButton
+--                   showing a raw unicode gear character. Removed the
+--                   redundant "SUBPROJECT ITEMS" label above the table.
 --   05/28/26 - v1.11 Fixing column width display
 --   05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
 --   05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)

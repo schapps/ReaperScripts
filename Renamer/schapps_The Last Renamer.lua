@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.11
+-- @version 1.12
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,9 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+--         shared theme (Common/ReaImGuiTheme.lua), on both naming
+--         modes
 --   v1.11 UI/UX improvements
 --   v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
 --   v1.9 Fixing bug for entry display when dropdown lists are super long

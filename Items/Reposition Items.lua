@@ -1,6 +1,6 @@
 -- @description Reposition Items
 -- @author Stephen Schappler
--- @version 1.4
+-- @version 1.5
 -- @about
 --   Spaces selected items relative to each other. The first item stays in place.
 --   "End" mode: gap between each item's end and the next item's start.
@@ -9,6 +9,10 @@
 --   "Order items by track order" chains items track-by-track instead of by time position.
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/23/26 - v1.5 Window title uppercased to match the other Schapps
+--                   ReaImGui scripts. Reposition button now uses the
+--                   shared theme's PrimaryButton style, with a
+--                   left-right icon.
 --   7/16/26 - v1.4 Adding "Order items by track order" option
 --   5/06/26 - v1.3 Removing Provides
 --   4/27/26 - v1.2 Adding provides for ReaImGui Theme
