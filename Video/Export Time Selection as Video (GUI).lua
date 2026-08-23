@@ -1,5 +1,5 @@
 -- @description Export Time Selection as Video (GUI)
--- @version 1.0
+-- @version 1.1
 -- @about
 --   ReaImGui dialog that renders the current time selection to a video file
 --   using REAPER's native video render formats (AVFoundation, FFmpeg/libav,
