@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="93b356ce3ec961c125a3b0e5164b40bc5cc6b026">
+<index version="1" name="SPS Scripts" commit="db246813f7b947a90cb232f746311dd3a34b3f56">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -378,6 +378,18 @@
 4/21/26 - v1.0 Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/c90c4f58b21b24d85cde9365e59407d760413bf8/Items/Reposition%20Items.lua</source>
       </version>
+      <version name="1.5" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.5 Window title uppercased to match the other Schapps
+                ReaImGui scripts. Reposition button now uses the
+                shared theme's PrimaryButton style, with a
+                left-right icon.
+7/16/26 - v1.4 Adding "Order items by track order" option
+5/06/26 - v1.3 Removing Provides
+4/27/26 - v1.2 Adding provides for ReaImGui Theme
+4/21/26 - v1.1 adding option to shift automation with items 
+4/21/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Items/Reposition%20Items.lua</source>
+      </version>
     </reapack>
     <reapack name="Search for selected item in Media Explorer (similar items).lua" type="script" desc="Search for selected item in Media Explorer (similar items)">
       <metadata>
@@ -639,6 +651,20 @@
                  other scripts can reuse the same "main action" button
                  look. Render button here now just calls it.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/87f0749ec567f69c5d04ca493dda53a9dab85c42/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.37" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 v1.37 - Browse and Wildcards are now icon buttons
+                 (folder-open / dollar-sign) instead of text buttons,
+                 sized via the shared theme's theme.IconButtonSize.
+                 Render button now shows a file-waveform icon before
+                 its label (theme.PrimaryButton's new optional icon
+                 argument, ReaImGuiTheme.lua v1.18).
+08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items - Configure.lua" type="script" desc="Smart Export Selected Items - Configure">
@@ -7070,6 +7096,61 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/7add6b414baa8af615a3ffc422f6c1bdebf5845b/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/7add6b414baa8af615a3ffc422f6c1bdebf5845b/Renamer/Lib/yaml.lua</source>
       </version>
+      <version name="1.12" author="Aaron Cendan, modified by Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+      shared theme (Common/ReaImGuiTheme.lua), on both naming
+      modes
+v1.11 UI/UX improvements
+v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.13" author="Aaron Cendan, modified by Stephen Schappler" time="2026-08-23T19:16:13Z">
+        <changelog><![CDATA[v1.13 Fixed unresolved merge conflict markers in SchemeStructureEditor.lua that broke script loading
+v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+      shared theme (Common/ReaImGuiTheme.lua), on both naming
+      modes
+v1.11 UI/UX improvements
+v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/db246813f7b947a90cb232f746311dd3a34b3f56/Renamer/Lib/yaml.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="Subprojects">
@@ -7156,6 +7237,19 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 3/31/26 - v1.1 Added in option to auto close subproject after creation
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/aab557946b95118aa46335bcd6f2837da35f730a/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.8" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.8 Create button now uses the shared theme's
+                PrimaryButton style, with a square-plus icon.
+5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
@@ -7559,6 +7653,34 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/d4a412fa3835e66074c196fb14f0aae7a9839024/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.12" author="Stephen Schappler" time="2026-08-23T18:00:19Z">
+        <changelog><![CDATA[08/23/26 - v1.12 Settings button is now a proper icon button
+                (theme.IconButton, gear icon) instead of a SmallButton
+                showing a raw unicode gear character. Removed the
+                redundant "SUBPROJECT ITEMS" label above the table.
+05/28/26 - v1.11 Fixing column width display
+05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
+05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>

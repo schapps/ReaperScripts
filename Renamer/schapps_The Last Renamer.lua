@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.12
+-- @version 1.13
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.13 Fixed unresolved merge conflict markers in SchemeStructureEditor.lua that broke script loading
 --   v1.12 Visual pass to match the other Schapps ReaImGui scripts'
 --         shared theme (Common/ReaImGuiTheme.lua), on both naming
 --         modes
