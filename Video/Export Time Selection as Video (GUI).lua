@@ -10,9 +10,16 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @provides
---   [nomain] ../Common/ReaImGuiTheme.lua > Common/ReaImGuiTheme.lua
 --   [nomain] ../Common/VideoRenderFormat.lua > Common/VideoRenderFormat.lua
 -- @changelog
+--   08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides: it's already
+--                   a separately-installed shared "Common" package with its
+--                   own Fonts/ dependency, and re-providing it here made
+--                   ReaPack materialize an incomplete copy alongside this
+--                   script (missing Fonts/fa-solid-900.ttf), which this
+--                   script's own Common/-first lookup then preferred over
+--                   the real, complete install -- causing "Could not load
+--                   font file!" on ImGui_PushFont.
 --   08/23/26 v1.0 - Initial release
 
 -- ============================================================
