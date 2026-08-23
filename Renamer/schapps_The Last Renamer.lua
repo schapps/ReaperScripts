@@ -1669,7 +1669,7 @@ function Main()
 
       NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode, 0xA08FE2FF)
       NamingModeTabItem("quick", "Predictive Naming",
-          function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode, 0x4FBF67FF)
+          function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode, 0xF789D4FF)
 
       TabItem("Metadata", TabMetadata, "opt_enable_meta", 0xE8C24DFF)
 
