@@ -1391,7 +1391,7 @@ local function loop()
     -- would fill to the window's edge instead of the rail's padded width.
     local no_items = n_items == 0
     if no_items then ImGui.BeginDisabled(ctx, true) end
-    local do_render = theme.PrimaryButton(ctx, "Render", LEFT_CONTENT_W, 0)
+    local do_render = theme.PrimaryButton(ctx, "Render", LEFT_CONTENT_W, 0, nil, theme.Icons.FILE_WAVEFORM)
       or (not no_items and (
             ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
             or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
@@ -1426,9 +1426,12 @@ local function loop()
     -- label, sized to whatever width remains in the window (no outer_size_w:
     -- unlike the left column's tables, nothing follows this on the line, so
     -- "available width" here already stops at the window edge).
+    local action_icon_size = ImGui.GetFontSize(ctx)
+    local action_btn_w = theme.IconButtonSize(ctx, action_icon_size)
+
     if ImGui.BeginTable(ctx, "##right_top", 3) then
       ImGui.TableSetupColumn(ctx, "##input", ImGui.TableColumnFlags_WidthStretch)
-      ImGui.TableSetupColumn(ctx, "##btn",   ImGui.TableColumnFlags_WidthFixed, 80)
+      ImGui.TableSetupColumn(ctx, "##btn",   ImGui.TableColumnFlags_WidthFixed, action_btn_w)
       ImGui.TableSetupColumn(ctx, "##lbl",   ImGui.TableColumnFlags_WidthFixed, 72)
 
       ImGui.TableNextRow(ctx)
@@ -1440,10 +1443,11 @@ local function loop()
       dir_buf = new_dir
       ImGui.TableSetColumnIndex(ctx, 1)
       if has_browse then
-        if ImGui.Button(ctx, "Browse\u{2026}", -1, 0) then
+        if theme.IconButton(ctx, theme.Icons.FOLDER_OPEN .. "##browse_dir", nil, nil, action_icon_size) then
           local ok, folder = reaper.JS_Dialog_BrowseForFolder("Select Export Folder", dir_buf)
           if ok == 1 then dir_buf = folder end
         end
+        if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Browse\u{2026}") end
       end
       ImGui.TableSetColumnIndex(ctx, 2)
       ImGui.Text(ctx, "Directory")
@@ -1456,9 +1460,10 @@ local function loop()
       ImGui.PopFont(ctx)
       pattern_buf = new_pat
       ImGui.TableSetColumnIndex(ctx, 1)
-      if ImGui.Button(ctx, "Wildcards", -1, 0) then
+      if theme.IconButton(ctx, theme.Icons.DOLLAR_SIGN .. "##wildcards_btn", nil, nil, action_icon_size) then
         ImGui.OpenPopup(ctx, "##wildcards_popup")
       end
+      if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Wildcards") end
       if ImGui.BeginPopup(ctx, "##wildcards_popup") then
         for _, cat in ipairs(WILDCARD_CATEGORIES) do
           if ImGui.BeginMenu(ctx, cat.name) then

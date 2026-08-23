@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.8
+-- @version 1.22
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -9,6 +9,58 @@
 --   Fonts/fa-solid-900.ttf > Fonts/fa-solid-900.ttf
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
 -- @changelog
+--   08/23/26 - v1.22 Fixed theme.PrimaryButton's icon path: passing the
+--                   standard `-1` (fill available width) for `width` was
+--                   silently treated as "auto-size to content" instead,
+--                   since the check was `width > 0` -- any icon
+--                   PrimaryButton passing -1 (Create, Reposition) came
+--                   out narrower than intended. Now matches native
+--                   ImGui.Button's width semantics: nil/0 = auto, < 0 =
+--                   fill available width, > 0 = fixed width.
+--   08/23/26 - v1.21 Added theme.Icons.LEFT_RIGHT (fa-left-right).
+--   08/23/26 - v1.20 Added theme.Icons.SQUARE_PLUS (fa-square-plus).
+--   08/23/26 - v1.19 Added theme.Icons.FILE_WAVEFORM (fa-file-waveform).
+--   08/23/26 - v1.18 theme.PrimaryButton takes an optional 6th `icon`
+--                   arg (one of theme.Icons.*), drawn before the label.
+--                   Since there's no font-merge, this draws a blank-label
+--                   Button() for native hover/press + click behavior and
+--                   overlays the icon glyph + bold label text on top via
+--                   the draw list. Also added theme.Icons.PENCIL.
+--   08/23/26 - v1.17 Added theme.Icons.DOLLAR_SIGN (fa-dollar-sign).
+--   08/22/26 - v1.16 theme.PrimaryButton now takes an optional 5th `color`
+--                   arg to reuse the exact same bold/1.3x/dark-text style
+--                   in a different hue (hover/active shades auto-derived
+--                   via the new scale_rgb helper) -- e.g. Renamer's
+--                   Export button, which needed the same look as Rename
+--                   but a distinct color.
+--   08/22/26 - v1.15 Col_PopupBg (dropdown/combo popup background) was
+--                   0x202225FF -- same blue-tint pattern as the other
+--                   fixes here. Flattened to neutral 0x202020FF.
+--   08/22/26 - v1.14 Added theme.Icons.FILE_LINES (fa-file-lines) and
+--                   theme.Icons.CLOCK (fa-clock).
+--   08/22/26 - v1.13 Col_ScrollbarBg/Grab/Hovered/Active had the same
+--                   blue-tint pattern as the other fixes here (confirmed
+--                   by pixel-sampling a screenshot: the grab handle
+--                   rendered as (58,64,70), exactly the old
+--                   Col_ScrollbarGrab value). Flattened all four to
+--                   neutral greys, same relative brightness as before.
+--   08/22/26 - v1.12 Col_Border (the line ImGui draws under a tab bar,
+--                   among other places) was 0x3A3F45FF -- same blue-tint
+--                   pattern as the other fixes here. Flattened to neutral
+--                   0x3F3F3FFF.
+--   08/22/26 - v1.11 Col_Tab (base/inactive tab) was 0x23282DFF -- reads
+--                   as clearly blue in practice despite looking like a
+--                   plausible dark grey in hex (only a 10/255 R-to-B
+--                   spread, but very visible at this low a brightness).
+--                   Flattened to neutral 0x232323FF, matching the
+--                   Col_TabDimmed*/Col_FrameBg* fixes below.
+--   08/22/26 - v1.10 Col_TabDimmed/Unfocused and Col_TabDimmedSelected/
+--                   UnfocusedActive (tabs shown when the script's window
+--                   itself isn't focused) had the same blue-tint issue as
+--                   Col_FrameBg* below -- flattened to neutral greys.
+--   08/22/26 - v1.9 Col_FrameBgHovered/Active were slightly blue-tinted
+--                   (unequal R/G/B) -- changed to neutral greys, lighter
+--                   than Col_FrameBg, with no color cast.
 --   08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
 --                   table of glyph constants), theme.PushIconFont/PopIconFont,
 --                   theme.IconText, and theme.IconButton. The icon font
@@ -42,18 +94,18 @@ function theme.Push(ctx)
     {ImGui.Col_TextDisabled, 0xA0A0A0FF},
     {ImGui.Col_WindowBg, 0x28282828FF},
     {ImGui.Col_ChildBg, 0x222222FF},
-    {ImGui.Col_PopupBg, 0x202225FF},
-    {ImGui.Col_Border, 0x3A3F45FF},
+    {ImGui.Col_PopupBg, 0x202020FF},
+    {ImGui.Col_Border, 0x3F3F3FFF},
     {ImGui.Col_FrameBg, 0x333333FF},
-    {ImGui.Col_FrameBgHovered, 0x343A40FF},
-    {ImGui.Col_FrameBgActive, 0x3C434AFF},
+    {ImGui.Col_FrameBgHovered, 0x454545FF},
+    {ImGui.Col_FrameBgActive, 0x505050FF},
     {ImGui.Col_TitleBg, 0x222222FF},
     {ImGui.Col_TitleBgActive, 0x333333FF},
     {ImGui.Col_TitleBgCollapsed, 0x15181BFF},
-    {ImGui.Col_ScrollbarBg, 0x1A1C1FFF},
-    {ImGui.Col_ScrollbarGrab, 0x3A4046FF},
-    {ImGui.Col_ScrollbarGrabHovered, 0x4A545CFF},
-    {ImGui.Col_ScrollbarGrabActive, 0x5A6771FF},
+    {ImGui.Col_ScrollbarBg, 0x1C1C1CFF},
+    {ImGui.Col_ScrollbarGrab, 0x404040FF},
+    {ImGui.Col_ScrollbarGrabHovered, 0x535353FF},
+    {ImGui.Col_ScrollbarGrabActive, 0x666666FF},
     {ImGui.Col_CheckMark, 0xa08fe2FF},
     {ImGui.Col_SliderGrab, 0xa08fe2FF},
     {ImGui.Col_SliderGrabActive, 0xa08fe2FF},
@@ -78,7 +130,7 @@ function theme.Push(ctx)
     end
   end
 
-  add_color_name("Col_Tab", 0x23282DFF)
+  add_color_name("Col_Tab", 0x232323FF)
   add_color_name("Col_TabHovered", 0x333333FF)
   -- Newer ReaImGui builds renamed these (Col_TabActive -> Col_TabSelected,
   -- Col_TabUnfocused -> Col_TabDimmed, Col_TabUnfocusedActive ->
@@ -89,10 +141,13 @@ function theme.Push(ctx)
   -- tab fell back to Dear ImGui's default blue.
   add_color_name("Col_TabSelected", 0x2C6B64FF)
   add_color_name("Col_TabActive", 0x2C6B64FF)
-  add_color_name("Col_TabDimmed", 0x1E2226FF)
-  add_color_name("Col_TabUnfocused", 0x1E2226FF)
-  add_color_name("Col_TabDimmedSelected", 0x273035FF)
-  add_color_name("Col_TabUnfocusedActive", 0x273035FF)
+  -- Dimmed/Unfocused tabs (shown when the script's window itself isn't
+  -- the focused window) were blue-tinted (unequal R/G/B) like the
+  -- Col_FrameBg* fix above -- flattened to neutral greys.
+  add_color_name("Col_TabDimmed", 0x1E1E1EFF)
+  add_color_name("Col_TabUnfocused", 0x1E1E1EFF)
+  add_color_name("Col_TabDimmedSelected", 0x2A2A2AFF)
+  add_color_name("Col_TabUnfocusedActive", 0x2A2A2AFF)
 
   local vars = {
     {ImGui.StyleVar_WindowRounding, 6},
@@ -165,16 +220,99 @@ local function get_bold_font(ctx)
   return font
 end
 
-function theme.PrimaryButton(ctx, label, width, height)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Button,        0xA08FE2FF)
-  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered,  0xB3A6E8FF)
-  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,   0x8D7ACCFF)
+-- Scales an 0xRRGGBBAA color's RGB channels by `factor` (alpha untouched),
+-- clamped to 255. Used by PrimaryButton to derive hover/active shades for
+-- a caller-supplied color, the same way the default purple's hover
+-- (lighter) and active (darker) shades relate to its base color.
+local function scale_rgb(color, factor)
+  local r = math.min(255, math.floor(((color >> 24) & 0xFF) * factor))
+  local g = math.min(255, math.floor(((color >> 16) & 0xFF) * factor))
+  local b = math.min(255, math.floor(((color >> 8) & 0xFF) * factor))
+  local a = color & 0xFF
+  return (r << 24) | (g << 16) | (b << 8) | a
+end
+
+-- color (optional) overrides the button's purple fill with a different
+-- 0xRRGGBBAA hue -- hover/active shades are derived automatically
+-- (lighter/darker). Font, size, and dark text stay identical either way,
+-- so a differently-colored PrimaryButton still reads as "the same style,
+-- different color," not a different button class.
+--
+-- icon (optional): one of theme.Icons.*, drawn before the label text,
+-- inside the same button. ReaImGui has no font-merge mode, so a single
+-- Button() label can't mix the icon font and the bold label font -- this
+-- draws a real Button() with a blank label (native hover/press
+-- background + click handling, sized to fit both pieces) and overlays
+-- the icon glyph and bold label text on top of it via the draw list, in
+-- their respective fonts. Omit icon for the plain text-only button
+-- (unchanged from before).
+function theme.PrimaryButton(ctx, label, width, height, color, icon)
+  local normal, hover, active
+  if color then
+    normal, hover, active = color, scale_rgb(color, 1.13), scale_rgb(color, 0.85)
+  else
+    normal, hover, active = 0xA08FE2FF, 0xB3A6E8FF, 0x8D7ACCFF
+  end
+
+  ImGui.PushStyleColor(ctx, ImGui.Col_Button,        normal)
+  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered,  hover)
+  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive,   active)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text,           0x222222FF)
-  ImGui.PushFont(ctx, get_bold_font(ctx), ImGui.GetFontSize(ctx) * 1.3)
 
-  local clicked = ImGui.Button(ctx, label, width or 0, height or 0)
+  local text_size = ImGui.GetFontSize(ctx) * 1.3
+  local bold_font = get_bold_font(ctx)
+  local clicked
 
-  ImGui.PopFont(ctx)
+  if icon then
+    ImGui.PushFont(ctx, bold_font, text_size)
+    local label_w, label_h = ImGui.CalcTextSize(ctx, label)
+    ImGui.PopFont(ctx)
+
+    theme.PushIconFont(ctx, text_size)
+    local icon_w, icon_h = ImGui.CalcTextSize(ctx, icon)
+    theme.PopIconFont(ctx)
+
+    local pad_x, pad_y = ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding)
+    local icon_gap = pad_x * 0.5
+    local content_w = icon_w + icon_gap + label_w
+
+    -- Matches native ImGui.Button's own width semantics: nil/0 auto-sizes
+    -- to content, negative fills available width (e.g. -1, the "full
+    -- width" convention used throughout this repo), positive is a fixed
+    -- width. The auto-content case wasn't reachable before this fix --
+    -- `width > 0` is false for -1, so a caller passing -1 (expecting
+    -- full width, same as every other PrimaryButton call site) silently
+    -- fell through to auto-sizing-to-content instead.
+    local btn_w
+    if width == nil or width == 0 then
+      btn_w = content_w + pad_x * 2
+    elseif width < 0 then
+      local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+      btn_w = avail_w + width
+    else
+      btn_w = width
+    end
+    local btn_h = (height and height > 0) and height or (label_h + pad_y * 2)
+
+    clicked = ImGui.Button(ctx, "##" .. label, btn_w, btn_h)
+
+    local x0, y0 = ImGui.GetItemRectMin(ctx)
+    local draw_list = ImGui.GetWindowDrawList(ctx)
+    local content_x = x0 + (btn_w - content_w) * 0.5
+
+    theme.PushIconFont(ctx, text_size)
+    ImGui.DrawList_AddText(draw_list, content_x, y0 + (btn_h - icon_h) * 0.5, 0x222222FF, icon)
+    theme.PopIconFont(ctx)
+
+    ImGui.PushFont(ctx, bold_font, text_size)
+    ImGui.DrawList_AddText(draw_list, content_x + icon_w + icon_gap, y0 + (btn_h - label_h) * 0.5, 0x222222FF, label)
+    ImGui.PopFont(ctx)
+  else
+    ImGui.PushFont(ctx, bold_font, text_size)
+    clicked = ImGui.Button(ctx, label, width or 0, height or 0)
+    ImGui.PopFont(ctx)
+  end
+
   ImGui.PopStyleColor(ctx, 4)
 
   return clicked
@@ -193,6 +331,7 @@ theme.Icons = {
   DUPLICATE       = "\u{f24d}", -- fa-clone
   FOLDER_OPEN     = "\u{f07c}", -- fa-folder-open
   FOLDER          = "\u{f07b}", -- fa-folder
+  DOLLAR_SIGN     = "\u{24}",   -- fa-dollar-sign
   PLAY            = "\u{f04b}", -- fa-play
   STOP            = "\u{f04d}", -- fa-stop
   PAUSE           = "\u{f04c}", -- fa-pause
@@ -208,12 +347,18 @@ theme.Icons = {
   PLUS            = "\u{2b}",   -- fa-plus
   MINUS           = "\u{f068}", -- fa-minus
   EDIT            = "\u{f044}", -- fa-pen-to-square
+  PENCIL          = "\u{f303}", -- fa-pencil
   LOCK            = "\u{f023}", -- fa-lock
   UNLOCK          = "\u{f3c1}", -- fa-lock-open
   VIDEO           = "\u{f03d}", -- fa-video
   MUSIC           = "\u{f001}", -- fa-music
   EXPORT          = "\u{f56e}", -- fa-file-export
+  FILE_WAVEFORM   = "\u{f478}", -- fa-file-waveform
+  SQUARE_PLUS     = "\u{f0fe}", -- fa-square-plus
+  LEFT_RIGHT      = "\u{f337}", -- fa-left-right
   IMPORT          = "\u{f56f}", -- fa-file-import
+  FILE_LINES      = "\u{f15c}", -- fa-file-lines
+  CLOCK           = "\u{f017}", -- fa-clock
   LINK            = "\u{f0c1}", -- fa-link
   CHEVRON_DOWN    = "\u{f078}", -- fa-chevron-down
   CHEVRON_UP      = "\u{f077}", -- fa-chevron-up

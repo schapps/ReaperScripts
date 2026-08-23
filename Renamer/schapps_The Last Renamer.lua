@@ -265,89 +265,92 @@ end
 
 -- ImGui style tables (defined after require 'imgui')
 acendan.ImGui_Styles = {}
+-- Color values below are aligned to Common/ReaImGuiTheme.lua's shared
+-- palette wherever that theme defines the same slot, so this script's
+-- buttons/tabs/title bar match the rest of the Schapps ReaImGui scripts.
+-- Slots the shared theme doesn't define (Table*, Plot*, DockingPreview,
+-- ResizeGrip, TextSelectedBg, DragDropTarget) keep their original values.
 acendan.ImGui_Styles.colors = {
   { reaper.ImGui_Col_DragDropTarget,       0xCDA4DEFF },
-  { reaper.ImGui_Col_FrameBg,              0x72727224 },
-  { reaper.ImGui_Col_FrameBgHovered,       0x80808064 },
-  { reaper.ImGui_Col_FrameBgActive,        0x80808080 },
-  { reaper.ImGui_Col_CheckMark,            0xCDA4DEFF },
-  { reaper.ImGui_Col_TitleBg,              0xB19CD932 },
-  { reaper.ImGui_Col_TitleBgCollapsed,     0xB19CD932 },
-  { reaper.ImGui_Col_TitleBgActive,        0x5A3F78CC },
+  { reaper.ImGui_Col_FrameBg,              0x333333FF },
+  { reaper.ImGui_Col_FrameBgHovered,       0x454545FF },
+  { reaper.ImGui_Col_FrameBgActive,        0x505050FF },
+  { reaper.ImGui_Col_CheckMark,            0xA08FE2FF },
+  { reaper.ImGui_Col_TitleBg,              0x222222FF },
+  { reaper.ImGui_Col_TitleBgCollapsed,     0x15181BFF },
+  { reaper.ImGui_Col_TitleBgActive,        0x333333FF },
   { reaper.ImGui_Col_Button,               0x60606066 },
   { reaper.ImGui_Col_ButtonHovered,        0x606060FF },
   { reaper.ImGui_Col_ButtonActive,         0x808080FF },
-  { reaper.ImGui_Col_Text,                 0xFFFFFFDE },
-  { reaper.ImGui_Col_TextDisabled,         0xFFFFFF61 },
+  { reaper.ImGui_Col_Text,                 0xE6E6E6FF },
+  { reaper.ImGui_Col_TextDisabled,         0xA0A0A0FF },
   { reaper.ImGui_Col_TextSelectedBg,       0xD8BFD864 },
-  { reaper.ImGui_Col_ResizeGrip,           0x80808000 },
-  { reaper.ImGui_Col_ResizeGripHovered,    0x80808000 },
-  { reaper.ImGui_Col_ResizeGripActive,     0x80808000 },
+  { reaper.ImGui_Col_ChildBg,              0x222222FF },
+  { reaper.ImGui_Col_ResizeGrip,           0x60606066 },
+  { reaper.ImGui_Col_ResizeGripHovered,    0x606060FF },
+  { reaper.ImGui_Col_ResizeGripActive,     0x808080FF },
   { reaper.ImGui_Col_Separator,            0x80808080 },
   { reaper.ImGui_Col_SeparatorHovered,     0x808080C7 },
   { reaper.ImGui_Col_SeparatorActive,      0x808080FF },
-  { reaper.ImGui_Col_Tab,                  0x60606066 },
-  { reaper.ImGui_Col_TabHovered,           0x606060FF },
-  { reaper.ImGui_Col_TabSelected,          0x6C6C6CFF },
+  { reaper.ImGui_Col_Tab,                  0x232323FF },
+  { reaper.ImGui_Col_TabHovered,           0x333333FF },
+  -- Flattened into the window background (rather than the shared theme's
+  -- teal accent) with a purple overline below, matching how Smart Export
+  -- Selected Items treats its active tab.
+  { reaper.ImGui_Col_TabSelected,          0x282828FF },
+  { reaper.ImGui_Col_TabSelectedOverline,  0xA08FE2FF },
   { reaper.ImGui_Col_WindowBg,             0x282828FF },
-  { reaper.ImGui_Col_PopupBg,              0x1F1F1FF0 },
-  { reaper.ImGui_Col_ScrollbarBg,          0x18181887 },
+  { reaper.ImGui_Col_PopupBg,              0x202020FF },
+  { reaper.ImGui_Col_ScrollbarBg,          0x1C1C1CFF },
+  { reaper.ImGui_Col_ScrollbarGrab,        0x404040FF },
+  { reaper.ImGui_Col_ScrollbarGrabHovered, 0x535353FF },
+  { reaper.ImGui_Col_ScrollbarGrabActive,  0x666666FF },
   { reaper.ImGui_Col_Header,               0x60606066 },
   { reaper.ImGui_Col_HeaderHovered,        0x606060FF },
   { reaper.ImGui_Col_HeaderActive,         0x808080FF },
   { reaper.ImGui_Col_TableRowBg,           0xFFFFFF00 },
   { reaper.ImGui_Col_TableRowBgAlt,        0xFFFFFF04 },
-  { reaper.ImGui_Col_SliderGrab,           0xCDA4DEC8 },
-  { reaper.ImGui_Col_SliderGrabActive,     0xD8BFD4DD },
+  { reaper.ImGui_Col_SliderGrab,           0xA08FE2FF },
+  { reaper.ImGui_Col_SliderGrabActive,     0xA08FE2FF },
   { reaper.ImGui_Col_PlotLines,            0xB19CD9FF },
   { reaper.ImGui_Col_PlotLinesHovered,     0xB19CD9FF },
   { reaper.ImGui_Col_PlotHistogram,        0xB19CD932 },
   { reaper.ImGui_Col_PlotHistogramHovered, 0xB19CD932 },
   { reaper.ImGui_Col_DockingPreview,       1123734963 },
-  { reaper.ImGui_Col_TabDimmed,            640034552  },
-  { reaper.ImGui_Col_TabDimmedSelected,    1819045119 },
-  { reaper.ImGui_Col_Border,               -2139062144 },
+  { reaper.ImGui_Col_TabDimmed,            0x1E1E1EFF },
+  { reaper.ImGui_Col_TabDimmedSelected,    0x2A2A2AFF },
+  { reaper.ImGui_Col_Border,               0x3F3F3FFF },
   { reaper.ImGui_Col_TableBorderLight,     993737727  },
   { reaper.ImGui_Col_TableBorderStrong,    1330597887 },
   { reaper.ImGui_Col_TableHeaderBg,        858993663  },
 }
+-- Matches Common/ReaImGuiTheme.lua's vars exactly -- these 7 are the only
+-- ones the shared theme sets, so they're the only ones this script
+-- overrides too now. Everything this table used to also set (Alpha,
+-- DisabledAlpha, *BorderSize, ChildRounding, ItemInnerSpacing,
+-- IndentSpacing, ScrollbarSize, GrabMinSize, ButtonTextAlign) already
+-- equaled Dear ImGui's own built-in default, so dropping them changes
+-- nothing. PopupRounding, TabRounding, WindowTitleAlign, and
+-- SelectableTextAlign did NOT match the true default -- dropping those
+-- now makes popups/tabs/the title bar/selectable-row text match every
+-- other Schapps ReaImGui script (none of which touch these either),
+-- instead of only this script looking different.
 acendan.ImGui_Styles.vars = {
-  { reaper.ImGui_StyleVar_Alpha(),               1.0 },
-  { reaper.ImGui_StyleVar_DisabledAlpha(),       0.6 },
-  { reaper.ImGui_StyleVar_WindowPadding(),       { 8, 4 } },
-  { reaper.ImGui_StyleVar_FramePadding(),        { 4, 3 } },
-  { reaper.ImGui_StyleVar_CellPadding(),         { 4, 4 } },
-  { reaper.ImGui_StyleVar_ItemSpacing(),         { 4, 4 } },
-  { reaper.ImGui_StyleVar_ItemInnerSpacing(),    { 4, 4 } },
-  { reaper.ImGui_StyleVar_IndentSpacing(),       21 },
-  { reaper.ImGui_StyleVar_ScrollbarSize(),       14 },
-  { reaper.ImGui_StyleVar_GrabMinSize(),         12 },
-  { reaper.ImGui_StyleVar_WindowBorderSize(),    1 },
-  { reaper.ImGui_StyleVar_ChildBorderSize(),     1 },
-  { reaper.ImGui_StyleVar_PopupBorderSize(),     1 },
-  { reaper.ImGui_StyleVar_FrameBorderSize(),     0 },
-  { reaper.ImGui_StyleVar_WindowRounding(),      8 },
-  { reaper.ImGui_StyleVar_ChildRounding(),       0 },
-  { reaper.ImGui_StyleVar_FrameRounding(),       2 },
-  { reaper.ImGui_StyleVar_PopupRounding(),       4 },
-  { reaper.ImGui_StyleVar_ScrollbarRounding(),   4 },
-  { reaper.ImGui_StyleVar_GrabRounding(),        2 },
-  { reaper.ImGui_StyleVar_TabRounding(),         2 },
-  { reaper.ImGui_StyleVar_WindowTitleAlign(),    { 0.5, 0.5 } },
-  { reaper.ImGui_StyleVar_ButtonTextAlign(),     { 0.5, 0.5 } },
-  { reaper.ImGui_StyleVar_SelectableTextAlign(), { 0, 0.5 } },
+  { reaper.ImGui_StyleVar_WindowRounding(),    6 },
+  { reaper.ImGui_StyleVar_FrameRounding(),     4 },
+  { reaper.ImGui_StyleVar_GrabRounding(),      4 },
+  { reaper.ImGui_StyleVar_ScrollbarRounding(), 6 },
+  { reaper.ImGui_StyleVar_FramePadding(),      { 10, 6 } },
+  { reaper.ImGui_StyleVar_WindowPadding(),     { 12, 10 } },
+  { reaper.ImGui_StyleVar_ItemSpacing(),       { 10, 8 } },
 }
 acendan.ImGui_Styles.scalable = {
   reaper.ImGui_StyleVar_WindowPadding(),
   reaper.ImGui_StyleVar_FramePadding(),
-  reaper.ImGui_StyleVar_CellPadding(),
   reaper.ImGui_StyleVar_ItemSpacing(),
-  reaper.ImGui_StyleVar_ItemInnerSpacing(),
-  reaper.ImGui_StyleVar_IndentSpacing(),
-  reaper.ImGui_StyleVar_ScrollbarSize(),
-  reaper.ImGui_StyleVar_GrabMinSize(),
 }
 acendan.ImGui_Styles.font = nil
+acendan.ImGui_Styles.mono_font = nil
 
 -- Hacky ChildWindow flag for autofill combo
 if not reaper.ImGui_WindowFlags_ChildWindow then
@@ -378,13 +381,36 @@ function acendan.ImGui_HSV(h, s, v, a)
   return reaper.ImGui_ColorConvertDouble4ToU32(r, g, b, a or 1.0)
 end
 
--- ImGui font & scale
-function acendan.ImGui_SetFont(font_name, font_size)
+-- ImGui font & scale.
+--
+-- CreateFont's 2nd argument is FLAGS (e.g. FontFlags_Bold), not a pixel
+-- size -- there is no size argument on CreateFont at all; the actual
+-- rendered size always comes from whatever's passed to PushFont at each
+-- call site (every push in this script already does this correctly).
+-- This function used to pass a computed pixel size into that flags slot,
+-- which (being a raw integer, not FontFlags_None) could silently flip on
+-- unrelated flag bits -- e.g. any odd size would set bit 0, which is
+-- FontFlags_Bold, making the font unpredictably bold depending on
+-- whatever size/scale happened to be active when it was (re)created.
+function acendan.ImGui_SetFont(font_name)
   font_name = font_name or "Arial"
-  font_size = math.floor((font_size or 14) * acendan.ImGui_GetScale())
   if acendan.ImGui_Styles.font then reaper.ImGui_Detach(ctx, acendan.ImGui_Styles.font) end
-  acendan.ImGui_Styles.font = reaper.ImGui_CreateFont(font_name, font_size)
+  acendan.ImGui_Styles.font = reaper.ImGui_CreateFont(font_name)
   reaper.ImGui_Attach(ctx, acendan.ImGui_Styles.font)
+end
+
+-- Monospace counterpart to ImGui_SetFont, same lifecycle (recreated
+-- whenever ui_scale changes, via the same wgt.set_font flag). Used by
+-- Quick Naming's name input, options list, and preview table
+-- (Lib/QuickNamingGui.lua). Named explicitly (Menlo/Consolas) rather than
+-- the generic "monospace" family alias, matching Smart Export Selected
+-- Items' own mono_font -- the generic alias resolves to a different
+-- actual typeface than what that script names directly.
+function acendan.ImGui_SetMonoFont()
+  local font_name = reaper.GetOS():find("Win") and "Consolas" or "Menlo"
+  if acendan.ImGui_Styles.mono_font then reaper.ImGui_Detach(ctx, acendan.ImGui_Styles.mono_font) end
+  acendan.ImGui_Styles.mono_font = reaper.ImGui_CreateFont(font_name)
+  reaper.ImGui_Attach(ctx, acendan.ImGui_Styles.mono_font)
 end
 
 function acendan.ImGui_GetScale()
@@ -563,6 +589,42 @@ local META_DIR    = SCRIPT_DIR .. "Meta" .. SEP
 
 local META_MKR_PREFIX = "#META"
 
+-- Tab bar sizing/accent, used by Main()'s BeginTabBar block and by
+-- TabItem/NamingModeTabItem below. TabFramePadding() must wrap the whole
+-- BeginTabBar/EndTabBar block, not just each BeginTabItem call -- the tab
+-- bar reserves its own overall height (and centers each label within a
+-- tab) using whatever padding is active when it's built, so padding
+-- pushed only around individual BeginTabItem calls left the bar itself
+-- reserving its old (smaller) height, and the taller pills overflowed
+-- into the content below. COMPACT_FRAME_PADDING is pushed back around
+-- each tab's own content so buttons/fields inside match the padding
+-- used everywhere else in the app (acendan.ImGui_Styles.vars' own
+-- FramePadding, which now matches the shared theme).
+local TAB_HEIGHT = 26 -- matches Smart Export Selected Items' preset tabs
+
+-- Frame padding {10, y} where y is whatever's needed to make a tab pill
+-- exactly TAB_HEIGHT tall, given the current font's actual line height
+-- (computed at runtime rather than hardcoded, so it stays exact
+-- regardless of font/scale).
+local function TabFramePadding()
+  local pad_y = math.max(0, (TAB_HEIGHT - reaper.ImGui_GetTextLineHeight(ctx)) / 2)
+  return 10, pad_y
+end
+
+local COMPACT_FRAME_PADDING = { 10, 6 }
+
+-- Smart-Export-style 3px colored left-edge accent on whichever tab was
+-- most recently submitted via BeginTabItem. Must be called immediately
+-- after BeginTabItem (before any other item is submitted), since
+-- GetItemRectMin/Max refer to the last submitted item.
+local function DrawTabAccent(color)
+  if not color then return end
+  local x0, y0 = reaper.ImGui_GetItemRectMin(ctx)
+  local _, y1 = reaper.ImGui_GetItemRectMax(ctx)
+  local draw_list = reaper.ImGui_GetWindowDrawList(ctx)
+  reaper.ImGui_DrawList_AddRectFilled(draw_list, x0, y0, x0 + 3, y1, color)
+end
+
 -- Scheme-editor modules (dofile'd once at startup, not inside Main()/defer -
 -- dofile always re-executes, no require-style memoization/caching). These
 -- can't see this script's `local acendan`, so it's injected explicitly.
@@ -572,6 +634,17 @@ local SchemeEditorGui           = dofile(script_path .. "Lib" .. SEP .. "SchemeE
 local SchemeStructureEditor     = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditor.lua")
 local SchemeStructureEditorGui  = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditorGui.lua")
 local SchemeVisualizer          = dofile(script_path .. "Lib" .. SEP .. "SchemeVisualizer.lua")
+
+-- Shared ReaImGUI theme -- used here only for theme.PrimaryButton (the
+-- Rename action). This script keeps its own acendan.ImGui_Styles push/pop
+-- system (it has a UI-scale slider the shared theme doesn't support), so
+-- rather than replacing that, the color VALUES below have been aligned to
+-- match the shared theme's palette instead.
+local theme_path = script_path .. "Common" .. SEP .. "ReaImGuiTheme.lua"
+if not reaper.file_exists(theme_path) then
+  theme_path = script_path .. ".." .. SEP .. "Common" .. SEP .. "ReaImGuiTheme.lua"
+end
+local theme = dofile(theme_path)
 -- Quick Naming's two modules are dofile'd here (with the others) but their
 -- init() calls are deferred to the bottom of this file - unlike the modules
 -- above, they depend on local functions (TryMatchField, SplitBySep,
@@ -631,6 +704,7 @@ function Init()
 
   ctx = reaper.ImGui_CreateContext(SCRIPT_NAME, CONFIG_FLAGS)
   acendan.ImGui_SetFont()
+  acendan.ImGui_SetMonoFont()
   local scale = acendan.ImGui_GetScale()
   reaper.ImGui_SetNextWindowSize(ctx, wgt.window_w * scale, wgt.window_h * scale)
   acendan.ImGui_SetScale(scale)
@@ -887,17 +961,24 @@ end
 
 function LoadPresets()
   reaper.ImGui_SameLine(ctx)
-  local scale = acendan.ImGui_GetScale()
-  local btn_pad = 4 * scale * 2   -- FramePadding.x (4) * scale * 2 sides
-  local btn_gap = 4 * scale       -- ItemSpacing.x (4) * scale
-  local presets_w = reaper.ImGui_CalcTextSize(ctx, "Presets") + btn_pad
-  local history_w = reaper.ImGui_CalcTextSize(ctx, "History") + btn_pad
+  -- Auto-sized via theme.IconButtonSize, the same call Smart Export
+  -- Selected Items' Browse/Wildcards buttons use -- NOT a hardcoded
+  -- pixel guess. As long as the ambient FramePadding matches the shared
+  -- theme's here (it does: TabFramePadding is already popped by this
+  -- point, leaving acendan.ImGui_Styles.vars' own {10, 6}), this
+  -- produces the exact same size as those buttons, guaranteed by using
+  -- the identical formula rather than two hand-kept-in-sync numbers.
+  local icon_size = reaper.ImGui_GetFontSize(ctx)
+  local btn_gap = 6
+  local presets_w = theme.IconButtonSize(ctx, icon_size)
+  local history_w = theme.IconButtonSize(ctx, icon_size)
   local total_w = presets_w + history_w + btn_gap
   reaper.ImGui_SetCursorPosX(ctx, reaper.ImGui_GetCursorPosX(ctx) + reaper.ImGui_GetContentRegionAvail(ctx) - total_w)
-  if reaper.ImGui_Button(ctx, "Presets") then
+  if theme.IconButton(ctx, theme.Icons.FILE_LINES .. "##presets_icon", nil, nil, icon_size) then
     RecallPresets()
     reaper.ImGui_OpenPopup(ctx, "PresetPopup")
   end
+  if reaper.ImGui_IsItemHovered(ctx) then reaper.ImGui_SetTooltip(ctx, "Presets") end
   if reaper.ImGui_BeginPopup(ctx, "PresetPopup") then
     local items = {}
     for _, preset in ipairs(wgt.preset.presets) do
@@ -971,10 +1052,18 @@ function ClickLoadHistory()
 end
 
 function LoadHistory()
-  reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "History") then
+  -- Explicit 6px gap (matching LoadPresets' total_w math and the
+  -- Settings/Documentation row) rather than the default ItemSpacing.x
+  -- (10) SameLine would otherwise use -- LoadPresets right-aligns this
+  -- pair assuming a 6px gap between them, so the actual gap must match
+  -- or the pair ends up a few px short of flush with the right edge.
+  reaper.ImGui_SameLine(ctx, 0, 6)
+  -- Auto-sized via theme.IconButtonSize -- see LoadPresets above.
+  local icon_size = reaper.ImGui_GetFontSize(ctx)
+  if theme.IconButton(ctx, theme.Icons.CLOCK .. "##history_icon", nil, nil, icon_size) then
     reaper.ImGui_OpenPopup(ctx, "HistoryPopup")
   end
+  if reaper.ImGui_IsItemHovered(ctx) then reaper.ImGui_SetTooltip(ctx, "History") end
   if reaper.ImGui_BeginPopup(ctx, "HistoryPopup") then
     local items = {}
     for _, history in ipairs(wgt.history.presets) do
@@ -1065,19 +1154,35 @@ function TabNaming()
   local preview_name = SanitizeName(wgt.name, wgt.enumeration, {}, true)
   ValidateFields(preview_name)
   reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + 20)
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * 1.5)
+  -- The shared theme's PrimaryButton owns its own (bold, 1.3x) font, unlike
+  -- the other buttons here which get their "big" look from a manual 1.5x
+  -- font push -- this is the one script-wide "main action" button, matching
+  -- the Rename/Render/Create buttons in the other Schapps ReaImGui scripts.
   if wgt.invalid then reaper.ImGui_BeginDisabled(ctx) end
-  acendan.ImGui_Button("Rename", ApplyName, {86, 64, 110})
+  if theme.PrimaryButton(ctx, "Rename", nil, nil, nil, theme.Icons.PENCIL) then
+    reaper.PreventUIRefresh(1)
+    reaper.Undo_BeginBlock()
+    ApplyName()
+    reaper.Undo_EndBlock("Rename", -1)
+    reaper.PreventUIRefresh(-1)
+    reaper.UpdateArrange()
+  end
   if wgt.invalid then reaper.ImGui_EndDisabled(ctx) end
-  reaper.ImGui_PopFont(ctx)
   acendan.ImGui_Tooltip("Applies your name to the given target!\n\nPro Tip: You can press the 'Enter' key to trigger renaming from any of the fields above.")
 
   local has_export = HasExportScript()
   reaper.ImGui_SameLine(ctx, 0, 10)
   if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx) * 1.5)
-  acendan.ImGui_Button("Export", RunExportScript, {70, 160, 210})
-  reaper.ImGui_PopFont(ctx)
+  -- Same PrimaryButton style as Rename (bold font, 1.3x size, dark text),
+  -- just a different color -- #94BAE3.
+  if theme.PrimaryButton(ctx, "Export", nil, nil, 0x94BAE3FF, theme.Icons.EXPORT) then
+    reaper.PreventUIRefresh(1)
+    reaper.Undo_BeginBlock()
+    RunExportScript()
+    reaper.Undo_EndBlock("Export", -1)
+    reaper.PreventUIRefresh(-1)
+    reaper.UpdateArrange()
+  end
   acendan.ImGui_Tooltip("Runs the export script configured in the Settings tab.")
   if not has_export then reaper.ImGui_EndDisabled(ctx) end
 
@@ -1099,21 +1204,33 @@ function TabNaming()
   reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + 20)
   reaper.ImGui_SeparatorText(ctx, "Name Preview")
 
-  reaper.ImGui_PushTextWrapPos(ctx, 0.0)
+  local row_x, row_y = reaper.ImGui_GetCursorPosX(ctx), reaper.ImGui_GetCursorPosY(ctx)
+  local avail_w = select(1, reaper.ImGui_GetContentRegionAvail(ctx))
+  local copy_icon_size = reaper.ImGui_GetFontSize(ctx)
+  local copy_w = theme.IconButtonSize(ctx, copy_icon_size)
+
+  -- Wrap before the reserved icon-button column on the right, not the
+  -- full window width, so a long preview name can't run under the button.
+  reaper.ImGui_PushTextWrapPos(ctx, row_x + avail_w - copy_w - 8)
+  -- 13px literal, matching Smart Export Selected Items' own mono_font
+  -- pushes exactly, rather than GetFontSize(ctx) (whatever the ambient
+  -- default happens to be here, which may not actually be 13).
+  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
   reaper.ImGui_TextColored(ctx, 0xFFFFFFFF, preview_name)
+  reaper.ImGui_PopFont(ctx)
   reaper.ImGui_PopTextWrapPos(ctx)
   if wgt.data and wgt.data.maxchars then
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_TextDisabled(ctx, "(" .. #preview_name .. "/" .. wgt.data.maxchars .. ")")
   end
 
-  local copy_label = "Copy"
-  local copy_w = reaper.ImGui_CalcTextSize(ctx, copy_label) + 4 * acendan.ImGui_GetScale() * 2
-  reaper.ImGui_SetCursorPosX(ctx, reaper.ImGui_GetCursorPosX(ctx) + reaper.ImGui_GetContentRegionAvail(ctx) - copy_w)
-  Button(copy_label, function()
-    if not wgt.name or wgt.name == "" then return end
-    reaper.CF_SetClipboard(SanitizeName(wgt.name, nil, {}, true))
-  end, "Copies the generated name to your clipboard.\n\nUnfortunately, this can not resolve wildcards or enumeration.")
+  reaper.ImGui_SetCursorPos(ctx, row_x + avail_w - copy_w, row_y)
+  if theme.IconButton(ctx, theme.Icons.COPY .. "##copy_preview", nil, nil, copy_icon_size) then
+    if wgt.name and wgt.name ~= "" then
+      reaper.CF_SetClipboard(SanitizeName(wgt.name, nil, {}, true))
+    end
+  end
+  acendan.ImGui_Tooltip("Copies the generated name to your clipboard.\n\nUnfortunately, this can not resolve wildcards or enumeration.")
 end
 
 function ClearFields(title, fields)
@@ -1507,11 +1624,16 @@ function Main()
   end
 
   if wgt.set_font then
-    acendan.ImGui_SetFont(); wgt.set_font = false
+    acendan.ImGui_SetFont(); acendan.ImGui_SetMonoFont(); wgt.set_font = false
   end
   acendan.ImGui_PushStyles()
 
-  local rv, open = reaper.ImGui_Begin(ctx, "The Last Renamer - Schapps Edition", true, WINDOW_FLAGS)
+  -- acendan.ImGui_Styles.vars now pushes FramePadding{10,6} (matching
+  -- the shared theme) and no longer sets WindowTitleAlign at all, which
+  -- leaves ImGui's own default ({0.0, 0.5} = left-aligned) in effect --
+  -- both are what give the native title bar the right height/alignment,
+  -- matching every other Schapps ReaImGui script's title bar.
+  local rv, open = reaper.ImGui_Begin(ctx, "THE LAST RENAMER - SCHAPPS EDITION", true, WINDOW_FLAGS)
   if not rv then return open end
 
   -- Tracks whatever size the user has manually resized the window to (no
@@ -1529,23 +1651,52 @@ function Main()
     SetCurrentValue("opt_window_h", unscaled_h)
   end
 
-  if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
-    local do_restore_naming_mode = not wgt.naming_mode_restored
+  -- Settings and "?" used to be trailing tab items; they're now icon
+  -- buttons weighted to the right of this row instead (Settings toggles
+  -- wgt.show_settings, replacing the tab bar with TabSettings() below,
+  -- the same way selecting the Settings tab used to).
+  local top_row_x, top_row_y = reaper.ImGui_GetCursorPosX(ctx), reaper.ImGui_GetCursorPosY(ctx)
+  local avail_w = select(1, reaper.ImGui_GetContentRegionAvail(ctx))
 
-    NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode)
-    NamingModeTabItem("quick", "Predictive Naming",
-        function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode)
+  if not wgt.show_settings then
+    reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(), TabFramePadding())
+    if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
+      local do_restore_naming_mode = not wgt.naming_mode_restored
 
-    TabItem("Metadata", TabMetadata, "opt_enable_meta")
-    TabItem("Settings", TabSettings)
+      NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode, 0xA08FE2FF)
+      NamingModeTabItem("quick", "Predictive Naming",
+          function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode, 0x4FBF67FF)
 
-    if reaper.ImGui_TabItemButton(ctx, '?',
-        reaper.ImGui_TabItemFlags_Trailing() | reaper.ImGui_TabItemFlags_NoTooltip()) then
+      TabItem("Metadata", TabMetadata, "opt_enable_meta", 0xE8C24DFF)
+
+      reaper.ImGui_EndTabBar(ctx)
+      wgt.naming_mode_restored = true
+    end
+    reaper.ImGui_PopStyleVar(ctx, 1)
+  end
+
+  do
+    -- Auto-sized via theme.IconButtonSize -- see LoadPresets above for
+    -- why this (not a hardcoded pixel size) is what actually guarantees
+    -- matching Smart Export Selected Items' icon buttons.
+    local icon_size = reaper.ImGui_GetFontSize(ctx)
+    local settings_w = theme.IconButtonSize(ctx, icon_size)
+    local info_w = theme.IconButtonSize(ctx, icon_size)
+    local ICON_GAP = 6
+    reaper.ImGui_SetCursorPos(ctx, top_row_x + avail_w - settings_w - ICON_GAP - info_w, top_row_y)
+    if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings_icon", nil, nil, icon_size) then
+      wgt.show_settings = not wgt.show_settings
+    end
+    if reaper.ImGui_IsItemHovered(ctx) then reaper.ImGui_SetTooltip(ctx, "Settings") end
+    reaper.ImGui_SameLine(ctx, 0, ICON_GAP)
+    if theme.IconButton(ctx, theme.Icons.INFO .. "##info_icon", nil, nil, icon_size) then
       reaper.CF_ShellExecute("https://github.com/acendan/reascripts/wiki/The-Last-Renamer")
     end
+    if reaper.ImGui_IsItemHovered(ctx) then reaper.ImGui_SetTooltip(ctx, "Documentation") end
+  end
 
-    reaper.ImGui_EndTabBar(ctx)
-    wgt.naming_mode_restored = true
+  if wgt.show_settings then
+    TabSettings()
   end
 
   if reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Escape()) and
@@ -2110,10 +2261,14 @@ function Button(name, callback, help, color)
   if help then acendan.ImGui_Tooltip(help) end
 end
 
-function TabItem(name, tab, setting)
+function TabItem(name, tab, setting, accent_color)
   if setting and GetPreviousValue(setting, false) ~= "true" then return end
-  if reaper.ImGui_BeginTabItem(ctx, name) then
+  local began = reaper.ImGui_BeginTabItem(ctx, name)
+  DrawTabAccent(accent_color)
+  if began then
+    reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(), COMPACT_FRAME_PADDING[1], COMPACT_FRAME_PADDING[2])
     tab()
+    reaper.ImGui_PopStyleVar(ctx, 1)
     reaper.ImGui_EndTabItem(ctx)
   end
 end
@@ -2129,14 +2284,16 @@ end
 -- own click-driven return value. Persisting to wgt.naming_mode/
 -- opt_naming_mode is ALSO gated on `not do_restore` (see below) - never
 -- write back on the restore frame itself, only on genuine later clicks.
-function NamingModeTabItem(mode_key, name, tab, do_restore)
+function NamingModeTabItem(mode_key, name, tab, do_restore, accent_color)
   local flags = (do_restore and wgt.naming_mode == mode_key) and
       reaper.ImGui_TabItemFlags_SetSelected() or reaper.ImGui_TabItemFlags_None()
   -- p_open must be `false` (not nil) to skip the close button while still
   -- reaching the `flags` argument - passing nil for an in/out bool ref
   -- parameter isn't the same as omitting it in this API (confirmed against
   -- other real ReaImGui scripts' BeginTabItem calls with flags).
-  if reaper.ImGui_BeginTabItem(ctx, name, false, flags) then
+  local began = reaper.ImGui_BeginTabItem(ctx, name, false, flags)
+  DrawTabAccent(accent_color)
+  if began then
     -- Gated on `not do_restore`: on the one-shot restore frame, Dear
     -- ImGui's tab bar may report a DIFFERENT tab as active than the one
     -- SetSelected asked for (e.g. its own "first registered tab wins"
@@ -2151,7 +2308,9 @@ function NamingModeTabItem(mode_key, name, tab, do_restore)
       wgt.naming_mode = mode_key
       SetCurrentValue("opt_naming_mode", mode_key)
     end
+    reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(), COMPACT_FRAME_PADDING[1], COMPACT_FRAME_PADDING[2])
     tab()
+    reaper.ImGui_PopStyleVar(ctx, 1)
     reaper.ImGui_EndTabItem(ctx)
   end
 end
@@ -2716,7 +2875,7 @@ QuickNamingGui.init(NamePredictor, {
   GetSelectedItemName  = GetSelectedItemName,
   HasExportScript      = HasExportScript,
   RunExportScript      = RunExportScript,
-}, acendan)
+}, acendan, theme)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~~~ MAIN ~~~~~~~~~~~~~~

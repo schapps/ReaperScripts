@@ -585,10 +585,6 @@ local function loop()
     local has_selection = #valid_selected > 0
 
     -- ── Subproject items table ───────────────────────────────────
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-    ImGui.Text(ctx, "SUBPROJECT ITEMS")
-    ImGui.PopStyleColor(ctx)
-    ImGui.SameLine(ctx)
     local settings_icon_size = ImGui.GetFontSize(ctx) * 1.4
     do
       local cur_x   = ImGui.GetCursorPosX(ctx)

@@ -31,7 +31,7 @@ if not reaper.file_exists(theme_path) then
 end
 local theme = dofile(theme_path)
 
-local ctx        = ImGui.CreateContext("Reposition Items")
+local ctx        = ImGui.CreateContext("REPOSITION ITEMS")
 local WIN_FLAGS  = ImGui.WindowFlags_NoScrollbar
                  | ImGui.WindowFlags_NoCollapse
                  | ImGui.WindowFlags_AlwaysAutoResize
@@ -137,7 +137,7 @@ end
 
 local function loop()
   local color_count, var_count = theme.Push(ctx)
-  local visible, open = ImGui.Begin(ctx, "Reposition Items", true, WIN_FLAGS)
+  local visible, open = ImGui.Begin(ctx, "REPOSITION ITEMS", true, WIN_FLAGS)
 
   if visible then
     ImGui.Text(ctx, "Reference")
@@ -202,7 +202,7 @@ local function loop()
 
     local too_few = reaper.CountSelectedMediaItems(0) < 2
     if too_few then ImGui.BeginDisabled(ctx, true) end
-    if theme.PrimaryButton(ctx, "Reposition", -1, 0) then reposition_items() end
+    if theme.PrimaryButton(ctx, "Reposition", -1, 0, nil, theme.Icons.LEFT_RIGHT) then reposition_items() end
     if too_few then ImGui.EndDisabled(ctx) end
 
     if status_msg ~= "" then
