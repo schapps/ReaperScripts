@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0e4aa2c5ac889278fbd718572b1a64b405f30b5f">
+<index version="1" name="SPS Scripts" commit="c4fbb618f0de88214aaffc3099865ec387756169">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -8763,6 +8763,19 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/82881c47cc8c13b66aa64f467258009ab2320f50/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
         <source file="Common/ReaImGuiTheme.lua">https://github.com/schapps/ReaperScripts/raw/82881c47cc8c13b66aa64f467258009ab2320f50/Common/ReaImGuiTheme.lua</source>
         <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/82881c47cc8c13b66aa64f467258009ab2320f50/Common/VideoRenderFormat.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-08-23T23:24:36Z">
+        <changelog><![CDATA[08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides: it's already
+                a separately-installed shared "Common" package with its
+                own Fonts/ dependency, and re-providing it here made
+                ReaPack materialize an incomplete copy alongside this
+                script (missing Fonts/fa-solid-900.ttf), which this
+                script's own Common/-first lookup then preferred over
+                the real, complete install -- causing "Could not load
+                font file!" on ImGui_PushFont.
+08/23/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/c4fbb618f0de88214aaffc3099865ec387756169/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
+        <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/c4fbb618f0de88214aaffc3099865ec387756169/Common/VideoRenderFormat.lua</source>
       </version>
     </reapack>
   </category>
