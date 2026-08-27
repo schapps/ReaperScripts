@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.1
+-- @version 1.14
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,7 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   08/27/26 v0.3 - clean up GUI and make improvements
 --   08/27/26 v0.2 - Replaced REAPER's stock grayscale-only overlay preset
 --                   with a custom variant adding full RGB text/background
 --                   color and a drop shadow (enable + X/Y offset + alpha
@@ -96,7 +97,21 @@ local PRESET_CODE_BLOCK = [[<TAKEFX
       |project_wh_valid===0 ? input_info(input,project_w,project_h);
       |gfx_a2=0;
       |gfx_blit(input,1);
-      |gfx_setfont(size*project_h,font);
+      |
+      |// The Video processor plugin runs its OWN EEL2 environment with a
+      |// gfx_setfont that is NOT the standard JSFX one -- there is no idx/
+      |// slot argument here at all, it's just gfx_setfont(pxsize,fontname,
+      |// flags), pxsize already in real pixels, and flags use UPPERCASE
+      |// letters ('B'/'I'/'BI', not 'b'/'i'/'bi'). Calling it with the
+      |// standard-JSFX 4-argument shape (as this used to) isn't valid here --
+      |// it threw at runtime and silently aborted everything after it, which
+      |// is why the actual REAPER video window showed a plain black frame
+      |// (no text, no background box) even though this script's own preview
+      |// -- rendered separately via ImGui, unaffected by this -- looked fine.
+      |is_bold = matchi("*bold*",font);
+      |is_italic = matchi("*italic*",font);
+      |font_flags = is_bold && is_italic ? 'BI' : is_bold ? 'B' : is_italic ? 'I' : 0;
+      |gfx_setfont(size*project_h,font,font_flags);
       |
       |tc>0.5 ? (
       |  t = floor((project_time + project_timeoffs) * framerate + 0.0000001);
@@ -189,6 +204,7 @@ local DEFAULT_STYLE = {
   ignore_input = false,
   show_tc      = false,
   dropframe_tc = false,
+  tab_color    = 0,
 }
 
 -- ============================================================
@@ -410,6 +426,38 @@ local function read_style_from_item(item)
   }
 end
 
+-- The JSFX source text (#text=/font=/CODEPARM aside) is baked into an item
+-- once, at creation -- later param/font edits only ever patch those specific
+-- fields (see apply_style_params/SetOverlayFont), never the surrounding
+-- source. So a bugfix to PRESET_CODE_BLOCK (like the gfx_setfont fix above)
+-- only affects items created after the fix; anything created earlier keeps
+-- running its old, buggy source forever unless repaired. This detects that
+-- by checking for the exact old broken call.
+local OUTDATED_CODE_MARKERS = {
+  "gfx_setfont(size*project_h,font)",             -- pre-v1.7: font/size never applied at all
+  "gfx_setfont(1,font,size*project_h,font_flags)", -- v1.7: wrong call shape, blanked the whole video frame
+}
+
+local function overlay_code_is_outdated(item)
+  local _, _, code = GetChunkAndTakeFX(item)
+  if not code then return false end
+  for _, marker in ipairs(OUTDATED_CODE_MARKERS) do
+    if code:find(marker, 1, true) then return true end
+  end
+  return false
+end
+
+-- Rewrites an existing item's whole TAKEFX source from the current
+-- PRESET_CODE_BLOCK template (picking up any bugfixes made to it since the
+-- item was created) while preserving everything the item currently has --
+-- text, font, and every numeric field -- by round-tripping through
+-- read_style_from_item/AddOverlayFX exactly as a fresh item creation would.
+local function RepairOverlayCode(item)
+  local style = read_style_from_item(item)
+  if not style then return false end
+  return AddOverlayFX(item, style)
+end
+
 local function deep_copy(t)
   local c = {}
   for k, v in pairs(t) do c[k] = v end
@@ -418,12 +466,13 @@ end
 
 -- ============================================================
 -- System font discovery -- there's no ReaScript/ReaImGui API to enumerate
--- installed fonts, so this scans the OS's standard font directories
--- directly with reaper.EnumerateFiles (no shelling out) and derives a
--- display name from each file's basename. Flat (non-recursive), so a font
--- installed into a subfolder of one of these directories won't show up --
--- the FONT field stays a free-text input too, so any font can still be
--- typed by hand regardless of whether this discovery finds it.
+-- installed fonts. On Windows, real display names are read from the font
+-- registry key (see below). Elsewhere (and as a Windows fallback), this
+-- scans the OS's standard font directories with reaper.EnumerateFiles and
+-- derives a display name from each file's basename -- flat (non-recursive),
+-- so a font installed into a subfolder of one of these directories won't
+-- show up. The FONT field stays a free-text input too, so any font can
+-- still be typed by hand regardless of whether this discovery finds it.
 -- ============================================================
 local FONT_FILE_EXTENSIONS = { ttf = true, otf = true, ttc = true, dfont = true }
 
@@ -445,11 +494,60 @@ local function add_fonts_from_dir(dir, seen, out)
   end
 end
 
+-- Windows keeps a proper "display name" -> "font file" map in the registry;
+-- many core system fonts (trebuc.ttf, verdanab.ttf, timesbi.ttf...) still use
+-- legacy 8.3-style filenames, so deriving the name from the filename (as
+-- add_fonts_from_dir does) produces garbage that gfx_setfont can't resolve.
+-- Read the real family names straight out of the registry instead, via
+-- reaper.ExecProcess rather than io.popen -- io.popen('reg query ...')
+-- flashes a visible console window on Windows for every call, which is
+-- exactly what ExecProcess exists to avoid.
+local FONT_REGISTRY_KEYS = {
+  "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
+  "HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
+}
+
+local function add_fonts_from_registry_key(reg_exe, key, seen, out)
+  -- ExecProcess doesn't do PATH lookups, so reg_exe must be a full path.
+  -- Return format is "<exit code>\n<command's stdout+stderr>".
+  local result = reaper.ExecProcess('"' .. reg_exe .. '" query "' .. key .. '"', 3000)
+  if not result then return end
+  local body = result:match("^[^\n]*\n?(.*)$")
+  if not body then return end
+  for line in body:gmatch("[^\r\n]+") do
+    local name = line:match("^%s*(.-)%s+REG_SZ%s+.-%s*$")
+    if name then
+      -- Strip the trailing "(TrueType)" / "(OpenType)" / "(VGA res)" etc.
+      -- type-suffix Windows appends to every entry's display name.
+      name = name:gsub("%s*%b()%s*$", "")
+      if name ~= "" and not seen[name] then
+        seen[name] = true
+        out[#out + 1] = name
+      end
+    end
+  end
+end
+
+local function discover_windows_fonts()
+  local seen, out = {}, {}
+  local windir = os.getenv("WINDIR") or os.getenv("SystemRoot") or "C:\\Windows"
+  local reg_exe = windir .. "\\System32\\reg.exe"
+  for _, key in ipairs(FONT_REGISTRY_KEYS) do
+    add_fonts_from_registry_key(reg_exe, key, seen, out)
+  end
+  return out
+end
+
 local function discover_system_fonts()
   local seen, out = {}, {}
   if reaper.GetOS():find("Win") then
-    local windir = os.getenv("WINDIR") or os.getenv("SystemRoot") or "C:\\Windows"
-    add_fonts_from_dir(windir .. "\\Fonts", seen, out)
+    out = discover_windows_fonts()
+    if #out == 0 then
+      -- Registry lookup failed for some reason -- fall back to the old
+      -- filename-derived list rather than showing no fonts at all.
+      local windir = os.getenv("WINDIR") or os.getenv("SystemRoot") or "C:\\Windows"
+      add_fonts_from_dir(windir .. "\\Fonts", seen, out)
+    end
   else
     local home = os.getenv("HOME") or ""
     add_fonts_from_dir("/System/Library/Fonts", seen, out)
@@ -458,6 +556,21 @@ local function discover_system_fonts()
       add_fonts_from_dir(home .. "/Library/Fonts", seen, out)
     end
   end
+
+  -- Style variants (Bold/Italic/Bold Italic/...) show up as separate
+  -- registry/filename entries, but selecting one doesn't reliably apply
+  -- any differently -- drop them from the picker so only base family
+  -- names are offered. The FONT field stays free-text, so a variant name
+  -- can still be typed by hand if someone wants to try it anyway.
+  local filtered = {}
+  for _, name in ipairs(out) do
+    local lower = name:lower()
+    if not (lower:find("bold", 1, true) or lower:find("italic", 1, true) or lower:find("oblique", 1, true)) then
+      filtered[#filtered + 1] = name
+    end
+  end
+  out = filtered
+
   table.sort(out, function(a, b) return a:lower() < b:lower() end)
   return out
 end
@@ -509,6 +622,10 @@ local function CreateOverlayItem(style)
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
 
+  -- Exclusive selection: whatever was selected before (e.g. the previous
+  -- overlay in the sequence) is deselected so the new item ends up as the
+  -- sole target, keeping the single-item editing UI active for it.
+  reaper.SelectAllMediaItems(0, false)
   reaper.SetOnlyTrackSelected(track)
   reaper.GetSet_LoopTimeRange(true, false, sel_start, sel_end, false)
 
@@ -558,7 +675,7 @@ local STYLE_FIELDS_ORDER = {
   "text_r", "text_g", "text_b", "text_alpha",
   "bg_r", "bg_g", "bg_b", "bg_alpha", "bg_fit",
   "shadow", "shadow_x", "shadow_y", "shadow_alpha",
-  "ignore_input", "show_tc", "dropframe_tc",
+  "ignore_input", "show_tc", "dropframe_tc", "tab_color",
 }
 
 local function ensure_style_dir()
@@ -733,6 +850,14 @@ local active_idx = 1
 local buf        = deep_copy(DEFAULT_STYLE)
 local last_sig   = nil
 
+-- Set right after "Add Text Overlay" creates a new item: buf already holds
+-- exactly what was baked into that item, so the next sig change (selection
+-- moving onto it) should just be absorbed, not trigger a re-read -- reading
+-- back immediately can race a brand-new JSFX's preset-name metadata and,
+-- if FindOverlayFX doesn't find it yet, wrongly fall back to the saved
+-- style's values and stomp the user's live tweaks.
+local skip_next_sync = false
+
 local rename_pending    = false
 local rename_focus_next = false
 local rename_idx        = 1
@@ -765,13 +890,22 @@ end
 
 init_styles()
 
-local function style_dirty()
+-- Persists buf's current values into the active style (in-memory and on
+-- disk). Called from "Add Text Overlay" so a new overlay's baked-in values
+-- and the active style are always in sync -- otherwise anything the user
+-- tweaked would only live in buf, and the next selection change (e.g. onto
+-- the very item just created) could resync buf back from the stale saved
+-- style instead.
+local function update_active_style()
   local s = styles[active_idx]
-  if not s then return false end
   for _, k in ipairs(STYLE_FIELDS_ORDER) do
-    if k ~= "name" and s[k] ~= buf[k] then return true end
+    -- name and tab_color aren't part of the editable overlay fields buf
+    -- holds -- tab_color is set directly (and saved) from the tab's
+    -- right-click color picker, so copying buf's stale value here would
+    -- clobber a color change the next time an overlay item is created.
+    if k ~= "name" and k ~= "tab_color" then s[k] = buf[k] end
   end
-  return false
+  save_style(s)
 end
 
 -- ============================================================
@@ -781,7 +915,9 @@ local function loop()
   local targets, sig = get_targets()
   if sig ~= last_sig then
     last_sig = sig
-    if #targets >= 1 then
+    if skip_next_sync then
+      skip_next_sync = false
+    elseif #targets >= 1 then
       local s = read_style_from_item(targets[1].item)
       if s then buf = s end
     else
@@ -793,8 +929,24 @@ local function loop()
   end
 
   local color_count, var_count = theme.Push(ctx)
+  -- Match the style tab bar to Smart Export Selected Items (GUI).lua's
+  -- template tabs: a flat dark fill on the active tab plus a purple accent
+  -- line, instead of Dear ImGui's default blue. This build of ReaImGui
+  -- renamed the tab color enums (Col_TabActive -> Col_TabSelected, etc.)
+  -- and added a native Col_TabSelectedOverline for the accent line -- try
+  -- the current name first, fall back to the old one for older installs.
+  local col_tab_selected = rawget(ImGui, "Col_TabSelected") or rawget(ImGui, "Col_TabActive")
+  if col_tab_selected then
+    ImGui.PushStyleColor(ctx, col_tab_selected, 0x282828FF)
+    color_count = color_count + 1
+  end
+  local col_tab_overline = rawget(ImGui, "Col_TabSelectedOverline")
+  if col_tab_overline then
+    ImGui.PushStyleColor(ctx, col_tab_overline, 0xA08FE2FF)
+    color_count = color_count + 1
+  end
 
-  ImGui.SetNextWindowSize(ctx, 680, 0, ImGui.Cond_FirstUseEver)
+  ImGui.SetNextWindowSize(ctx, 900, 0, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, script_title, true, WIN_FLAGS)
 
   if visible then
@@ -804,12 +956,46 @@ local function loop()
       for i, s in ipairs(styles) do
         local tab_visible, new_open = ImGui.BeginTabItem(ctx, s.name, true, 0)
 
+        -- GetItemRectMin/Max here refer to the tab item itself, so both
+        -- accent draws below must run immediately after BeginTabItem.
+        local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
+        local tab_max_x, tab_max_y = ImGui.GetItemRectMax(ctx)
+        local draw_list = ImGui.GetWindowDrawList(ctx)
+
+        -- Per-style custom color: a thin bar along the tab's left edge,
+        -- visible whether or not the tab is active, so styles stay
+        -- identifiable by color even when not selected.
+        if s.tab_color ~= 0 then
+          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_min_x + 3, tab_max_y, s.tab_color)
+        end
+
+        -- Accent top-border on the active tab -- only needed as a fallback
+        -- when this ReaImGui build has no native Col_TabSelectedOverline
+        -- (pushed above), which already draws this for us.
+        if tab_visible and not col_tab_overline then
+          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_max_x, tab_min_y + 2, 0xA08FE2FF)
+        end
+
         if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. i) then
           if ImGui.MenuItem(ctx, "Rename\u{2026}") then
             rename_pending = true
             rename_idx     = i
             rename_buf     = s.name
             rename_dup_err = false
+          end
+          if ImGui.BeginMenu(ctx, "Color") then
+            local rgb = (s.tab_color >> 8) & 0xFFFFFF
+            local color_changed, new_rgb = ImGui.ColorPicker3(ctx, "##tab_color_picker", rgb)
+            if color_changed then
+              s.tab_color = (new_rgb << 8) | 0xFF
+              save_style(s)
+            end
+            ImGui.Separator(ctx)
+            if ImGui.MenuItem(ctx, "Clear Color", nil, false, s.tab_color ~= 0) then
+              s.tab_color = 0
+              save_style(s)
+            end
+            ImGui.EndMenu(ctx)
           end
           local can_delete = #styles > 1
           if not can_delete then ImGui.BeginDisabled(ctx, true) end
@@ -898,8 +1084,18 @@ local function loop()
     ImGui.PopStyleColor(ctx)
     ImGui.Spacing(ctx)
 
-    -- ── Left column: fields ──────────────────────────────────
-    local LEFT_W = 320
+    -- ── Column geometry ───────────────────────────────────────
+    -- Left column holds the text + the big WYSIWYG preview; right column
+    -- holds all the parameter controls, laid out two-up where the
+    -- controls are narrow enough to pair, so the window is wide and short
+    -- rather than skinny and tall.
+    local LEFT_W  = 440
+    local RIGHT_W = 380
+    local COL_GAP = 24
+    local HALF_GAP = 10
+    local HALF_W  = (RIGHT_W - HALF_GAP) / 2
+
+    -- ── Left column: text + preview ──────────────────────────
     ImGui.BeginGroup(ctx)
 
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
@@ -928,7 +1124,7 @@ local function loop()
 
     ImGui.Spacing(ctx)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
-    ImGui.Text(ctx, "PREVIEW")
+    ImGui.Text(ctx, "PREVIEW (click/drag to position)")
     ImGui.PopStyleColor(ctx)
 
     -- Live preview: renders the text at its actual size/position/color/
@@ -1015,11 +1211,52 @@ local function loop()
         commit_undo("Set text overlay position")
       end
     end
-    ImGui.Spacing(ctx)
 
-    -- ── Slider rows ───────────────────────────────────────────
-    local function slider_row(label, key, buf_key, min, max, fmt)
-      ImGui.SetNextItemWidth(ctx, LEFT_W)
+    ImGui.Spacing(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+    ImGui.Text(ctx, "NEW ITEM DURATION (used only when no time selection)")
+    ImGui.PopStyleColor(ctx)
+    ImGui.SetNextItemWidth(ctx, LEFT_W)
+    local dur_changed, new_dur = ImGui.SliderDouble(ctx, "##duration", buf.duration, 0.5, 20, "%.1f sec")
+    if dur_changed then buf.duration = new_dur end
+
+    if single_target then
+      ImGui.Spacing(ctx)
+      if theme.IconButton(ctx, theme.Icons.SETTINGS, nil, nil, ImGui.GetFontSize(ctx)) then
+        reaper.TakeFX_Show(single_target.take, single_target.fx, 3)
+      end
+      if ImGui.IsItemHovered(ctx) then
+        ImGui.SetTooltip(ctx, "Open native FX window (font/code editing, etc.)")
+      end
+
+      -- Only items created before the v1.9 gfx_setfont fix carry outdated
+      -- code (either the pre-v1.7 or the v1.7 broken shape) -- this only
+      -- shows up for those, so there's nothing to click once every item on
+      -- the timeline has been repaired.
+      if overlay_code_is_outdated(single_target.item) then
+        ImGui.SameLine(ctx)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xE0A030FF)
+        if theme.IconButton(ctx, theme.Icons.WRENCH .. "##repair_code", nil, nil, ImGui.GetFontSize(ctx)) then
+          if RepairOverlayCode(single_target.item) then
+            buf = read_style_from_item(single_target.item) or buf
+          end
+        end
+        ImGui.PopStyleColor(ctx)
+        if ImGui.IsItemHovered(ctx) then
+          ImGui.SetTooltip(ctx, "This item's font code predates a fix -- fonts/sizes weren't applying, or the video frame could render blank -- click to update it in place.")
+        end
+      end
+    end
+
+    ImGui.EndGroup(ctx) -- left column
+
+    ImGui.SameLine(ctx, 0, COL_GAP)
+
+    -- ── Right column: all the parameter controls ─────────────
+    ImGui.BeginGroup(ctx)
+
+    local function slider_row(label, key, buf_key, min, max, fmt, width)
+      ImGui.SetNextItemWidth(ctx, width or RIGHT_W)
       local changed, val = ImGui.SliderDouble(ctx, "##" .. buf_key, buf[buf_key], min, max, label .. ": " .. fmt)
       if changed then
         buf[buf_key] = val
@@ -1029,16 +1266,6 @@ local function loop()
         commit_undo("Set text overlay " .. label:lower())
       end
     end
-
-    slider_row("X Position", "XPOS", "xpos", 0, 1, "%.2f")
-    slider_row("Y Position", "YPOS", "ypos", 0, 1, "%.2f")
-
-    ImGui.Spacing(ctx)
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
-    ImGui.Text(ctx, "SIZE")
-    ImGui.PopStyleColor(ctx)
-    slider_row("Text Size", "SIZE", "size", 0.01, 0.2, "%.3f")
-    slider_row("Background Padding", "BORDER", "border", 0, 1, "%.2f")
 
     -- ── Checkboxes (declared before use by the color rows' "Fit
     -- Background to Text" placement below) ──────────────────────
@@ -1053,9 +1280,9 @@ local function loop()
       if disabled then ImGui.EndDisabled(ctx) end
     end
 
-    local function color_row(label, key_r, key_g, key_b, buf_r, buf_g, buf_b)
+    local function color_row(label, key_r, key_g, key_b, buf_r, buf_g, buf_b, width)
       local packed = rgb_to_packed(buf[buf_r], buf[buf_g], buf[buf_b])
-      ImGui.SetNextItemWidth(ctx, LEFT_W)
+      ImGui.SetNextItemWidth(ctx, width or RIGHT_W)
       local changed, new_packed = ImGui.ColorEdit3(ctx, label, packed)
       if changed then
         local r, g, b = packed_to_rgb(new_packed)
@@ -1069,19 +1296,31 @@ local function loop()
       end
     end
 
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+    ImGui.Text(ctx, "POSITION & SIZE")
+    ImGui.PopStyleColor(ctx)
+    slider_row("X Position", "XPOS", "xpos", 0, 1, "%.2f", HALF_W)
+    ImGui.SameLine(ctx, 0, HALF_GAP)
+    slider_row("Y Position", "YPOS", "ypos", 0, 1, "%.2f", HALF_W)
+    slider_row("Text Size", "SIZE", "size", 0.01, 0.2, "%.3f", HALF_W)
+    ImGui.SameLine(ctx, 0, HALF_GAP)
+    slider_row("Background Padding", "BORDER", "border", 0, 1, "%.2f", HALF_W)
+
     ImGui.Spacing(ctx)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
     ImGui.Text(ctx, "TEXT COLOR")
     ImGui.PopStyleColor(ctx)
-    color_row("Color##text_color", "TEXT_R", "TEXT_G", "TEXT_B", "text_r", "text_g", "text_b")
-    slider_row("Text Opacity", "TEXT_ALPHA", "text_alpha", 0, 1, "%.2f")
+    color_row("Color##text_color", "TEXT_R", "TEXT_G", "TEXT_B", "text_r", "text_g", "text_b", HALF_W)
+    ImGui.SameLine(ctx, 0, HALF_GAP)
+    slider_row("Text Opacity", "TEXT_ALPHA", "text_alpha", 0, 1, "%.2f", HALF_W)
 
     ImGui.Spacing(ctx)
     ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
     ImGui.Text(ctx, "BACKGROUND COLOR")
     ImGui.PopStyleColor(ctx)
-    color_row("Color##bg_color", "BG_R", "BG_G", "BG_B", "bg_r", "bg_g", "bg_b")
-    slider_row("Background Opacity", "BG_ALPHA", "bg_alpha", 0, 1, "%.2f")
+    color_row("Color##bg_color", "BG_R", "BG_G", "BG_B", "bg_r", "bg_g", "bg_b", HALF_W)
+    ImGui.SameLine(ctx, 0, HALF_GAP)
+    slider_row("Background Opacity", "BG_ALPHA", "bg_alpha", 0, 1, "%.2f", HALF_W)
     checkbox_row("Fit Background to Text", "BG_FIT", "bg_fit")
 
     ImGui.Spacing(ctx)
@@ -1089,13 +1328,19 @@ local function loop()
     ImGui.Text(ctx, "SHADOW")
     ImGui.PopStyleColor(ctx)
     checkbox_row("Enable Shadow", "SHADOW", "shadow")
-    slider_row("Shadow X Offset", "SHADOW_X", "shadow_x", 0, 10, "%.1f px")
-    slider_row("Shadow Y Offset", "SHADOW_Y", "shadow_y", 0, 10, "%.1f px")
+    slider_row("Shadow X Offset", "SHADOW_X", "shadow_x", 0, 10, "%.1f px", HALF_W)
+    ImGui.SameLine(ctx, 0, HALF_GAP)
+    slider_row("Shadow Y Offset", "SHADOW_Y", "shadow_y", 0, 10, "%.1f px", HALF_W)
     slider_row("Shadow Opacity Scale", "SHADOW_ALPHA", "shadow_alpha", 0, 1, "%.2f")
 
     ImGui.Spacing(ctx)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
+    ImGui.Text(ctx, "OTHER")
+    ImGui.PopStyleColor(ctx)
     checkbox_row("Ignore Input Video", "IGNORE_INPUT", "ignore_input")
+    ImGui.SameLine(ctx, 0, 18)
     checkbox_row("Show Timecode", "SHOW_TC", "show_tc")
+    ImGui.SameLine(ctx, 0, 18)
     checkbox_row("Dropframe Timecode", "DROPFRAME_TC", "dropframe_tc", not buf.show_tc)
 
     ImGui.Spacing(ctx)
@@ -1106,7 +1351,7 @@ local function loop()
     local font_icon_size = ImGui.GetFontSize(ctx)
     local font_btn_w = theme.IconButtonSize(ctx, font_icon_size)
 
-    ImGui.SetNextItemWidth(ctx, LEFT_W - font_btn_w - 6)
+    ImGui.SetNextItemWidth(ctx, RIGHT_W - font_btn_w - 6)
     local font_changed, new_font = ImGui.InputText(ctx, "##overlay_font", buf.font)
     if font_changed then
       buf.font = new_font
@@ -1158,47 +1403,22 @@ local function loop()
       ImGui.EndPopup(ctx)
     end
 
-    ImGui.Spacing(ctx)
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
-    ImGui.Text(ctx, "NEW ITEM DURATION (used only when no time selection)")
-    ImGui.PopStyleColor(ctx)
-    ImGui.SetNextItemWidth(ctx, LEFT_W)
-    local dur_changed, new_dur = ImGui.SliderDouble(ctx, "##duration", buf.duration, 0.5, 20, "%.1f sec")
-    if dur_changed then buf.duration = new_dur end
-
-    if single_target then
-      ImGui.Spacing(ctx)
-      if theme.IconButton(ctx, theme.Icons.SETTINGS, nil, nil, ImGui.GetFontSize(ctx)) then
-        reaper.TakeFX_Show(single_target.take, single_target.fx, 3)
-      end
-      if ImGui.IsItemHovered(ctx) then
-        ImGui.SetTooltip(ctx, "Open native FX window (font/code editing, etc.)")
-      end
-    end
-
-    ImGui.EndGroup(ctx)
+    ImGui.EndGroup(ctx) -- right column
 
     -- ── Bottom actions ────────────────────────────────────────
     ImGui.Spacing(ctx)
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
-    local dirty = style_dirty()
-    if not dirty then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Update Style \"" .. styles[active_idx].name .. "\"", 220, 0) then
-      local s = styles[active_idx]
-      for _, k in ipairs(STYLE_FIELDS_ORDER) do
-        if k ~= "name" then s[k] = buf[k] end
-      end
-      save_style(s)
-    end
-    if not dirty then ImGui.EndDisabled(ctx) end
-
-    ImGui.SameLine(ctx)
     if theme.PrimaryButton(ctx, "Add Text Overlay", -1, 0, nil, theme.Icons.VIDEO) then
+      -- Keep the active style's saved values in sync with buf before
+      -- creating the item -- see update_active_style's comment for why.
+      update_active_style()
       local new_item = CreateOverlayItem(buf)
       if new_item then
-        last_sig = nil -- force a re-sync from the new selection next frame
+        -- buf already holds everything just baked into new_item -- absorb
+        -- the upcoming selection-change sig without re-reading it back.
+        skip_next_sync = true
       end
     end
 
