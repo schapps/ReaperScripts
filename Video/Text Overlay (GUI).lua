@@ -604,10 +604,59 @@ local function FindOrCreateOverlayTrack()
   return track
 end
 
+-- Inserts a video-processor item on `track` spanning [pos, pos_end), attaches
+-- the Video processor FX, and applies `style` (including its .text) to it.
+-- Caller is responsible for undo blocks, PreventUIRefresh, and saving/
+-- restoring the time selection/cursor around (possibly several) calls to
+-- this -- see CreateOverlayItem and CreateOverlayItemsFromSelectedItems.
+--
+-- If close_fx_window is true, the newly added FX's floating window (which
+-- REAPER opens automatically whenever a new FX instance is added) is
+-- closed again immediately, using the index TakeFX_AddByName itself
+-- returns -- not a post-hoc FindOverlayFX lookup, since that matches by
+-- the preset name baked into the chunk by AddOverlayFX just below, which
+-- can lag behind a brand-new JSFX's compile and silently fail to find it
+-- (see AddOverlayFX/build_preset_block's own comments on this compile
+-- race), leaving the window open despite the close attempt.
+local function CreateOverlayItemAtRange(track, pos, pos_end, style, close_fx_window)
+  -- Exclusive selection: whatever was selected before (e.g. the previous
+  -- overlay in the sequence) is deselected so the new item ends up as the
+  -- sole target, keeping the single-item editing UI active for it.
+  reaper.SelectAllMediaItems(0, false)
+  reaper.SetOnlyTrackSelected(track)
+  reaper.GetSet_LoopTimeRange(true, false, pos, pos_end, false)
+
+  local items_before = reaper.CountTrackMediaItems(track)
+  reaper.Main_OnCommand(41932, 0) -- Insert dedicated video processor item
+  local item = nil
+  if reaper.CountTrackMediaItems(track) > items_before then
+    item = reaper.GetTrackMediaItem(track, reaper.CountTrackMediaItems(track) - 1)
+  end
+
+  if item then
+    -- Action 41932 only inserts the item shell -- it does not by itself
+    -- attach a Video processor FX instance, so one has to be added before
+    -- AddOverlayFX has a <TAKEFX> block to splice the preset into.
+    local take = reaper.GetActiveTake(item)
+    local fx_idx = reaper.TakeFX_AddByName(take, "Video processor", 1)
+
+    local ok, err = AddOverlayFX(item, style)
+    if not ok then
+      reaper.ShowMessageBox("Could not set up the text overlay:\n" .. tostring(err), "Text Overlay", 0)
+    end
+
+    if close_fx_window and fx_idx and fx_idx >= 0 then
+      reaper.TakeFX_SetOpen(take, fx_idx, false)
+    end
+  end
+
+  return item
+end
+
 -- Creates a new overlay item on the dedicated track, at the current time
 -- selection (or a default-length item at the edit cursor if there isn't
 -- one), and applies `style` to it.
-local function CreateOverlayItem(style)
+local function CreateOverlayItem(style, close_fx_window)
   local track = FindOrCreateOverlayTrack()
 
   local orig_ts_start, orig_ts_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
@@ -622,36 +671,8 @@ local function CreateOverlayItem(style)
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
 
-  -- Exclusive selection: whatever was selected before (e.g. the previous
-  -- overlay in the sequence) is deselected so the new item ends up as the
-  -- sole target, keeping the single-item editing UI active for it.
-  reaper.SelectAllMediaItems(0, false)
-  reaper.SetOnlyTrackSelected(track)
-  reaper.GetSet_LoopTimeRange(true, false, sel_start, sel_end, false)
-
-  local items_before = reaper.CountTrackMediaItems(track)
-  reaper.Main_OnCommand(41932, 0) -- Insert dedicated video processor item
-  local item = nil
-  if reaper.CountTrackMediaItems(track) > items_before then
-    item = reaper.GetTrackMediaItem(track, reaper.CountTrackMediaItems(track) - 1)
-  end
-
+  local item = CreateOverlayItemAtRange(track, sel_start, sel_end, style, close_fx_window)
   if item then
-    -- Action 41932 only inserts the item shell -- it does not by itself
-    -- attach a Video processor FX instance, so one has to be added before
-    -- AddOverlayFX has a <TAKEFX> block to splice the preset into.
-    local take = reaper.GetActiveTake(item)
-    reaper.TakeFX_AddByName(take, "Video processor", 1)
-
-    local ok, err = AddOverlayFX(item, style)
-    if ok then
-      local fx = FindOverlayFX(take)
-      if fx then
-        reaper.TakeFX_SetOpen(take, fx, false)
-      end
-    else
-      reaper.ShowMessageBox("Could not set up the text overlay:\n" .. tostring(err), "Text Overlay", 0)
-    end
     reaper.SetMediaItemSelected(item, true)
   end
 
@@ -663,6 +684,119 @@ local function CreateOverlayItem(style)
   reaper.UpdateArrange()
 
   return item
+end
+
+-- ============================================================
+-- "Add Text Overlay From Items" -- creates one overlay item per selected
+-- media item, using that item's take name as the overlay text and its
+-- position/length as the overlay's position/length, styled with whatever
+-- style is currently active (text aside). Mirrors the temporal-overlap
+-- vertical stacking from the precedent Create Video Labels From Selected
+-- Items Using Regions script: items whose [pos, endpos) ranges overlap are
+-- assigned increasing "lanes" via the same greedy interval-coloring
+-- algorithm as that script's BuildRegionEntries, and each lane beyond the
+-- first nudges ypos upward (clamped at 0) by that lane's own background-bar
+-- height (plus a small fixed gap) so overlapping labels' bars stack
+-- cleanly instead of overlapping/touching each other.
+-- ============================================================
+
+-- Extra breathing room (as a fraction of frame height) stacked on top of
+-- each lane's own bar height, so adjacent lanes get a visible gap instead
+-- of their background bars just touching edge-to-edge.
+local OVERLAP_GAP_FRACTION = 0.015
+
+-- Approximates one overlay's background-bar height as a fraction of the
+-- video frame's height, mirroring the JSFX's own b/txth math (see
+-- PRESET_CODE_BLOCK): the JSFX sets its font's pixel size to size*project_h
+-- and pads that text height by `border` on top and bottom, so the bar's
+-- total on-screen height is roughly size*(1 + border*2) of the frame
+-- height. (An approximation, since actual glyph metrics vary slightly by
+-- font -- but close enough that stacked lanes don't overlap.)
+local function overlay_bar_height_fraction(style)
+  return style.size * (1 + style.border * 2)
+end
+
+local function assign_overlap_lanes(entries)
+  table.sort(entries, function(a, b)
+    if a.pos == b.pos then return a.endpos < b.endpos end
+    return a.pos < b.pos
+  end)
+
+  local lane_end = {} -- lane_end[i] = end time of whatever currently occupies lane i
+  for _, e in ipairs(entries) do
+    local lane = nil
+    for i = 1, #lane_end do
+      if lane_end[i] <= e.pos then
+        lane = i
+        break
+      end
+    end
+    if not lane then
+      lane = #lane_end + 1
+    end
+    lane_end[lane] = e.endpos
+    e.lane = lane - 1
+  end
+end
+
+local function CreateOverlayItemsFromSelectedItems(style, close_fx_window)
+  local n = reaper.CountSelectedMediaItems(0)
+  if n == 0 then
+    reaper.ShowMessageBox("No items selected.", "Add Text Overlay From Items", 0)
+    return {}
+  end
+
+  local entries = {}
+  for i = 0, n - 1 do
+    local item = reaper.GetSelectedMediaItem(0, i)
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local _, name = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
+      local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+      entries[#entries + 1] = { pos = pos, endpos = pos + len, text = name }
+    end
+  end
+
+  if #entries == 0 then
+    reaper.ShowMessageBox("Selected items have no active take to name the overlay from.", "Add Text Overlay From Items", 0)
+    return {}
+  end
+
+  assign_overlap_lanes(entries)
+
+  local track = FindOrCreateOverlayTrack()
+  local orig_ts_start, orig_ts_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  local orig_cursor = reaper.GetCursorPosition()
+
+  reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1)
+
+  local lane_step = overlay_bar_height_fraction(style) + OVERLAP_GAP_FRACTION
+
+  local created = {}
+  for _, e in ipairs(entries) do
+    local item_style = deep_copy(style)
+    item_style.text = e.text or ""
+    item_style.ypos = math.max(0, style.ypos - lane_step * e.lane)
+
+    local item = CreateOverlayItemAtRange(track, e.pos, e.endpos, item_style, close_fx_window)
+    if item then created[#created + 1] = item end
+  end
+
+  reaper.SelectAllMediaItems(0, false)
+  for _, item in ipairs(created) do
+    reaper.SetMediaItemSelected(item, true)
+  end
+
+  reaper.GetSet_LoopTimeRange(true, false, orig_ts_start, orig_ts_end, false)
+  reaper.SetEditCurPos(orig_cursor, false, false)
+
+  reaper.PreventUIRefresh(-1)
+  reaper.Undo_EndBlock("Add Text Overlay From Items", -1)
+  reaper.UpdateArrange()
+
+  return created
 end
 
 -- ============================================================
@@ -857,6 +991,18 @@ local last_sig   = nil
 -- if FindOverlayFX doesn't find it yet, wrongly fall back to the saved
 -- style's values and stomp the user's live tweaks.
 local skip_next_sync = false
+
+local function get_bool_ext_state(key, default_val)
+  local v = reaper.GetExtState("TextOverlayGUI", key)
+  if v == "" then return default_val end
+  return v == "1"
+end
+
+local function set_bool_ext_state(key, val)
+  reaper.SetExtState("TextOverlayGUI", key, val and "1" or "0", true)
+end
+
+local auto_close_fx_window = get_bool_ext_state("auto_close_fx_window", true)
 
 local rename_pending    = false
 local rename_focus_next = false
@@ -1410,14 +1556,37 @@ local function loop()
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
 
-    if theme.PrimaryButton(ctx, "Add Text Overlay", -1, 0, nil, theme.Icons.VIDEO) then
+    local close_changed, close_val = ImGui.Checkbox(ctx, "Automatically close video processor windows after creation", auto_close_fx_window)
+    if close_changed then
+      auto_close_fx_window = close_val
+      set_bool_ext_state("auto_close_fx_window", auto_close_fx_window)
+    end
+
+    ImGui.Spacing(ctx)
+
+    local action_btn_gap = 10
+    local action_btn_w = (ImGui.GetContentRegionAvail(ctx) - action_btn_gap) / 2
+
+    if theme.PrimaryButton(ctx, "Add Text Overlay", action_btn_w, 0, nil, theme.Icons.VIDEO) then
       -- Keep the active style's saved values in sync with buf before
       -- creating the item -- see update_active_style's comment for why.
       update_active_style()
-      local new_item = CreateOverlayItem(buf)
+      local new_item = CreateOverlayItem(buf, auto_close_fx_window)
       if new_item then
         -- buf already holds everything just baked into new_item -- absorb
         -- the upcoming selection-change sig without re-reading it back.
+        skip_next_sync = true
+      end
+    end
+
+    ImGui.SameLine(ctx, 0, action_btn_gap)
+    if theme.PrimaryButton(ctx, "Add Text Overlay From Items", action_btn_w, 0, nil, theme.Icons.IMPORT) then
+      update_active_style()
+      local new_items = CreateOverlayItemsFromSelectedItems(buf, auto_close_fx_window)
+      if #new_items > 0 then
+        -- Each created item's text/ypos is overridden per-item -- skip the
+        -- upcoming selection-change resync so it doesn't stomp buf with
+        -- the first created item's (overlap-offset) values.
         skip_next_sync = true
       end
     end
