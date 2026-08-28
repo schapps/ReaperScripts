@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.14
+-- @version 1.15
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,7 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   08/27/26 v1.15- adding new feature to create labels from selected items
 --   08/27/26 v0.3 - clean up GUI and make improvements
 --   08/27/26 v0.2 - Replaced REAPER's stock grayscale-only overlay preset
 --                   with a custom variant adding full RGB text/background
