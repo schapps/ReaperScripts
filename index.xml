@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="7b36cf67f724311b2edb5b242be690850e4a1390">
+<index version="1" name="SPS Scripts" commit="687834842023315fe0a7231261b120410e0b1c68">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -8797,6 +8797,16 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
                 preset and won't be recognized by this version.
 08/27/26 v0.1 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/7b36cf67f724311b2edb5b242be690850e4a1390/Video/Text%20Overlay%20(GUI).lua</source>
+      </version>
+      <version name="1.14" author="Stephen Schappler" time="2026-08-27T21:52:15Z">
+        <changelog><![CDATA[08/27/26 v0.3 - clean up GUI and make improvements
+08/27/26 v0.2 - Replaced REAPER's stock grayscale-only overlay preset
+                with a custom variant adding full RGB text/background
+                color and a drop shadow (enable + X/Y offset + alpha
+                scale). Existing items created with v1.0 use the old
+                preset and won't be recognized by this version.
+08/27/26 v0.1 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/687834842023315fe0a7231261b120410e0b1c68/Video/Text%20Overlay%20(GUI).lua</source>
       </version>
     </reapack>
   </category>
