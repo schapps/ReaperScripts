@@ -1,25 +1,21 @@
 -- @description Export Time Selection as Video (GUI)
--- @version 1.1
+-- @version 1.2
 -- @about
 --   ReaImGui dialog that renders the current time selection to a video file
 --   using REAPER's native video render formats (AVFoundation, FFmpeg/libav,
---   GIF, LCF), with full control over each format's options (container,
---   codec, bitrate/quality, size, framerate, etc). Supports multiple named
---   presets (tabs), same as Smart Export Selected Items (GUI).
+--   Windows Media Encoder, GIF, LCF), with full control over each format's
+--   options (container, codec, bitrate/quality, size, framerate, etc).
+--   Supports multiple named presets (tabs), same as Smart Export Selected
+--   Items (GUI).
 --   SWS extension is required (render-quality config vars).
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @provides
 --   [nomain] ../Common/VideoRenderFormat.lua > Common/VideoRenderFormat.lua
 -- @changelog
---   08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides: it's already
---                   a separately-installed shared "Common" package with its
---                   own Fonts/ dependency, and re-providing it here made
---                   ReaPack materialize an incomplete copy alongside this
---                   script (missing Fonts/fa-solid-900.ttf), which this
---                   script's own Common/-first lookup then preferred over
---                   the real, complete install -- causing "Could not load
---                   font file!" on ImGui_PushFont.
+--   08/27/26 v1.2 - Added Windows Media Encoder (WMF) as a video format
+--                   choice on Windows
+--   08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides
 --   08/23/26 v1.0 - Initial release
 
 -- ============================================================
@@ -70,7 +66,7 @@ local DEFAULTS = {
   -- audio -- the one combination that renders identically on both Mac and
   -- Windows (AVFoundation is Mac-only; most other FFmpeg codec choices are
   -- flagged Windows-only in the format's own docs).
-  format_id               = "ffmpeg", -- "avf" | "ffmpeg" | "gif" | "lcf"
+  format_id               = "ffmpeg", -- "avf" | "ffmpeg" | "wmf" | "gif" | "lcf"
   container               = 3,        -- ffmpeg: QT/MOV/MP4
   video_codec             = 0,        -- ffmpeg/QT-MOV-MP4: H.264
   video_bitrate_kbps      = 6000,
@@ -196,18 +192,21 @@ end
 local function containers_for(format_id)
   if format_id == "avf" then return VF.AVF_CONTAINERS end
   if format_id == "ffmpeg" then return VF.FFMPEG_CONTAINERS end
+  if format_id == "wmf" then return VF.WMF_CONTAINERS end
   return nil
 end
 
 local function video_codecs_for(format_id, container)
   if format_id == "avf" then return VF.AVF_VIDEO_CODECS[container] or VF.AVF_VIDEO_CODECS.DEFAULT end
   if format_id == "ffmpeg" then return VF.FFMPEG_VIDEO_CODECS[container] end
+  if format_id == "wmf" then return VF.WMF_VIDEO_CODECS.DEFAULT end
   return nil
 end
 
 local function audio_codecs_for(format_id, container)
   if format_id == "avf" then return VF.AVF_AUDIO_CODECS[container] or VF.AVF_AUDIO_CODECS.DEFAULT end
   if format_id == "ffmpeg" then return VF.FFMPEG_AUDIO_CODECS[container] end
+  if format_id == "wmf" then return VF.WMF_AUDIO_CODECS.DEFAULT end
   return nil
 end
 
@@ -251,6 +250,10 @@ local function file_ext_for(t)
     local ext_by_container = { [0] = ".avi", [1] = ".mpg", [2] = ".mpg", [3] = ".mp4", [4] = ".mkv", [5] = ".flv", [6] = ".webm" }
     return ext_by_container[t.container] or ".mp4"
   end
+  if t.format_id == "wmf" then
+    local ext_by_container = { [0] = ".mp4", [1] = ".m4a", [2] = ".wmv", [3] = ".wma" }
+    return ext_by_container[t.container] or ".mp4"
+  end
   return ""
 end
 
@@ -260,6 +263,7 @@ end
 local function build_render_format_blob(t)
   if t.format_id == "avf" then return VF.encode_avf(t) end
   if t.format_id == "ffmpeg" then return VF.encode_ffmpeg(t) end
+  if t.format_id == "wmf" then return VF.encode_wmf(t) end
   if t.format_id == "gif" then return VF.encode_gif(t) end
   if t.format_id == "lcf" then return VF.encode_lcf(t) end
   return VF.encode_avf(t)
@@ -454,6 +458,7 @@ local WILDCARD_CATEGORIES = {
 local FORMAT_OPTIONS = {
   { id = "avf",    label = "AVFoundation (MPEG-4, MOV)" },
   { id = "ffmpeg", label = "FFmpeg/libav (video, compressed audio)" },
+  { id = "wmf",    label = "Windows Media Encoder (MPEG-4, WMV)" },
   { id = "gif",    label = "GIF (video only)" },
   { id = "lcf",    label = "LCF (video only)" },
 }
@@ -783,9 +788,11 @@ local function loop()
       ImGui.EndTable(ctx)
     end
 
-    -- Container 3 ("MPEG-4 Audio") on AVFoundation produces no video at
-    -- all -- hide every video-specific control in that case.
+    -- Container 3 ("MPEG-4 Audio") on AVFoundation, and containers 1/3
+    -- ("MPEG-4 Audio"/"WMA Audio") on WMF, produce no video at all -- hide
+    -- every video-specific control in those cases.
     local is_audio_only = (format_id == "avf" and container == 3)
+      or (format_id == "wmf" and (container == 1 or container == 3))
 
     if not is_audio_only then
       ImGui.Spacing(ctx)
@@ -818,8 +825,9 @@ local function loop()
       preserve_aspect = new_aspect
     end
 
-    -- AUDIO section -- audio_codecs_for only returns a list for avf/ffmpeg,
-    -- nil for gif/lcf ("(video only)" formats with no audio track at all).
+    -- AUDIO section -- audio_codecs_for only returns a list for avf/ffmpeg/
+    -- wmf, nil for gif/lcf ("(video only)" formats with no audio track at
+    -- all).
     local acodecs = audio_codecs_for(format_id, container)
     if acodecs then
       ImGui.Spacing(ctx)

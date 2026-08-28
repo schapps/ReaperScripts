@@ -207,24 +207,52 @@ VideoRenderFormat.FFMPEG_AUDIO_CODECS = {
   },
 }
 
+-- WMF ("Windows Media encoder") renders through Windows' own built-in Media
+-- Foundation H.264 encoder rather than REAPER's optional/separately-
+-- installed FFmpeg libs, so it's the one FFmpeg-format alternative that
+-- produces real H.264 out of the box on a stock Windows install with no
+-- extra DLLs. Windows-only; container id doubles as the format's own
+-- video/audio-track toggle (id 1 and 3 are audio-only, no video codec at
+-- all -- same pattern as AVF's "MPEG-4 Audio" container).
+VideoRenderFormat.WMF_CONTAINERS = {
+  { id = 0, label = "MPEG-4 Video" },
+  { id = 1, label = "MPEG-4 Audio (no video)" },
+  { id = 2, label = "WMV Video" },
+  { id = 3, label = "WMA Audio (no video)" },
+}
+
+-- H.264 is the only real encoder choice for either video-capable container
+-- -- the audio-only containers hide video fields entirely (caller's
+-- is_audio_only check), so there's nothing container-specific to key this
+-- by. No quality field exists in WMF's byte layout (unlike PMFF/H.264),
+-- only bitrate.
+VideoRenderFormat.WMF_VIDEO_CODECS = {
+  DEFAULT = {
+    { id = 0, label = "H.264", rate_mode = "bitrate" },
+  },
+}
+
+VideoRenderFormat.WMF_AUDIO_CODECS = {
+  DEFAULT = {
+    { id = 0, label = "AAC" },
+    { id = 2, label = "None" },
+  },
+}
+
 -- ============================================================
 -- Encoders. `t` is a template-like table; see Video/Export Time Selection
 -- as Video (GUI).lua's DEFAULTS for the exact field set.
 -- ============================================================
 
--- Shared 44-byte body for AVF/PMFF (only the 4-byte header differs), plus 2
--- trailing zero bytes -- present in the real captured FVAX ground-truth
--- blob (46 bytes total) even though the documented field table only covers
--- 44; almost certainly the two empty-string terminators PMFF's trailing
--- command-line-option fields use when empty (skipped/unsupported here), so
--- appended unconditionally to match the real serializer's output shape.
--- Both the kbps and quality fields are always present in the blob
--- regardless of which one the selected codec actually uses -- confirmed
--- against ground truth, where an h264 (bitrate-mode) preset still carried
--- a nonzero, unrelated value (95) in the quality field. REAPER apparently
--- just persists whatever each field's own UI control last held rather than
--- zeroing the unused one, so both are passed through here unconditionally;
--- only the caller's rate_mode-driven UI decides which one is user-facing.
+-- Shared 44-byte body for AVF/PMFF (only the 4-byte header differs, and AVF
+-- appends its own 2 trailing bytes -- see encode_avf). Both the kbps and
+-- quality fields are always present in the blob regardless of which one the
+-- selected codec actually uses -- confirmed against ground truth, where an
+-- h264 (bitrate-mode) preset still carried a nonzero, unrelated value (95)
+-- in the quality field. REAPER apparently just persists whatever each
+-- field's own UI control last held rather than zeroing the unused one, so
+-- both are passed through here unconditionally; only the caller's
+-- rate_mode-driven UI decides which one is user-facing.
 local function encode_avf_or_ffmpeg_body(t)
   local video_kbps    = t.video_bitrate_kbps or 0
   local video_quality = t.video_quality or 0
@@ -241,16 +269,51 @@ local function encode_avf_or_ffmpeg_body(t)
     f32_le(t.framerate or 0),
     string.char(t.preserve_aspect and 1 or 0), string.char(0), string.char(0), string.char(0),
     u32_le(video_quality),
-    string.char(0), string.char(0), -- trailing empty-string terminators (see above)
   })
 end
 
 function VideoRenderFormat.encode_avf(t)
-  return VideoRenderFormat.base64_encode("FVAX" .. encode_avf_or_ffmpeg_body(t))
+  -- The real captured FVAX ground-truth blob (see module header comment)
+  -- was 46 bytes -- 2 bytes longer than the documented 44-byte field table
+  -- -- so AVF keeps its trailing zero pair, almost certainly the two
+  -- empty-string terminators PMFF's (but not FVAX's) documented
+  -- command-line-option fields use when empty.
+  return VideoRenderFormat.base64_encode("FVAX" .. encode_avf_or_ffmpeg_body(t) .. "\0\0")
 end
 
 function VideoRenderFormat.encode_ffmpeg(t)
+  -- Unlike AVF, a real PMFF preset saved from REAPER's own render dialog
+  -- ("DCF2 Faceware Video Export" in this machine's reaper-render.ini --
+  -- container 3/QT-MOV-MP4, H.264, quality 100) decodes to exactly the
+  -- documented 44 bytes with no trailing padding. Per
+  -- RENDER_How_RenderCFG-Base64-strings_are_encoded.txt, PMFF only grows
+  -- past byte 44 for non-empty command-line-option strings, which this
+  -- script never sets, so no trailing bytes are appended here.
   return VideoRenderFormat.base64_encode("PMFF" .. encode_avf_or_ffmpeg_body(t))
+end
+
+-- WMF's video-codec field is an unusual 4-byte sentinel rather than a small
+-- per-container enum byte: 0x00000000 = H.264, 0xFFFFFFFF = no video codec
+-- (used for the audio-only containers, which have no video track at all --
+-- see RENDER_How_RenderCFG-Base64-strings_are_encoded.txt's WMF section).
+-- No quality field exists in this layout, unlike PMFF/H.264.
+function VideoRenderFormat.encode_wmf(t)
+  local is_audio_only = (t.container == 1 or t.container == 3)
+  local video_codec_field = is_audio_only and "\255\255\255\255" or "\0\0\0\0"
+
+  local body = table.concat({
+    string.char(t.container or 0), string.char(0), string.char(0), string.char(0),
+    video_codec_field,
+    u32_le(t.video_bitrate_kbps or 0),
+    string.char(t.audio_codec or 0), string.char(0), string.char(0), string.char(0),
+    u32_le(t.audio_bitrate_kbps or 0),
+    u32_le(t.width or 0),
+    u32_le(t.height or 0),
+    f32_le(t.framerate or 0),
+    string.char(t.preserve_aspect and 1 or 0), string.char(0), string.char(0), string.char(0),
+    string.char(0), string.char(0), string.char(0), string.char(0), -- unused bytes 41-44
+  })
+  return VideoRenderFormat.base64_encode(" FMW" .. body)
 end
 
 function VideoRenderFormat.encode_gif(t)
