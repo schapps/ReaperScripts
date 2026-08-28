@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="02068d49a09dd5f2536466d90f77064881c524f2">
+<index version="1" name="SPS Scripts" commit="d4f5adaa3222cdb042d10557c87310e45034dacb">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -9031,7 +9031,7 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGui dialog that renders the current time selection to a video file using REAPER's native video render formats (AVFoundation, FFmpeg/libav, GIF, LCF), with full control over each format's options (container, codec, bitrate/quality, size, framerate, etc). Supports multiple named presets (tabs), same as Smart Export Selected Items (GUI). SWS extension is required (render-quality config vars).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGui dialog that renders the current time selection to a video file using REAPER's native video render formats (AVFoundation, FFmpeg/libav, Windows Media Encoder, GIF, LCF), with full control over each format's options (container, codec, bitrate/quality, size, framerate, etc). Supports multiple named presets (tabs), same as Smart Export Selected Items (GUI). SWS extension is required (render-quality config vars).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -9054,6 +9054,14 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 08/23/26 v1.0 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/c4fbb618f0de88214aaffc3099865ec387756169/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
         <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/c4fbb618f0de88214aaffc3099865ec387756169/Common/VideoRenderFormat.lua</source>
+      </version>
+      <version name="1.2" author="Stephen Schappler" time="2026-08-28T05:52:43Z">
+        <changelog><![CDATA[08/27/26 v1.2 - Added Windows Media Encoder (WMF) as a video format
+                choice on Windows
+08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides
+08/23/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/d4f5adaa3222cdb042d10557c87310e45034dacb/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
+        <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/d4f5adaa3222cdb042d10557c87310e45034dacb/Common/VideoRenderFormat.lua</source>
       </version>
     </reapack>
     <reapack name="Text Overlay (GUI).lua" type="script" desc="Text Overlay (GUI)">
