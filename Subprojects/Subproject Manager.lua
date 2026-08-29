@@ -1,12 +1,39 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.12
+-- @version 1.17
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/28/26 - v1.17 Fixed the color swatch column reading I_CUSTOMCOLOR
+--                   directly, which is unset (0) for an item that's only
+--                   colored via track-color inheritance ("items use track
+--                   color" preference) -- the swatch showed grey/uncolored
+--                   even though the item was clearly colored in the arrange
+--                   view. Now reads reaper.GetDisplayedMediaItemColor2,
+--                   which resolves the same color REAPER actually draws
+--                   (item color, else inherited track color, else none).
+--   08/28/26 - v1.16 Settings button in the bottom row is now sized to
+--                   match the PrimaryButton row height exactly (was sized
+--                   off its own 1.4x icon glyph, making it visibly taller
+--                   than the row).
+--   08/28/26 - v1.15 Removed the separator line above the filter box --
+--                   the filter box is now the window's first row.
+--   08/28/26 - v1.14 Fixed a persistent vertical scrollbar on the window
+--                   introduced in v1.13: the table/child region's height
+--                   was still sized against the old plain-Button row height
+--                   (ImGui.GetFrameHeight), which is shorter than the new
+--                   PrimaryButton row, leaving the window a scrollbar's
+--                   worth too short at every size. Now sized against
+--                   theme.PrimaryButtonHeight (new in theme v1.23).
+--   08/28/26 - v1.13 Moved the Settings button down into the bottom action
+--                   row (was floating above the table) to save vertical
+--                   space, and switched the five bottom action buttons from
+--                   plain ImGui.Button to theme.PrimaryButton with icons,
+--                   matching the shared theme's "main action" style used
+--                   elsewhere (e.g. Renamer's Rename/Export buttons).
 --   08/23/26 - v1.12 Settings button is now a proper icon button
 --                   (theme.IconButton, gear icon) instead of a SmallButton
 --                   showing a raw unicode gear character. Removed the
@@ -200,7 +227,11 @@ local function getAllSubprojectItems()
             if not takeName or takeName == "" then takeName = basename end
             local ipos  = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
             local ilen  = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-            local icol  = math.floor(reaper.GetMediaItemInfo_Value(item, "I_CUSTOMCOLOR"))
+            -- GetDisplayedMediaItemColor2 (not I_CUSTOMCOLOR) so the swatch
+            -- matches what's actually drawn in the arrange view, including
+            -- track color inherited via the "items use track color"
+            -- preference when the item itself has no custom color set.
+            local icol  = reaper.GetDisplayedMediaItemColor2(item, take)
             rows[#rows + 1] = { item = item, track = tname, file = basename, takes = tc, take_idx = cur_idx, take = takeName, start = ipos, len = ilen, color = icol }
           end
         end
@@ -589,61 +620,6 @@ local function loop()
     local has_selection = #valid_selected > 0
 
     -- ── Subproject items table ───────────────────────────────────
-    local settings_icon_size = ImGui.GetFontSize(ctx) * 1.4
-    do
-      local cur_x   = ImGui.GetCursorPosX(ctx)
-      local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
-      ImGui.SetCursorPosX(ctx, cur_x + avail_w - theme.IconButtonSize(ctx, settings_icon_size))
-    end
-    if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings", nil, nil, settings_icon_size) then
-      ImGui.OpenPopup(ctx, "##settings_popup")
-    end
-    if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Settings") end
-
-    if ImGui.BeginPopup(ctx, "##settings_popup") then
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
-      ImGui.Text(ctx, "SETTINGS")
-      ImGui.PopStyleColor(ctx)
-      ImGui.Separator(ctx)
-      ImGui.Spacing(ctx)
-      ImGui.Text(ctx, "Export Script")
-      ImGui.SameLine(ctx)
-      ImGui.SetNextItemWidth(ctx, 350)
-      local ch, nv = ImGui.InputText(ctx, "##exportpath", export_path_buf, 0)
-      if ch then
-        export_path_buf = nv
-        reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
-      end
-      ImGui.SameLine(ctx)
-      if ImGui.Button(ctx, "Browse...") then
-        if reaper.JS_Dialog_BrowseForOpenFiles then
-          local retval, path = reaper.JS_Dialog_BrowseForOpenFiles(
-            "Select export script", "", "", "Lua scripts (*.lua)\0*.lua\0All files\0*.*\0\0", false)
-          if retval and path ~= "" then
-            export_path_buf = path
-            reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
-            ImGui.CloseCurrentPopup(ctx)
-          end
-        else
-          reaper.MB(
-            "Install js_ReaScriptAPI to enable file browsing,\nor paste the script path directly into the field.",
-            "Browse", 0)
-        end
-      end
-      if export_path_buf ~= "" then
-        ImGui.SameLine(ctx)
-        if ImGui.Button(ctx, "Clear") then
-          export_path_buf = ""
-          reaper.SetExtState("SchappsSubprojects", "ExportScript", "", true)
-        end
-      end
-      ImGui.Spacing(ctx)
-      ImGui.EndPopup(ctx)
-    end
-
-    ImGui.Separator(ctx)
-    ImGui.Spacing(ctx)
-
     ImGui.SetNextItemWidth(ctx, -1)
     local sc, search_val = ImGui.InputTextWithHint(ctx, "##search", "Filter by take name...", search_buf, 0)
     if sc then
@@ -677,9 +653,18 @@ local function loop()
       end)
     end
 
+    -- Bottom row is a mix of theme.PrimaryButton (bold, 1.3x font) and one
+    -- theme.IconButton -- size the settings button's square to match the
+    -- PrimaryButton row height exactly (rather than sizing it off its own
+    -- 1.4x glyph, which came out taller than the row), and size the child
+    -- against that same height, not ImGui.GetFrameHeight(), or the window
+    -- ends up permanently a scrollbar's worth too short.
+    local bottom_row_h = theme.PrimaryButtonHeight(ctx)
+    local _, frame_pad_y = ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding)
+    local settings_icon_size = bottom_row_h - frame_pad_y * 2
     local _, avail_h = ImGui.GetContentRegionAvail(ctx)
     local _, sp_y    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local child_h    = math.max(400, avail_h - ImGui.GetFrameHeight(ctx) - sp_y * 2)
+    local child_h    = math.max(400, avail_h - bottom_row_h - sp_y * 2)
     local child_visible = ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
     if child_visible then
     if #rows == 0 then
@@ -998,13 +983,14 @@ local function loop()
     ImGui.Spacing(ctx)
 
     -- ── Quick action buttons ─────────────────────────────────────
+    local settings_w = bottom_row_h
     local avail_w, _ = ImGui.GetContentRegionAvail(ctx)
     local sp_x, _    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local btn_w      = (avail_w - sp_x * 4) / 5
+    local btn_w      = (avail_w - sp_x * 5 - settings_w) / 5
 
     local has_export = export_path_buf ~= ""
     if not (has_selection and has_export) then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Export", btn_w, 0) then
+    if theme.PrimaryButton(ctx, "Export", btn_w, 0, nil, theme.Icons.EXPORT) then
       exportSelectedSubprojects(valid_selected)
     end
     if not (has_selection and has_export) then ImGui.EndDisabled(ctx) end
@@ -1014,22 +1000,69 @@ local function loop()
     end
     ImGui.SameLine(ctx)
     if not has_selection then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Open Selected", btn_w, 0) then
+    if theme.PrimaryButton(ctx, "Open Selected", btn_w, 0, nil, theme.Icons.FOLDER_OPEN) then
       openSelectedSubprojects(valid_selected)
     end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Update Subprojects", btn_w, 0) then
+    if theme.PrimaryButton(ctx, "Update Subprojects", btn_w, 0, nil, theme.Icons.REFRESH) then
       updateSubproject(valid_selected)
     end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Duplicate New Version", btn_w, 0) then
+    if theme.PrimaryButton(ctx, "Duplicate New Version", btn_w, 0, nil, theme.Icons.DUPLICATE) then
       duplicateToNewVersion(valid_selected)
     end
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Explode Subprojects", btn_w, 0) then
+    if theme.PrimaryButton(ctx, "Explode Subprojects", btn_w, 0, nil, theme.Icons.TRACKS) then
       explodeSubprojects(valid_selected)
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
+
+    ImGui.SameLine(ctx)
+    if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings", settings_w, bottom_row_h, settings_icon_size) then
+      ImGui.OpenPopup(ctx, "##settings_popup")
+    end
+    if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Settings") end
+
+    if ImGui.BeginPopup(ctx, "##settings_popup") then
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
+      ImGui.Text(ctx, "SETTINGS")
+      ImGui.PopStyleColor(ctx)
+      ImGui.Separator(ctx)
+      ImGui.Spacing(ctx)
+      ImGui.Text(ctx, "Export Script")
+      ImGui.SameLine(ctx)
+      ImGui.SetNextItemWidth(ctx, 350)
+      local ch, nv = ImGui.InputText(ctx, "##exportpath", export_path_buf, 0)
+      if ch then
+        export_path_buf = nv
+        reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
+      end
+      ImGui.SameLine(ctx)
+      if ImGui.Button(ctx, "Browse...") then
+        if reaper.JS_Dialog_BrowseForOpenFiles then
+          local retval, path = reaper.JS_Dialog_BrowseForOpenFiles(
+            "Select export script", "", "", "Lua scripts (*.lua)\0*.lua\0All files\0*.*\0\0", false)
+          if retval and path ~= "" then
+            export_path_buf = path
+            reaper.SetExtState("SchappsSubprojects", "ExportScript", export_path_buf, true)
+            ImGui.CloseCurrentPopup(ctx)
+          end
+        else
+          reaper.MB(
+            "Install js_ReaScriptAPI to enable file browsing,\nor paste the script path directly into the field.",
+            "Browse", 0)
+        end
+      end
+      if export_path_buf ~= "" then
+        ImGui.SameLine(ctx)
+        if ImGui.Button(ctx, "Clear") then
+          export_path_buf = ""
+          reaper.SetExtState("SchappsSubprojects", "ExportScript", "", true)
+        end
+      end
+      ImGui.Spacing(ctx)
+      ImGui.EndPopup(ctx)
+    end
 
     -- Detect color picker popup close → end undo block
     do

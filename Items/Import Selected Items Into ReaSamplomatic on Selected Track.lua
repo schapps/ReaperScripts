@@ -1,6 +1,6 @@
 -- @description Import Selected Items Into ReaSamplomatic on Selected Tracks
 -- @author Analogmad, MPL, modification by Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- Initial Script by MPL Modified by Analogmad (Chris Kowalski), and further modified by Stephen Schappler
 -- From Analogmad: MPL Helped me with this via the Reaper Forums. I had an issue of putting all samples into one RS5K. Added Arming for Audio Recording. Added Velocity Randomizer
 -- From Stephen Schappler: I changed the MIDI Velcotiy randomizer this script uses (it now uses one I wrote for this purpose), as well as the actions used to render items to a new takes before and after getting loaded into the sampler
@@ -15,6 +15,8 @@
 --   5/15/25 v1.4 - Preserve Relative Delays option
 --   5/15/25 v1.5 - Obey Note-Offs checkbox
 --   5/15/25 v1.6 - Max Voices slider (1-64)
+--   8/28/26 v1.7 - Load Items is now a theme.PrimaryButton with an icon,
+--                  matching the shared theme's "main action" button style.
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
@@ -212,7 +214,7 @@ local function loop()
     ImGui.Spacing(ctx)
     local no_items = reaper.CountSelectedMediaItems(0) == 0
     if no_items then ImGui.BeginDisabled(ctx, true) end
-    if ImGui.Button(ctx, "Load Items", -1, 0) then load_items() end
+    if theme.PrimaryButton(ctx, "Load Items", -1, 0, nil, theme.Icons.IMPORT) then load_items() end
     if no_items then ImGui.EndDisabled(ctx) end
 
     ImGui.End(ctx)

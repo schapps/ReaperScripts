@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.22
+-- @version 1.23
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -9,6 +9,13 @@
 --   Fonts/fa-solid-900.ttf > Fonts/fa-solid-900.ttf
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
 -- @changelog
+--   08/28/26 - v1.23 Added theme.PrimaryButtonHeight, so callers can
+--                   pre-measure a PrimaryButton row's height (bold,
+--                   1.3x font + frame padding) to size layout space above
+--                   it -- e.g. Subproject Manager's table/child region,
+--                   which was sized assuming the plain-Button-height bottom
+--                   row it had before switching to PrimaryButton, leaving
+--                   the window permanently a scrollbar's worth too short.
 --   08/23/26 - v1.22 Fixed theme.PrimaryButton's icon path: passing the
 --                   standard `-1` (fill available width) for `width` was
 --                   silently treated as "auto-size to content" instead,
@@ -230,6 +237,22 @@ local function scale_rgb(color, factor)
   local b = math.min(255, math.floor(((color >> 8) & 0xFF) * factor))
   local a = color & 0xFF
   return (r << 24) | (g << 16) | (b << 8) | a
+end
+
+-- The height theme.PrimaryButton uses when its `height` arg is nil/0: the
+-- bold, 1.3x-size label's line height plus frame padding. Exposed so
+-- callers can reserve layout space for a PrimaryButton row before drawing
+-- it (e.g. sizing a child/table above the row to fill exactly the
+-- remaining space), the same way theme.IconButtonSize lets callers
+-- pre-measure an IconButton.
+function theme.PrimaryButtonHeight(ctx, size)
+  local text_size = size or ImGui.GetFontSize(ctx) * 1.3
+  local _, pad_y = ImGui.GetStyleVar(ctx, ImGui.StyleVar_FramePadding)
+  local bold_font = get_bold_font(ctx)
+  ImGui.PushFont(ctx, bold_font, text_size)
+  local _, label_h = ImGui.CalcTextSize(ctx, "Ag")
+  ImGui.PopFont(ctx)
+  return label_h + pad_y * 2
 end
 
 -- color (optional) overrides the button's purple fill with a different
