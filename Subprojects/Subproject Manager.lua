@@ -1,12 +1,26 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.17
+-- @version 1.18
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/29/26 - v1.18 The bottom-row settings (gear) button was getting
+--                   visibly cut off on the right edge of the window. It
+--                   was relying on 5 SameLine()'d PrimaryButtons above it
+--                   landing it exactly at the row's right edge, sized off
+--                   an avail-width measurement taken before any of them
+--                   were drawn -- but this window has no fixed height, so
+--                   a scrollbar toggling on within the same frame shrinks
+--                   avail width after that measurement, leaving the gear
+--                   button's SIZE correct but its final POSITION short of
+--                   the true edge. Now explicitly snapped flush to the
+--                   right edge via a fresh GetContentRegionAvail +
+--                   SetCursorPosX right before it's drawn, so its position
+--                   no longer depends on the earlier buttons landing
+--                   exactly where predicted.
 --   08/28/26 - v1.17 Fixed the color swatch column reading I_CUSTOMCOLOR
 --                   directly, which is unset (0) for an item that's only
 --                   colored via track-color inheritance ("items use track
@@ -1017,7 +1031,19 @@ local function loop()
     end
     if not has_selection then ImGui.EndDisabled(ctx) end
 
+    -- Snap the settings button flush to the row's right edge using a
+    -- freshly-measured avail width here, rather than trusting it to land
+    -- there on its own after 5 SameLine()'d PrimaryButtons -- the row-level
+    -- btn_w above assumes avail_w stays exactly what it was before any of
+    -- those buttons were drawn, but a scrollbar toggling on this same
+    -- frame (this window has no fixed height, so its own content can
+    -- trigger one) shrinks avail_w between that measurement and now,
+    -- leaving the gear button's width still correct but its position
+    -- drawn short of the true edge -- which read as the button being cut
+    -- off on the right.
     ImGui.SameLine(ctx)
+    local right_avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, right_avail_w - settings_w))
     if theme.IconButton(ctx, theme.Icons.SETTINGS .. "##settings", settings_w, bottom_row_h, settings_icon_size) then
       ImGui.OpenPopup(ctx, "##settings_popup")
     end

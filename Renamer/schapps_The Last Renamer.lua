@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.13
+-- @version 1.15
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,10 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.15 Export button (both naming modes) now uses theme.SecondaryButton
+--         instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
+--   v1.14 DrawTabAccent now delegates to the shared theme.DrawTabAccent
+--         (ReaImGuiTheme.lua v1.29) instead of its own duplicate.
 --   v1.13 Fixed unresolved merge conflict markers in SchemeStructureEditor.lua that broke script loading
 --   v1.12 Visual pass to match the other Schapps ReaImGui scripts'
 --         shared theme (Common/ReaImGuiTheme.lua), on both naming
@@ -617,16 +621,25 @@ end
 
 local COMPACT_FRAME_PADDING = { 10, 6 }
 
+-- Shared ReaImGUI theme -- used here for theme.PrimaryButton (the Rename
+-- action) and theme.DrawTabAccent (below). This script keeps its own
+-- acendan.ImGui_Styles push/pop system (it has a UI-scale slider the
+-- shared theme doesn't support), so rather than replacing that, the
+-- color VALUES below have been aligned to match the shared theme's
+-- palette instead.
+local theme_path = script_path .. "Common" .. SEP .. "ReaImGuiTheme.lua"
+if not reaper.file_exists(theme_path) then
+  theme_path = script_path .. ".." .. SEP .. "Common" .. SEP .. "ReaImGuiTheme.lua"
+end
+local theme = dofile(theme_path)
+
 -- Smart-Export-style 3px colored left-edge accent on whichever tab was
--- most recently submitted via BeginTabItem. Must be called immediately
--- after BeginTabItem (before any other item is submitted), since
--- GetItemRectMin/Max refer to the last submitted item.
+-- most recently submitted via BeginTabItem -- delegates to the shared
+-- theme.DrawTabAccent (ReaImGuiTheme.lua), which works the same way
+-- regardless of the reaper.ImGui_* vs ImGui.* binding style calling it,
+-- since both operate on the same underlying ctx.
 local function DrawTabAccent(color)
-  if not color then return end
-  local x0, y0 = reaper.ImGui_GetItemRectMin(ctx)
-  local _, y1 = reaper.ImGui_GetItemRectMax(ctx)
-  local draw_list = reaper.ImGui_GetWindowDrawList(ctx)
-  reaper.ImGui_DrawList_AddRectFilled(draw_list, x0, y0, x0 + 3, y1, color)
+  theme.DrawTabAccent(ctx, color)
 end
 
 -- Scheme-editor modules (dofile'd once at startup, not inside Main()/defer -
@@ -638,17 +651,6 @@ local SchemeEditorGui           = dofile(script_path .. "Lib" .. SEP .. "SchemeE
 local SchemeStructureEditor     = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditor.lua")
 local SchemeStructureEditorGui  = dofile(script_path .. "Lib" .. SEP .. "SchemeStructureEditorGui.lua")
 local SchemeVisualizer          = dofile(script_path .. "Lib" .. SEP .. "SchemeVisualizer.lua")
-
--- Shared ReaImGUI theme -- used here only for theme.PrimaryButton (the
--- Rename action). This script keeps its own acendan.ImGui_Styles push/pop
--- system (it has a UI-scale slider the shared theme doesn't support), so
--- rather than replacing that, the color VALUES below have been aligned to
--- match the shared theme's palette instead.
-local theme_path = script_path .. "Common" .. SEP .. "ReaImGuiTheme.lua"
-if not reaper.file_exists(theme_path) then
-  theme_path = script_path .. ".." .. SEP .. "Common" .. SEP .. "ReaImGuiTheme.lua"
-end
-local theme = dofile(theme_path)
 -- Quick Naming's two modules are dofile'd here (with the others) but their
 -- init() calls are deferred to the bottom of this file - unlike the modules
 -- above, they depend on local functions (TryMatchField, SplitBySep,
@@ -1177,9 +1179,9 @@ function TabNaming()
   local has_export = HasExportScript()
   reaper.ImGui_SameLine(ctx, 0, 10)
   if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-  -- Same PrimaryButton style as Rename (bold font, 1.3x size, dark text),
-  -- just a different color -- #94BAE3.
-  if theme.PrimaryButton(ctx, "Export", nil, nil, 0x94BAE3FF, theme.Icons.EXPORT) then
+  -- Secondary action button next to Rename -- same shape (bold font,
+  -- 1.3x size, dark text), Secondary-accent fill instead of Primary.
+  if theme.SecondaryButton(ctx, "Export", nil, nil, theme.Icons.EXPORT) then
     reaper.PreventUIRefresh(1)
     reaper.Undo_BeginBlock()
     RunExportScript()

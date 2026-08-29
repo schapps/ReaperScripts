@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.15
+-- @version 1.16
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,9 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   08/29/26 v1.16 - Style tab bar now uses the shared theme.TabBar
+--                    (ReaImGuiTheme.lua v1.29) instead of its own
+--                    duplicated implementation.
 --   08/27/26 v1.15- adding new feature to create labels from selected items
 --   08/27/26 v0.3 - clean up GUI and make improvements
 --   08/27/26 v0.2 - Replaced REAPER's stock grayscale-only overlay preset
@@ -1005,15 +1008,6 @@ end
 
 local auto_close_fx_window = get_bool_ext_state("auto_close_fx_window", true)
 
-local rename_pending    = false
-local rename_focus_next = false
-local rename_idx        = 1
-local rename_buf        = ""
-local rename_dup_err    = false
-
-local delete_pending = false
-local delete_idx     = 1
-
 local available_fonts = discover_system_fonts()
 local font_filter     = ""
 
@@ -1076,22 +1070,53 @@ local function loop()
   end
 
   local color_count, var_count = theme.Push(ctx)
-  -- Match the style tab bar to Smart Export Selected Items (GUI).lua's
-  -- template tabs: a flat dark fill on the active tab plus a purple accent
-  -- line, instead of Dear ImGui's default blue. This build of ReaImGui
-  -- renamed the tab color enums (Col_TabActive -> Col_TabSelected, etc.)
-  -- and added a native Col_TabSelectedOverline for the accent line -- try
-  -- the current name first, fall back to the old one for older installs.
-  local col_tab_selected = rawget(ImGui, "Col_TabSelected") or rawget(ImGui, "Col_TabActive")
-  if col_tab_selected then
-    ImGui.PushStyleColor(ctx, col_tab_selected, 0x282828FF)
-    color_count = color_count + 1
-  end
-  local col_tab_overline = rawget(ImGui, "Col_TabSelectedOverline")
-  if col_tab_overline then
-    ImGui.PushStyleColor(ctx, col_tab_overline, 0xA08FE2FF)
-    color_count = color_count + 1
-  end
+
+  -- Built fresh each frame (not module-level) since on_click_select needs
+  -- this frame's `targets` -- a per-frame local, not something a
+  -- module-level table could close over.
+  local TAB_BAR_OPTS = {
+    item_noun     = "Style",
+    app_name      = "Text Overlay",
+    new_name_base = "New Style",
+    name_in_use   = function(name, exclude_idx) return name_in_use(styles, name, exclude_idx) end,
+    save          = save_style,
+
+    on_create = function(active_tab)
+      return deep_copy(active_tab)
+    end,
+
+    -- Clicking a different tab previews it live: apply to any selected
+    -- overlay items + one undo point. Creating a tab (on_after_create,
+    -- below) deliberately skips this -- a just-cloned style is identical
+    -- to what's already applied, so there's nothing to preview and no
+    -- undo point worth creating.
+    on_click_select = function(new_tab, new_idx, old_tab, old_idx)
+      buf = deep_copy(new_tab)
+      if #targets >= 1 then
+        apply_style_to_targets(targets, new_tab)
+        commit_undo("Apply text overlay style")
+      end
+      reaper.SetExtState("TextOverlayGUI", "active_style", new_tab.name, true)
+    end,
+
+    on_after_create = function(new_tab, new_idx)
+      buf = deep_copy(new_tab)
+      reaper.SetExtState("TextOverlayGUI", "active_style", new_tab.name, true)
+    end,
+
+    on_after_delete = function(new_active_tab, new_idx)
+      buf = deep_copy(new_active_tab)
+    end,
+
+    on_delete = function(tab) delete_style(tab.name) end,
+
+    on_rename = function(tab, old_name, new_name, was_active)
+      rename_style_file(old_name, new_name)
+      if was_active then
+        reaper.SetExtState("TextOverlayGUI", "active_style", new_name, true)
+      end
+    end,
+  }
 
   ImGui.SetNextWindowSize(ctx, 900, 0, ImGui.Cond_FirstUseEver)
   local visible, still_open = ImGui.Begin(ctx, script_title, true, WIN_FLAGS)
@@ -1099,109 +1124,7 @@ local function loop()
   if visible then
 
     -- ── Style tab bar ───────────────────────────────────────
-    if ImGui.BeginTabBar(ctx, "##styles", ImGui.TabBarFlags_AutoSelectNewTabs) then
-      for i, s in ipairs(styles) do
-        local tab_visible, new_open = ImGui.BeginTabItem(ctx, s.name, true, 0)
-
-        -- GetItemRectMin/Max here refer to the tab item itself, so both
-        -- accent draws below must run immediately after BeginTabItem.
-        local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
-        local tab_max_x, tab_max_y = ImGui.GetItemRectMax(ctx)
-        local draw_list = ImGui.GetWindowDrawList(ctx)
-
-        -- Per-style custom color: a thin bar along the tab's left edge,
-        -- visible whether or not the tab is active, so styles stay
-        -- identifiable by color even when not selected.
-        if s.tab_color ~= 0 then
-          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_min_x + 3, tab_max_y, s.tab_color)
-        end
-
-        -- Accent top-border on the active tab -- only needed as a fallback
-        -- when this ReaImGui build has no native Col_TabSelectedOverline
-        -- (pushed above), which already draws this for us.
-        if tab_visible and not col_tab_overline then
-          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_max_x, tab_min_y + 2, 0xA08FE2FF)
-        end
-
-        if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. i) then
-          if ImGui.MenuItem(ctx, "Rename\u{2026}") then
-            rename_pending = true
-            rename_idx     = i
-            rename_buf     = s.name
-            rename_dup_err = false
-          end
-          if ImGui.BeginMenu(ctx, "Color") then
-            local rgb = (s.tab_color >> 8) & 0xFFFFFF
-            local color_changed, new_rgb = ImGui.ColorPicker3(ctx, "##tab_color_picker", rgb)
-            if color_changed then
-              s.tab_color = (new_rgb << 8) | 0xFF
-              save_style(s)
-            end
-            ImGui.Separator(ctx)
-            if ImGui.MenuItem(ctx, "Clear Color", nil, false, s.tab_color ~= 0) then
-              s.tab_color = 0
-              save_style(s)
-            end
-            ImGui.EndMenu(ctx)
-          end
-          local can_delete = #styles > 1
-          if not can_delete then ImGui.BeginDisabled(ctx, true) end
-          ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xFF5555FF)
-          if ImGui.MenuItem(ctx, "Delete") then
-            delete_pending = true
-            delete_idx     = i
-          end
-          ImGui.PopStyleColor(ctx)
-          if not can_delete then ImGui.EndDisabled(ctx) end
-          ImGui.EndPopup(ctx)
-        end
-
-        if not new_open and #styles > 1 then
-          delete_pending = true
-          delete_idx     = i
-        end
-
-        if tab_visible then
-          if i ~= active_idx then
-            active_idx = i
-            buf = deep_copy(s)
-            if #targets >= 1 then
-              apply_style_to_targets(targets, s)
-              commit_undo("Apply text overlay style")
-            end
-            reaper.SetExtState("TextOverlayGUI", "active_style", s.name, true)
-          end
-          ImGui.EndTabItem(ctx)
-        end
-      end
-
-      if ImGui.TabItemButton(ctx, "+", ImGui.TabItemFlags_Trailing) then
-        local base = "New Style"
-        local new_name = base
-        local suffix = 2
-        while name_in_use(styles, new_name) do
-          new_name = base .. " " .. suffix
-          suffix = suffix + 1
-        end
-
-        local new_s = deep_copy(styles[active_idx])
-        new_s.name = new_name
-        save_style(new_s)
-        table.insert(styles, new_s)
-
-        active_idx = #styles
-        buf = deep_copy(new_s)
-        reaper.SetExtState("TextOverlayGUI", "active_style", new_name, true)
-
-        rename_pending    = true
-        rename_focus_next = true
-        rename_idx        = active_idx
-        rename_buf        = new_name
-        rename_dup_err    = false
-      end
-
-      ImGui.EndTabBar(ctx)
-    end
+    active_idx = theme.TabBar(ctx, "##styles", styles, active_idx, TAB_BAR_OPTS)
 
     ImGui.Spacing(ctx)
 
@@ -1593,73 +1516,6 @@ local function loop()
     end
 
     ImGui.End(ctx)
-  end
-
-  -- ── Rename modal ─────────────────────────────────────────
-  if rename_pending then
-    ImGui.OpenPopup(ctx, "Rename Style##modal")
-    rename_pending    = false
-    rename_focus_next = true
-  end
-
-  if ImGui.BeginPopupModal(ctx, "Rename Style##modal", nil, ImGui.WindowFlags_AlwaysAutoResize) then
-    ImGui.Text(ctx, "Style name:")
-    ImGui.SetNextItemWidth(ctx, 280)
-    if rename_focus_next then
-      ImGui.SetKeyboardFocusHere(ctx)
-      rename_focus_next = false
-    end
-    local _, new_rb = ImGui.InputText(ctx, "##rename_val", rename_buf, ImGui.InputTextFlags_AutoSelectAll)
-    rename_buf = new_rb
-
-    if rename_dup_err then
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xFF5555FF)
-      ImGui.Text(ctx, "Name already in use.")
-      ImGui.PopStyleColor(ctx)
-    end
-
-    ImGui.Spacing(ctx)
-    local confirm = ImGui.Button(ctx, "OK", 130, 0)
-      or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
-      or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)
-    ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "Cancel", 130, 0) or ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) then
-      ImGui.CloseCurrentPopup(ctx)
-      rename_dup_err = false
-    elseif confirm and rename_buf ~= "" then
-      if name_in_use(styles, rename_buf, rename_idx) then
-        rename_dup_err = true
-      else
-        local old_name = styles[rename_idx].name
-        if old_name ~= rename_buf then
-          rename_style_file(old_name, rename_buf)
-          if rename_idx == active_idx then
-            reaper.SetExtState("TextOverlayGUI", "active_style", rename_buf, true)
-          end
-        end
-        styles[rename_idx].name = rename_buf
-        ImGui.CloseCurrentPopup(ctx)
-        rename_dup_err = false
-      end
-    end
-
-    ImGui.EndPopup(ctx)
-  end
-
-  -- ── Pending delete ────────────────────────────────────────
-  if delete_pending then
-    delete_pending = false
-    local name = styles[delete_idx] and styles[delete_idx].name or "?"
-    local answer = reaper.ShowMessageBox(
-      ('Delete style "%s"? This cannot be undone.'):format(name),
-      "Text Overlay", 4)
-    if answer == 6 then
-      delete_style(name)
-      table.remove(styles, delete_idx)
-      if active_idx > delete_idx then active_idx = active_idx - 1 end
-      active_idx = math.max(1, math.min(active_idx, #styles))
-      buf = deep_copy(styles[active_idx])
-    end
   end
 
   theme.Pop(ctx, color_count, var_count)

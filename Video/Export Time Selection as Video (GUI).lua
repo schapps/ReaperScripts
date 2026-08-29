@@ -1,5 +1,5 @@
 -- @description Export Time Selection as Video (GUI)
--- @version 1.2
+-- @version 1.3
 -- @about
 --   ReaImGui dialog that renders the current time selection to a video file
 --   using REAPER's native video render formats (AVFoundation, FFmpeg/libav,
@@ -13,6 +13,9 @@
 -- @provides
 --   [nomain] ../Common/VideoRenderFormat.lua > Common/VideoRenderFormat.lua
 -- @changelog
+--   08/29/26 v1.3 - Preset tab bar now uses the shared theme.TabBar
+--                   (ReaImGuiTheme.lua v1.29) instead of its own
+--                   duplicated implementation.
 --   08/27/26 v1.2 - Added Windows Media Encoder (WMF) as a video format
 --                   choice on Windows
 --   08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides
@@ -491,16 +494,6 @@ local gif_ignore_bits_buf, gif_encode_transparency
 local lcf_tweak_buf
 local open_folder_en, close_after_render_en
 
-local rename_pending    = false
-local rename_focus_next = false
-local rename_idx        = 1
-local rename_buf        = ""
-local rename_dup_err    = false
-
-local delete_pending = false
-local delete_idx     = 1
-
-local last_active_idx = 0
 local open = true
 local left_footer_h = 0
 
@@ -575,27 +568,56 @@ local function init_templates()
   end
 
   sync_buffers_from(templates[active_idx])
-  last_active_idx = active_idx
 end
 
 init_templates()
+
+-- ============================================================
+-- Tab bar (theme.TabBar -- shared closable/colorable/addable tab bar,
+-- also used by Smart Export and Text Overlay's own template/style lists)
+-- ============================================================
+local TAB_BAR_OPTS = {
+  item_noun     = "Preset",
+  app_name      = "Export Video",
+  new_name_base = "New Preset",
+  name_in_use   = name_in_use,
+  save          = save_template,
+
+  on_create = function(active_tab)
+    flush_buffers_to(active_tab)
+    local new_t = {}
+    for k, v in pairs(active_tab) do new_t[k] = v end
+    return new_t
+  end,
+
+  on_click_select = function(new_tab, new_idx, old_tab, old_idx)
+    if old_tab then flush_buffers_to(old_tab) end
+    sync_buffers_from(new_tab)
+  end,
+
+  on_after_create = function(new_tab, new_idx)
+    sync_buffers_from(new_tab)
+  end,
+
+  on_after_delete = function(new_active_tab, new_idx)
+    sync_buffers_from(new_active_tab)
+  end,
+
+  on_delete = function(tab) delete_template(tab.name) end,
+
+  on_rename = function(tab, old_name, new_name, was_active)
+    rename_template_file(old_name, new_name)
+    if was_active then
+      reaper.SetExtState("ExportVideo", "active_template", new_name, true)
+    end
+  end,
+}
 
 -- ============================================================
 -- ImGui render loop
 -- ============================================================
 local function loop()
   local color_count, var_count = theme.Push(ctx)
-
-  local col_tab_selected = rawget(ImGui, "Col_TabSelected") or rawget(ImGui, "Col_TabActive")
-  if col_tab_selected then
-    ImGui.PushStyleColor(ctx, col_tab_selected, 0x282828FF)
-    color_count = color_count + 1
-  end
-  local col_tab_overline = rawget(ImGui, "Col_TabSelectedOverline")
-  if col_tab_overline then
-    ImGui.PushStyleColor(ctx, col_tab_overline, 0xA08FE2FF)
-    color_count = color_count + 1
-  end
 
   local WIN_W = 950
   ImGui.SetNextWindowSizeConstraints(ctx, 630, 0, 3000, 10000)
@@ -605,104 +627,7 @@ local function loop()
   if visible then
 
     -- ── Tab bar ─────────────────────────────────────────────
-    if ImGui.BeginTabBar(ctx, "##templates", ImGui.TabBarFlags_AutoSelectNewTabs) then
-
-      for i, t in ipairs(templates) do
-        local tab_visible, new_open = ImGui.BeginTabItem(ctx, t.name, true, 0)
-
-        local tab_min_x, tab_min_y = ImGui.GetItemRectMin(ctx)
-        local tab_max_x, tab_max_y = ImGui.GetItemRectMax(ctx)
-        local draw_list = ImGui.GetWindowDrawList(ctx)
-
-        if t.tab_color ~= 0 then
-          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_min_x + 3, tab_max_y, t.tab_color)
-        end
-
-        if tab_visible and not col_tab_overline then
-          ImGui.DrawList_AddRectFilled(draw_list, tab_min_x, tab_min_y, tab_max_x, tab_min_y + 2, 0xA08FE2FF)
-        end
-
-        if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. i) then
-          if ImGui.MenuItem(ctx, "Rename\u{2026}") then
-            rename_pending  = true
-            rename_idx      = i
-            rename_buf      = t.name
-            rename_dup_err  = false
-          end
-          if ImGui.BeginMenu(ctx, "Color") then
-            local rgb = (t.tab_color >> 8) & 0xFFFFFF
-            local color_changed, new_rgb = ImGui.ColorPicker3(ctx, "##tab_color_picker", rgb)
-            if color_changed then
-              t.tab_color = (new_rgb << 8) | 0xFF
-              save_template(t)
-            end
-            ImGui.Separator(ctx)
-            if ImGui.MenuItem(ctx, "Clear Color", nil, false, t.tab_color ~= 0) then
-              t.tab_color = 0
-              save_template(t)
-            end
-            ImGui.EndMenu(ctx)
-          end
-          local can_delete = #templates > 1
-          if not can_delete then ImGui.BeginDisabled(ctx, true) end
-          ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xFF5555FF)
-          if ImGui.MenuItem(ctx, "Delete") then
-            delete_pending = true
-            delete_idx     = i
-          end
-          ImGui.PopStyleColor(ctx)
-          if not can_delete then ImGui.EndDisabled(ctx) end
-          ImGui.EndPopup(ctx)
-        end
-
-        if not new_open and #templates > 1 then
-          delete_pending = true
-          delete_idx     = i
-        end
-
-        if tab_visible then
-          if i ~= last_active_idx then
-            if last_active_idx >= 1 and last_active_idx <= #templates then
-              flush_buffers_to(templates[last_active_idx])
-            end
-            active_idx      = i
-            last_active_idx = i
-            sync_buffers_from(t)
-          end
-          ImGui.EndTabItem(ctx)
-        end
-      end
-
-      if ImGui.TabItemButton(ctx, "+", ImGui.TabItemFlags_Trailing) then
-        flush_buffers_to(templates[active_idx])
-
-        local base = "New Preset"
-        local new_name = base
-        local suffix = 2
-        while name_in_use(new_name) do
-          new_name = base .. " " .. suffix; suffix = suffix + 1
-        end
-
-        local src = templates[active_idx]
-        local new_t = {}
-        for k, v in pairs(src) do new_t[k] = v end
-        new_t.name = new_name
-        save_template(new_t)
-        table.insert(templates, new_t)
-
-        active_idx      = #templates
-        last_active_idx = #templates
-        sync_buffers_from(new_t)
-
-        rename_pending    = true
-        rename_focus_next = true
-        rename_idx        = active_idx
-        rename_buf        = new_name
-        rename_dup_err    = false
-      end
-
-      ImGui.EndTabBar(ctx)
-    end
+    active_idx = theme.TabBar(ctx, "##templates", templates, active_idx, TAB_BAR_OPTS)
 
     -- ── Left column: settings rail ───────────────────────────
     local LEFT_COL_W     = 280
@@ -1035,80 +960,6 @@ local function loop()
     end
 
     ImGui.End(ctx)
-  end
-
-  -- ── Rename modal ─────────────────────────────────────────
-  if rename_pending then
-    ImGui.OpenPopup(ctx, "Rename Preset##modal")
-    rename_pending    = false
-    rename_focus_next = true
-  end
-
-  if ImGui.BeginPopupModal(ctx, "Rename Preset##modal", nil,
-      ImGui.WindowFlags_AlwaysAutoResize) then
-    ImGui.Text(ctx, "Preset name:")
-    ImGui.SetNextItemWidth(ctx, 280)
-    if rename_focus_next then
-      ImGui.SetKeyboardFocusHere(ctx)
-      rename_focus_next = false
-    end
-    local _, new_rb = ImGui.InputText(ctx, "##rename_val", rename_buf,
-      ImGui.InputTextFlags_AutoSelectAll)
-    rename_buf = new_rb
-
-    if rename_dup_err then
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xFF5555FF)
-      ImGui.Text(ctx, "Name already in use.")
-      ImGui.PopStyleColor(ctx)
-    end
-
-    ImGui.Spacing(ctx)
-
-    local confirm = ImGui.Button(ctx, "OK", 130, 0)
-      or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
-      or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)
-
-    ImGui.SameLine(ctx)
-
-    if ImGui.Button(ctx, "Cancel", 130, 0) or ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) then
-      ImGui.CloseCurrentPopup(ctx)
-      rename_dup_err = false
-    elseif confirm and rename_buf ~= "" then
-      if name_in_use(rename_buf, rename_idx) then
-        rename_dup_err = true
-      else
-        local old_name = templates[rename_idx].name
-        if old_name ~= rename_buf then
-          rename_template_file(old_name, rename_buf)
-          if rename_idx == active_idx then
-            reaper.SetExtState("ExportVideo", "active_template", rename_buf, true)
-          end
-        end
-        templates[rename_idx].name = rename_buf
-        ImGui.CloseCurrentPopup(ctx)
-        rename_dup_err = false
-      end
-    end
-
-    ImGui.EndPopup(ctx)
-  end
-
-  -- ── Pending delete ────────────────────────────────────────
-  if delete_pending then
-    delete_pending = false
-    local name = templates[delete_idx] and templates[delete_idx].name or "?"
-    local answer = reaper.ShowMessageBox(
-      ('Delete preset "%s"? This cannot be undone.'):format(name),
-      "Export Video", 4)
-    if answer == 6 then
-      delete_template(name)
-      table.remove(templates, delete_idx)
-      if active_idx > delete_idx then
-        active_idx = active_idx - 1
-      end
-      active_idx      = math.max(1, math.min(active_idx, #templates))
-      last_active_idx = 0
-    end
   end
 
   theme.Pop(ctx, color_count, var_count)

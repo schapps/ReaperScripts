@@ -18,7 +18,7 @@ local QuickNamingGui = {}
 local Predictor   -- NamePredictor module
 local Helpers     -- { PreviewRename, ApplyQuickName, LoadTargets, FindField, PadZeroes, GetSelectedItemName, HasExportScript, RunExportScript }
 local acendan     -- shared style/tooltip/scale helper table (same one every other Lib module gets)
-local theme       -- Common/ReaImGuiTheme.lua, for theme.PrimaryButton (Rename/Export)
+local theme       -- Common/ReaImGuiTheme.lua, for theme.PrimaryButton (Rename) / theme.SecondaryButton (Export)
 
 function QuickNamingGui.init(name_predictor, helpers, acendan_helpers, theme_module)
   Predictor = name_predictor
@@ -630,7 +630,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     local has_export = Helpers.HasExportScript()
     reaper.ImGui_SameLine(ctx, 0, 10)
     if not has_export then reaper.ImGui_BeginDisabled(ctx) end
-    if theme.PrimaryButton(ctx, "Export", nil, nil, 0x94BAE3FF, theme.Icons.EXPORT) then
+    if theme.SecondaryButton(ctx, "Export", nil, nil, theme.Icons.EXPORT) then
       reaper.PreventUIRefresh(1)
       reaper.Undo_BeginBlock()
       Helpers.RunExportScript()
