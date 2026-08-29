@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="d4f5adaa3222cdb042d10557c87310e45034dacb">
+<index version="1" name="SPS Scripts" commit="8f0746b7ccd76ed1e38f08fa9432fb837402d037">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -156,6 +156,89 @@
         <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/Fonts/fa-solid-900.ttf</source>
         <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/93b356ce3ec961c125a3b0e5164b40bc5cc6b026/Common/Fonts/LICENSE.txt</source>
       </version>
+      <version name="1.23" author="Stephen Schappler" time="2026-08-29T03:35:57Z">
+        <changelog><![CDATA[08/28/26 - v1.23 Added theme.PrimaryButtonHeight, so callers can
+                pre-measure a PrimaryButton row's height (bold,
+                1.3x font + frame padding) to size layout space above
+                it -- e.g. Subproject Manager's table/child region,
+                which was sized assuming the plain-Button-height bottom
+                row it had before switching to PrimaryButton, leaving
+                the window permanently a scrollbar's worth too short.
+08/23/26 - v1.22 Fixed theme.PrimaryButton's icon path: passing the
+                standard `-1` (fill available width) for `width` was
+                silently treated as "auto-size to content" instead,
+                since the check was `width > 0` -- any icon
+                PrimaryButton passing -1 (Create, Reposition) came
+                out narrower than intended. Now matches native
+                ImGui.Button's width semantics: nil/0 = auto, < 0 =
+                fill available width, > 0 = fixed width.
+08/23/26 - v1.21 Added theme.Icons.LEFT_RIGHT (fa-left-right).
+08/23/26 - v1.20 Added theme.Icons.SQUARE_PLUS (fa-square-plus).
+08/23/26 - v1.19 Added theme.Icons.FILE_WAVEFORM (fa-file-waveform).
+08/23/26 - v1.18 theme.PrimaryButton takes an optional 6th `icon`
+                arg (one of theme.Icons.*), drawn before the label.
+                Since there's no font-merge, this draws a blank-label
+                Button() for native hover/press + click behavior and
+                overlays the icon glyph + bold label text on top via
+                the draw list. Also added theme.Icons.PENCIL.
+08/23/26 - v1.17 Added theme.Icons.DOLLAR_SIGN (fa-dollar-sign).
+08/22/26 - v1.16 theme.PrimaryButton now takes an optional 5th `color`
+                arg to reuse the exact same bold/1.3x/dark-text style
+                in a different hue (hover/active shades auto-derived
+                via the new scale_rgb helper) -- e.g. Renamer's
+                Export button, which needed the same look as Rename
+                but a distinct color.
+08/22/26 - v1.15 Col_PopupBg (dropdown/combo popup background) was
+                0x202225FF -- same blue-tint pattern as the other
+                fixes here. Flattened to neutral 0x202020FF.
+08/22/26 - v1.14 Added theme.Icons.FILE_LINES (fa-file-lines) and
+                theme.Icons.CLOCK (fa-clock).
+08/22/26 - v1.13 Col_ScrollbarBg/Grab/Hovered/Active had the same
+                blue-tint pattern as the other fixes here (confirmed
+                by pixel-sampling a screenshot: the grab handle
+                rendered as (58,64,70), exactly the old
+                Col_ScrollbarGrab value). Flattened all four to
+                neutral greys, same relative brightness as before.
+08/22/26 - v1.12 Col_Border (the line ImGui draws under a tab bar,
+                among other places) was 0x3A3F45FF -- same blue-tint
+                pattern as the other fixes here. Flattened to neutral
+                0x3F3F3FFF.
+08/22/26 - v1.11 Col_Tab (base/inactive tab) was 0x23282DFF -- reads
+                as clearly blue in practice despite looking like a
+                plausible dark grey in hex (only a 10/255 R-to-B
+                spread, but very visible at this low a brightness).
+                Flattened to neutral 0x232323FF, matching the
+                Col_TabDimmed*/Col_FrameBg* fixes below.
+08/22/26 - v1.10 Col_TabDimmed/Unfocused and Col_TabDimmedSelected/
+                UnfocusedActive (tabs shown when the script's window
+                itself isn't focused) had the same blue-tint issue as
+                Col_FrameBg* below -- flattened to neutral greys.
+08/22/26 - v1.9 Col_FrameBgHovered/Active were slightly blue-tinted
+                (unequal R/G/B) -- changed to neutral greys, lighter
+                than Col_FrameBg, with no color cast.
+08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
+                table of glyph constants), theme.PushIconFont/PopIconFont,
+                theme.IconText, and theme.IconButton. The icon font
+                ships as Fonts/fa-solid-900.ttf alongside this file and
+                is lazily created/cached per-ctx like the bold font
+                below, since ReaImGui has no font-merge mode -- icon
+                glyphs always come from a separate font pushed around
+                the draw call, not blended into the body-text font.
+                theme.IconButton/theme.IconButtonSize size the button
+                square to the requested icon size (default: current
+                font size) plus frame padding, so a larger icon grows
+                its button instead of clipping, and callers can still
+                align one (e.g. right-justify) without pre-measuring.
+08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Common/line-md--play-filled.png</source>
+        <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Common/Fonts/fa-solid-900.ttf</source>
+        <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Common/Fonts/LICENSE.txt</source>
+      </version>
     </reapack>
   </category>
   <category name="Items">
@@ -302,6 +385,18 @@
 5/15/25 v1.5 - Obey Note-Offs checkbox
 5/15/25 v1.6 - Max Voices slider (1-64)]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/8cdbb1ecc1f98581f3d062e1234a1eff2075d291/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
+      </version>
+      <version name="1.7" author="Analogmad, MPL, modification by Stephen Schappler" time="2026-08-29T03:35:57Z">
+        <changelog><![CDATA[9/3/24 v1.0 - Adding script to ReaPack
+9/3/24 v1.1 - Changing name of Midi Randomize JSFX to the correct name
+5/15/25 v1.2 - Multi-track support: items on each selected track load into that track's own RS5K instance
+5/15/25 v1.3 - ReaImGUI panel with Load Items button
+5/15/25 v1.4 - Preserve Relative Delays option
+5/15/25 v1.5 - Obey Note-Offs checkbox
+5/15/25 v1.6 - Max Voices slider (1-64)
+8/28/26 v1.7 - Load Items is now a theme.PrimaryButton with an icon,
+               matching the shared theme's "main action" button style.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Items/Import%20Selected%20Items%20Into%20ReaSamplomatic%20on%20Selected%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="Insert Marker at Start of Selected Items.lua" type="script" desc="Insert Marker at Start of Selected Items">
@@ -8775,6 +8870,61 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.17" author="Stephen Schappler" time="2026-08-29T03:35:57Z">
+        <changelog><![CDATA[08/28/26 - v1.17 Fixed the color swatch column reading I_CUSTOMCOLOR
+                directly, which is unset (0) for an item that's only
+                colored via track-color inheritance ("items use track
+                color" preference) -- the swatch showed grey/uncolored
+                even though the item was clearly colored in the arrange
+                view. Now reads reaper.GetDisplayedMediaItemColor2,
+                which resolves the same color REAPER actually draws
+                (item color, else inherited track color, else none).
+08/28/26 - v1.16 Settings button in the bottom row is now sized to
+                match the PrimaryButton row height exactly (was sized
+                off its own 1.4x icon glyph, making it visibly taller
+                than the row).
+08/28/26 - v1.15 Removed the separator line above the filter box --
+                the filter box is now the window's first row.
+08/28/26 - v1.14 Fixed a persistent vertical scrollbar on the window
+                introduced in v1.13: the table/child region's height
+                was still sized against the old plain-Button row height
+                (ImGui.GetFrameHeight), which is shorter than the new
+                PrimaryButton row, leaving the window a scrollbar's
+                worth too short at every size. Now sized against
+                theme.PrimaryButtonHeight (new in theme v1.23).
+08/28/26 - v1.13 Moved the Settings button down into the bottom action
+                row (was floating above the table) to save vertical
+                space, and switched the five bottom action buttons from
+                plain ImGui.Button to theme.PrimaryButton with icons,
+                matching the shared theme's "main action" style used
+                elsewhere (e.g. Renamer's Rename/Export buttons).
+08/23/26 - v1.12 Settings button is now a proper icon button
+                (theme.IconButton, gear icon) instead of a SmallButton
+                showing a raw unicode gear character. Removed the
+                redundant "SUBPROJECT ITEMS" label above the table.
+05/28/26 - v1.11 Fixing column width display
+05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
+05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8f0746b7ccd76ed1e38f08fa9432fb837402d037/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
