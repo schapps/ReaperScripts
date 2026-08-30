@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="26acaf7a43907bf642e1ae6accf488fc3d3d26cb">
+<index version="1" name="SPS Scripts" commit="2da9c5362757b944c2fad2598af2ebe1a0188fa8">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -9791,6 +9791,135 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 04/28/26 - v0.2 Adding color picker, bug fixes
 04/27/26 - v0.1 Initial alpha release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/26acaf7a43907bf642e1ae6accf488fc3d3d26cb/Subprojects/Subproject%20Manager.lua</source>
+      </version>
+      <version name="1.29" author="Stephen Schappler" time="2026-08-30T16:08:21Z">
+        <changelog><![CDATA[08/30/26 - v1.29 Shift+Click on the take-version </> buttons now also
+                triggers the whole-RPP-group move, same as Ctrl+Click.
+08/30/26 - v1.28 Ctrl+Click on a row's take-version </> buttons now
+                moves every item sourced from the same RPP file
+                together (each clamped to its own take count), for
+                keeping duplicated items in sync. Plain click is
+                unchanged (single item only). Wrapped in one undo
+                block either way.
+08/30/26 - v1.27 Color swatch and play button now also center
+                horizontally within their columns (center_row_item_xy),
+                not just vertically -- both are narrower than their
+                18px/24px columns.
+08/30/26 - v1.26 Removed the v1.24 debug readout now that v1.25's row
+                centering is confirmed correct.
+08/30/26 - v1.25 Found the real bug via the v1.24 debug readout: row_h
+                was computed from GetFrameHeight() (~28px, a
+                FramePadding-based number meant for buttons), but a
+                table row's real height comes from CellPadding
+                (~2px) plus its tallest cell's own content (measured
+                22px total here, the play button's ImageButton at
+                18px) -- a completely different, smaller number. That
+                6px error is what v1.22/v1.23's centering math
+                overshot by. Recomputed row_h from CellPadding +
+                content height and reapplied the SetCursorScreenPos
+                centering (which was fine all along) with the
+                corrected number. Debug readout left in for this
+                round to confirm before removing it.
+08/30/26 - v1.24 Reverted v1.22/v1.23's row-centering attempts (both
+                overshot to the bottom for reasons that didn't hold up
+                under two different techniques -- SetCursorPosY and
+                SetCursorScreenPos both landed content flush against
+                the row's bottom edge). Back to plain, unpositioned
+                rows (text top-aligned, matching pre-v1.22 behavior)
+                plus a TEMPORARY debug readout above the table showing
+                the actual measured row height and each element's
+                real rendered Y range, to find the real fix from
+                measured numbers instead of more guesses.
+08/30/26 - v1.23 Row content (text, buttons, swatch, play) wasn't
+                vertically centered -- v1.22's SetCursorPosY-based
+                nudge overshot to roughly double the intended offset
+                (text ended up bottom-flush) for reasons that didn't
+                trace back to anything explicable in this file, which
+                pointed at SetCursorPosY's relative-delta semantics
+                themselves rather than the math. Replaced with
+                SetCursorScreenPos to an absolute, directly-computed
+                screen Y (row top + (row height - item height) / 2),
+                applied to every row element, not just text.
+08/30/26 - v1.22 Row text (Take Name, Start, End, Length, Track, RPP
+08/29/26 - v1.21 Rows now alternate shading per-row (TableFlags_RowBg
+                + the shared theme's row stripe color, ReaImGuiTheme.lua
+                v1.32) instead of per RPP-file group, matching
+                Renamer's Quick Naming preview table.
+08/29/26 - v1.20 Table no longer draws its vertical column-border
+                lines all the way down the panel past the last row.
+                TableFlags_ScrollX auto-extends the table's height
+                with no flag to stop it, so BordersInnerV is dropped
+                and those dividers are now drawn manually, clipped to
+                the actual header+row height.
+08/29/26 - v1.19 Table header row is now bold (theme.PushBoldFont,
+                ReaImGuiTheme.lua v1.31).
+08/29/26 - v1.18 The bottom-row settings (gear) button was getting
+                visibly cut off on the right edge of the window. It
+                was relying on 5 SameLine()'d PrimaryButtons above it
+                landing it exactly at the row's right edge, sized off
+                an avail-width measurement taken before any of them
+                were drawn -- but this window has no fixed height, so
+                a scrollbar toggling on within the same frame shrinks
+                avail width after that measurement, leaving the gear
+                button's SIZE correct but its final POSITION short of
+                the true edge. Now explicitly snapped flush to the
+                right edge via a fresh GetContentRegionAvail +
+                SetCursorPosX right before it's drawn, so its position
+                no longer depends on the earlier buttons landing
+                exactly where predicted.
+08/28/26 - v1.17 Fixed the color swatch column reading I_CUSTOMCOLOR
+                directly, which is unset (0) for an item that's only
+                colored via track-color inheritance ("items use track
+                color" preference) -- the swatch showed grey/uncolored
+                even though the item was clearly colored in the arrange
+                view. Now reads reaper.GetDisplayedMediaItemColor2,
+                which resolves the same color REAPER actually draws
+                (item color, else inherited track color, else none).
+08/28/26 - v1.16 Settings button in the bottom row is now sized to
+                match the PrimaryButton row height exactly (was sized
+                off its own 1.4x icon glyph, making it visibly taller
+                than the row).
+08/28/26 - v1.15 Removed the separator line above the filter box --
+                the filter box is now the window's first row.
+08/28/26 - v1.14 Fixed a persistent vertical scrollbar on the window
+                introduced in v1.13: the table/child region's height
+                was still sized against the old plain-Button row height
+                (ImGui.GetFrameHeight), which is shorter than the new
+                PrimaryButton row, leaving the window a scrollbar's
+                worth too short at every size. Now sized against
+                theme.PrimaryButtonHeight (new in theme v1.23).
+08/28/26 - v1.13 Moved the Settings button down into the bottom action
+                row (was floating above the table) to save vertical
+                space, and switched the five bottom action buttons from
+                plain ImGui.Button to theme.PrimaryButton with icons,
+                matching the shared theme's "main action" style used
+                elsewhere (e.g. Renamer's Rename/Export buttons).
+08/23/26 - v1.12 Settings button is now a proper icon button
+                (theme.IconButton, gear icon) instead of a SmallButton
+                showing a raw unicode gear character. Removed the
+                redundant "SUBPROJECT ITEMS" label above the table.
+05/28/26 - v1.11 Fixing column width display
+05/26/26 - v1.10 - Making overlapping subproject items (loops), only show up once in table entry
+05/08/26 - v1.9 Bug fixes and code cleanup (version regex fix, helper extraction, constant hoisting)
+05/06/26 - v1.8 adding color support
+05/06/26 - v1.7 adding more columns and allowing for toggling of column visibility
+05/06/26 - v1.6 Fixing Export Script Setting Persistence Bug
+05/06/26 - v1.5 Adding shortcuts (play and select all)
+05/06/26 - v1.4 Fixing Shift + Click selection bug
+05/06/26 - v1.3 Fixing Open Subproject Logic
+05/06/26 - v1.2 Sortable column headers
+05/06/26 - v1.1 Settings popup with export script; Export button
+05/06/26 - v1.0 Start column using project ruler format
+05/06/26 - v0.9 Lasso drag selection in subproject list
+05/06/26 - v0.8 Search bar filters list by take name
+05/06/26 - v0.7 Single-click seeks to item; double-click opens inline take rename
+05/02/26 - v0.6 Added Explode Subprojects button
+05/01/26 - v0.5 Image-based play button (cross-platform)
+05/01/26 - v0.4 Removed create subproject (moved to Subproject Hub)
+04/29/26 - v0.3 Feature additions
+04/28/26 - v0.2 Adding color picker, bug fixes
+04/27/26 - v0.1 Initial alpha release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2da9c5362757b944c2fad2598af2ebe1a0188fa8/Subprojects/Subproject%20Manager.lua</source>
       </version>
     </reapack>
   </category>
