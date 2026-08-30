@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.16
+-- @version 1.19
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,21 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   08/30/26 v1.19 - Add Text Overlay From Items' overlap stacking only
+--                    ever moved overlapping lanes upward (clamped at the
+--                    top edge), so captions anchored near ypos=0 all
+--                    stacked on top of each other with nowhere to go. It
+--                    now grows downward instead when the base position is
+--                    in the top half of the frame.
+--   08/30/26 v1.18 - Info popup now centers over the main window (was
+--                    anchored at the icon, could run off-screen), is
+--                    wider (520px), and its last paragraph now actually
+--                    wraps -- it was plain TextDisabled, not TextWrapped,
+--                    so it ran past the popup's edge uncontained. Height
+--                    is capped at 480 with a scrollbar past that.
+--   08/30/26 v1.17 - Added an info icon next to the style tab bar with a
+--                    popup explaining Add Text Overlay vs. Add Text
+--                    Overlay From Items and how time selection is used.
 --   08/29/26 v1.16 - Style tab bar now uses the shared theme.TabBar
 --                    (ReaImGuiTheme.lua v1.29) instead of its own
 --                    duplicated implementation.
@@ -699,9 +714,11 @@ end
 -- Items Using Regions script: items whose [pos, endpos) ranges overlap are
 -- assigned increasing "lanes" via the same greedy interval-coloring
 -- algorithm as that script's BuildRegionEntries, and each lane beyond the
--- first nudges ypos upward (clamped at 0) by that lane's own background-bar
--- height (plus a small fixed gap) so overlapping labels' bars stack
--- cleanly instead of overlapping/touching each other.
+-- first nudges ypos by that lane's own background-bar height (plus a small
+-- fixed gap) so overlapping labels' bars stack cleanly instead of
+-- overlapping/touching each other -- toward the bottom if the base
+-- position starts in the top half of the frame, toward the top otherwise,
+-- so a caption anchored near either edge still has somewhere to stack.
 -- ============================================================
 
 -- Extra breathing room (as a fraction of frame height) stacked on top of
@@ -778,11 +795,24 @@ local function CreateOverlayItemsFromSelectedItems(style, close_fx_window)
 
   local lane_step = overlay_bar_height_fraction(style) + OVERLAP_GAP_FRACTION
 
+  -- Stack lanes toward whichever edge has more room, not always upward:
+  -- ypos 0 is the top of the frame, 1 is the bottom (see the JSFX's own
+  -- `yt = (project_h - txth - b*2) * ypos` math), so a caption already
+  -- anchored near the top has nowhere to go if lanes only ever subtract --
+  -- they'd all clamp to 0 and overlap completely, which is exactly what
+  -- was happening. Picking the direction with more available space (and
+  -- clamping against the *other* edge) keeps lanes visually separated
+  -- regardless of where the base position starts.
+  local grow_down = style.ypos < 0.5
+
   local created = {}
   for _, e in ipairs(entries) do
     local item_style = deep_copy(style)
     item_style.text = e.text or ""
-    item_style.ypos = math.max(0, style.ypos - lane_step * e.lane)
+    local offset = lane_step * e.lane
+    item_style.ypos = grow_down
+      and math.min(1, style.ypos + offset)
+      or  math.max(0, style.ypos - offset)
 
     local item = CreateOverlayItemAtRange(track, e.pos, e.endpos, item_style, close_fx_window)
     if item then created[#created + 1] = item end
@@ -1124,7 +1154,66 @@ local function loop()
   if visible then
 
     -- ── Style tab bar ───────────────────────────────────────
+    -- Info (i) icon is overlaid on the tab row's top-right corner: capture
+    -- this row's position before theme.TabBar draws the tabs (which only
+    -- occupy the row's left side), then jump the cursor back to it
+    -- afterward -- same technique The Last Renamer uses for its
+    -- settings/info icons next to its own tab bar.
+    local top_row_x, top_row_y = ImGui.GetCursorPosX(ctx), ImGui.GetCursorPosY(ctx)
+    local top_row_avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+    local win_x, win_y = ImGui.GetWindowPos(ctx)
+    local win_w, win_h = ImGui.GetWindowSize(ctx)
+
     active_idx = theme.TabBar(ctx, "##styles", styles, active_idx, TAB_BAR_OPTS)
+
+    do
+      local icon_size = ImGui.GetFontSize(ctx)
+      local info_w = theme.IconButtonSize(ctx, icon_size)
+      ImGui.SetCursorPos(ctx, top_row_x + top_row_avail_w - info_w, top_row_y)
+      if theme.IconButton(ctx, theme.Icons.INFO .. "##info_icon", nil, nil, icon_size) then
+        ImGui.OpenPopup(ctx, "##info_popup")
+      end
+      if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "How this works") end
+    end
+
+    -- Centered over the main window (pivot 0.5,0.5) rather than anchored
+    -- at the icon's position, which could run off the right edge of the
+    -- screen. Width fixed at 520, height capped at 480 with ImGui's usual
+    -- automatic scrollbar past that (a BeginPopup is a normal window
+    -- underneath, so it scrolls like one once content exceeds the max
+    -- constraint).
+    ImGui.SetNextWindowPos(ctx, win_x + win_w * 0.5, win_y + win_h * 0.5, ImGui.Cond_Always, 0.5, 0.5)
+    ImGui.SetNextWindowSizeConstraints(ctx, 520, 0, 520, 480)
+    if ImGui.BeginPopup(ctx, "##info_popup") then
+      theme.PushBoldFont(ctx)
+      ImGui.Text(ctx, "Add Text Overlay")
+      theme.PopBoldFont(ctx)
+      ImGui.TextWrapped(ctx,
+        "Creates one new overlay item on the \"Text Overlay\" track, using " ..
+        "the text currently typed above. If you have a time selection, the " ..
+        "overlay exactly spans it. Otherwise it's created at the edit " ..
+        "cursor, using the \"New Item Duration\" setting below.")
+
+      ImGui.Spacing(ctx)
+      theme.PushBoldFont(ctx)
+      ImGui.Text(ctx, "Add Text Overlay From Items")
+      theme.PopBoldFont(ctx)
+      ImGui.TextWrapped(ctx,
+        "Creates one overlay per currently selected media item instead -- " ..
+        "ignoring the time selection and the typed text. Each new overlay " ..
+        "is named after that item's own take name, and positioned/sized to " ..
+        "match it exactly. Items whose time ranges overlap are stacked " ..
+        "into separate vertical lanes so their overlay bars don't collide.")
+
+      ImGui.Spacing(ctx)
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, ImGui.GetStyleColor(ctx, ImGui.Col_TextDisabled))
+      ImGui.TextWrapped(ctx,
+        "Either way, the overlay's look (color, size, position, shadow, " ..
+        "etc.) comes from whichever style tab is currently selected above.")
+      ImGui.PopStyleColor(ctx)
+
+      ImGui.EndPopup(ctx)
+    end
 
     ImGui.Spacing(ctx)
 
