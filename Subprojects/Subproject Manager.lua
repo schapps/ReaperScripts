@@ -1,12 +1,24 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.26
+-- @version 1.29
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/30/26 - v1.29 Shift+Click on the take-version </> buttons now also
+--                   triggers the whole-RPP-group move, same as Ctrl+Click.
+--   08/30/26 - v1.28 Ctrl+Click on a row's take-version </> buttons now
+--                   moves every item sourced from the same RPP file
+--                   together (each clamped to its own take count), for
+--                   keeping duplicated items in sync. Plain click is
+--                   unchanged (single item only). Wrapped in one undo
+--                   block either way.
+--   08/30/26 - v1.27 Color swatch and play button now also center
+--                   horizontally within their columns (center_row_item_xy),
+--                   not just vertically -- both are narrower than their
+--                   18px/24px columns.
 --   08/30/26 - v1.26 Removed the v1.24 debug readout now that v1.25's row
 --                   centering is confirmed correct.
 --   08/30/26 - v1.25 Found the real bug via the v1.24 debug readout: row_h
@@ -645,6 +657,32 @@ local function commitRename(r)
   renaming_idx = nil
 end
 
+-- Moves row r's active take by delta (+-1). If whole_group is true, applies
+-- the same delta to every OTHER row sourced from the same RPP file too
+-- (each clamped to its own take count independently, so items with fewer
+-- takes just stop early rather than blocking the rest of the group) --
+-- for keeping duplicated items in sync across a subproject, since that's
+-- the common case when items share an RPP.
+local function shiftTakeVersion(rows, r, delta, whole_group)
+  local function apply(row)
+    local new_idx = row.take_idx + delta
+    if new_idx >= 0 and new_idx < row.takes then
+      reaper.SetMediaItemInfo_Value(row.item, "I_CURTAKE", new_idx)
+    end
+  end
+  reaper.Undo_BeginBlock()
+  apply(r)
+  if whole_group then
+    for _, other in ipairs(rows) do
+      if other ~= r and other.file == r.file then
+        apply(other)
+      end
+    end
+  end
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock(whole_group and "Move take version (RPP group)" or "Move take version", -1)
+end
+
 -- ============================================================
 -- Render loop
 -- ============================================================
@@ -750,6 +788,7 @@ local function loop()
       -- CellPadding) below the row top, with play's own bottom edge
       -- landing exactly 2px above the next row's top.
       local text_line_h = select(2, ImGui.CalcTextSize(ctx, "Ag"))
+      local play_icon_w = select(1, ImGui.CalcTextSize(ctx, "▶"))  -- SmallButton fallback width (no padding)
       local _, cell_pad_y = ImGui.GetStyleVar(ctx, ImGui.StyleVar_CellPadding)
       local row_content_h = math.max(14, text_line_h, play_img and 18 or text_line_h)
       local row_h = row_content_h + cell_pad_y * 2
@@ -873,6 +912,17 @@ local function loop()
             ImGui.SetCursorScreenPos(ctx, x, content_top + (row_content_h - item_h) * 0.5)
           end
 
+          -- Same, but also centers horizontally within the column's width
+          -- -- used for the swatch/play columns, which are wider than
+          -- their fixed-size content. Text columns stay left-aligned
+          -- (center_row_item above), which is what you want in a data
+          -- table.
+          local function center_row_item_xy(item_w, item_h)
+            local x = select(1, ImGui.GetCursorScreenPos(ctx))
+            local avail_w = select(1, ImGui.GetContentRegionAvail(ctx))
+            ImGui.SetCursorScreenPos(ctx, x + (avail_w - item_w) * 0.5, content_top + (row_content_h - item_h) * 0.5)
+          end
+
           ImGui.TableSetColumnIndex(ctx, 2)
           if renaming_idx == i then
             if rename_needs_focus then
@@ -931,10 +981,16 @@ local function loop()
             ImGui.TableSetColumnIndex(ctx, 3)
             center_row_item(text_line_h)
             local ci, tot = r.take_idx, r.takes
+            local group_mod_held = (KEY_LCTRL  and ImGui.IsKeyDown(ctx, KEY_LCTRL))
+                                 or (KEY_RCTRL  and ImGui.IsKeyDown(ctx, KEY_RCTRL))
+                                 or (KEY_LSHIFT and ImGui.IsKeyDown(ctx, KEY_LSHIFT))
+                                 or (KEY_RSHIFT and ImGui.IsKeyDown(ctx, KEY_RSHIFT))
             if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
             if ImGui.SmallButton(ctx, "<##p"..i) then
-              reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci - 1)
-              reaper.UpdateArrange()
+              shiftTakeVersion(rows, r, -1, group_mod_held)
+            end
+            if ImGui.IsItemHovered(ctx) then
+              ImGui.SetTooltip(ctx, "Ctrl+Click or Shift+Click to move every item on this RPP together")
             end
             if ci <= 0 then ImGui.EndDisabled(ctx) end
             ImGui.SameLine(ctx)
@@ -942,8 +998,10 @@ local function loop()
             ImGui.SameLine(ctx)
             if ci >= tot - 1 then ImGui.BeginDisabled(ctx, true) end
             if ImGui.SmallButton(ctx, ">##n"..i) then
-              reaper.SetMediaItemInfo_Value(r.item, "I_CURTAKE", ci + 1)
-              reaper.UpdateArrange()
+              shiftTakeVersion(rows, r, 1, group_mod_held)
+            end
+            if ImGui.IsItemHovered(ctx) then
+              ImGui.SetTooltip(ctx, "Ctrl+Click or Shift+Click to move every item on this RPP together")
             end
             if ci >= tot - 1 then ImGui.EndDisabled(ctx) end
           end
@@ -976,12 +1034,12 @@ local function loop()
           ImGui.TableSetColumnIndex(ctx, 1)
           local play_clicked
           if play_img then
-            center_row_item(18)
+            center_row_item_xy(18, 18)
             ImGui.PushStyleVar(ctx, ImGui.StyleVar_FramePadding, 2, 2)
             play_clicked = ImGui.ImageButton(ctx, "##play"..i, play_img, 14, 14)
             ImGui.PopStyleVar(ctx)
           else
-            center_row_item(text_line_h)
+            center_row_item_xy(play_icon_w, text_line_h)
             play_clicked = ImGui.SmallButton(ctx, "▶##play"..i)
           end
           if play_clicked then
@@ -998,7 +1056,7 @@ local function loop()
           if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Preview track") end
           -- Color swatch (col 0) — click to open color picker for this item (or all selected)
           ImGui.TableSetColumnIndex(ctx, 0)
-          center_row_item(14)
+          center_row_item_xy(14, 14)
           do
             local raw     = r.color
             local has_col = (raw & 0x1000000) ~= 0
