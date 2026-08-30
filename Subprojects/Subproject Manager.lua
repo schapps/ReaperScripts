@@ -1,12 +1,60 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.18
+-- @version 1.26
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   08/30/26 - v1.26 Removed the v1.24 debug readout now that v1.25's row
+--                   centering is confirmed correct.
+--   08/30/26 - v1.25 Found the real bug via the v1.24 debug readout: row_h
+--                   was computed from GetFrameHeight() (~28px, a
+--                   FramePadding-based number meant for buttons), but a
+--                   table row's real height comes from CellPadding
+--                   (~2px) plus its tallest cell's own content (measured
+--                   22px total here, the play button's ImageButton at
+--                   18px) -- a completely different, smaller number. That
+--                   6px error is what v1.22/v1.23's centering math
+--                   overshot by. Recomputed row_h from CellPadding +
+--                   content height and reapplied the SetCursorScreenPos
+--                   centering (which was fine all along) with the
+--                   corrected number. Debug readout left in for this
+--                   round to confirm before removing it.
+--   08/30/26 - v1.24 Reverted v1.22/v1.23's row-centering attempts (both
+--                   overshot to the bottom for reasons that didn't hold up
+--                   under two different techniques -- SetCursorPosY and
+--                   SetCursorScreenPos both landed content flush against
+--                   the row's bottom edge). Back to plain, unpositioned
+--                   rows (text top-aligned, matching pre-v1.22 behavior)
+--                   plus a TEMPORARY debug readout above the table showing
+--                   the actual measured row height and each element's
+--                   real rendered Y range, to find the real fix from
+--                   measured numbers instead of more guesses.
+--   08/30/26 - v1.23 Row content (text, buttons, swatch, play) wasn't
+--                   vertically centered -- v1.22's SetCursorPosY-based
+--                   nudge overshot to roughly double the intended offset
+--                   (text ended up bottom-flush) for reasons that didn't
+--                   trace back to anything explicable in this file, which
+--                   pointed at SetCursorPosY's relative-delta semantics
+--                   themselves rather than the math. Replaced with
+--                   SetCursorScreenPos to an absolute, directly-computed
+--                   screen Y (row top + (row height - item height) / 2),
+--                   applied to every row element, not just text.
+--   08/30/26 - v1.22 Row text (Take Name, Start, End, Length, Track, RPP
+--   08/29/26 - v1.21 Rows now alternate shading per-row (TableFlags_RowBg
+--                   + the shared theme's row stripe color, ReaImGuiTheme.lua
+--                   v1.32) instead of per RPP-file group, matching
+--                   Renamer's Quick Naming preview table.
+--   08/29/26 - v1.20 Table no longer draws its vertical column-border
+--                   lines all the way down the panel past the last row.
+--                   TableFlags_ScrollX auto-extends the table's height
+--                   with no flag to stop it, so BordersInnerV is dropped
+--                   and those dividers are now drawn manually, clipped to
+--                   the actual header+row height.
+--   08/29/26 - v1.19 Table header row is now bold (theme.PushBoldFont,
+--                   ReaImGuiTheme.lua v1.31).
 --   08/29/26 - v1.18 The bottom-row settings (gear) button was getting
 --                   visibly cut off on the right edge of the window. It
 --                   was relying on 5 SameLine()'d PrimaryButtons above it
@@ -691,7 +739,20 @@ local function loop()
       ImGui.PopStyleColor(ctx)
     else
       local row_rects = {}
-      local row_h     = ImGui.GetFrameHeight(ctx)
+      -- GetFrameHeight() (FramePadding-based, ~28px measured) was the wrong
+      -- number to build any of this around -- a table row's real height
+      -- (measured: 22px) comes from CellPadding, not FramePadding, plus
+      -- whichever cell's content is naturally tallest. That's the play
+      -- button (ImageButton branch: 14px icon + the 2,2 FramePadding
+      -- pushed just for it, so 18px) here, wider than the 14px swatch or
+      -- a plain text line -- confirmed by a debug readout that measured
+      -- swatch/play/text all starting at the exact same Y, 2px (one
+      -- CellPadding) below the row top, with play's own bottom edge
+      -- landing exactly 2px above the next row's top.
+      local text_line_h = select(2, ImGui.CalcTextSize(ctx, "Ag"))
+      local _, cell_pad_y = ImGui.GetStyleVar(ctx, ImGui.StyleVar_CellPadding)
+      local row_content_h = math.max(14, text_line_h, play_img and 18 or text_line_h)
+      local row_h = row_content_h + cell_pad_y * 2
       local take_name_col_w, track_col_w, rpp_col_w
       do
         local tn_max = select(1, ImGui.CalcTextSize(ctx, "Take Name"))
@@ -713,9 +774,20 @@ local function loop()
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
+      -- outer_size_h hint for TableFlags_ScrollX (it requires one) -- but
+      -- this alone does NOT stop the table auto-extending vertically past
+      -- it: TableFlags_NoHostExtendY, the flag that would, is explicitly
+      -- unavailable whenever ScrollX/ScrollY are set (needed here for
+      -- horizontal scrolling on wide rows). So BordersInnerV is dropped
+      -- below and its vertical column dividers are drawn manually after
+      -- EndTable instead, clipped to the real header+row height rather
+      -- than however tall the table auto-extended.
+      local table_h = row_h * (#display_rows + 1)
+      local col_left_x, header_top_y = {}
       if ImGui.BeginTable(ctx, "##ptable", 9,
-          ImGui.TableFlags_BordersInner | (rawget(ImGui, "TableFlags_Hideable") or 0)
-          | (rawget(ImGui, "TableFlags_ScrollX") or 0)) then
+          ImGui.TableFlags_BordersInnerH | ImGui.TableFlags_RowBg
+          | (rawget(ImGui, "TableFlags_Hideable") or 0)
+          | (rawget(ImGui, "TableFlags_ScrollX") or 0), 0, table_h) then
         ImGui.TableSetupColumn(ctx, "##colswatch", ImGui.TableColumnFlags_WidthFixed, 18)
         ImGui.TableSetupColumn(ctx, "##playcol",   ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthFixed, take_name_col_w)
@@ -736,8 +808,11 @@ local function loop()
 
         -- Manual header row: click to sort asc, again for desc, third click clears sort
         ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
+        header_top_y = select(2, ImGui.GetCursorScreenPos(ctx))
+        theme.PushBoldFont(ctx)
         for col = 0, 8 do
           ImGui.TableSetColumnIndex(ctx, col)
+          col_left_x[col] = select(1, ImGui.GetCursorScreenPos(ctx))
           local name = HDR_NAMES[col + 1]
           if name then
             local arrow = sort_col == col and (sort_asc and " ▲" or " ▼") or ""
@@ -760,6 +835,7 @@ local function loop()
             ImGui.TableHeader(ctx, "##h"..col)
           end
         end
+        theme.PopBoldFont(ctx)
 
         if ImGui.BeginPopup(ctx, "##col_ctx_menu") then
           ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0xA0A0A0FF)
@@ -778,20 +854,25 @@ local function loop()
           ImGui.EndPopup(ctx)
         end
 
-        local last_rpp_file = nil
-        local rpp_alt       = false
-        local row_bg0       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBg)
-        local row_bg1       = ImGui.GetStyleColor(ctx, ImGui.Col_TableRowBgAlt)
-        local tgt_row_bg    = rawget(ImGui, "TableBgTarget_RowBg0") or 1
+        -- Row striping is automatic now (TableFlags_RowBg above, using the
+        -- shared theme's Col_TableRowBg/TableRowBgAlt) instead of manually
+        -- toggled per RPP-file group.
         for i, r in ipairs(display_rows) do
-          ImGui.TableNextRow(ctx)
+          ImGui.TableNextRow(ctx, 0, row_h)
           local _, row_screen_y = ImGui.GetCursorScreenPos(ctx)
           row_rects[i] = row_screen_y
-          if r.file ~= last_rpp_file then
-            rpp_alt = not rpp_alt
-            last_rpp_file = r.file
+
+          -- Centers an item of height item_h within the row's real content
+          -- band (row top + one CellPadding, row_content_h tall) using an
+          -- absolute screen position -- content_top/row_content_h are the
+          -- measured-correct numbers now, so this is the same technique
+          -- v1.23 used, just no longer built on a wrong row_h.
+          local content_top = row_screen_y + cell_pad_y
+          local function center_row_item(item_h)
+            local x = select(1, ImGui.GetCursorScreenPos(ctx))
+            ImGui.SetCursorScreenPos(ctx, x, content_top + (row_content_h - item_h) * 0.5)
           end
-          ImGui.TableSetBgColor(ctx, tgt_row_bg, rpp_alt and row_bg1 or row_bg0)
+
           ImGui.TableSetColumnIndex(ctx, 2)
           if renaming_idx == i then
             if rename_needs_focus then
@@ -843,10 +924,12 @@ local function loop()
               rename_needs_focus = true
             end
             ImGui.SameLine(ctx)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, r.take)
           end
           if col_visible[3] then
             ImGui.TableSetColumnIndex(ctx, 3)
+            center_row_item(text_line_h)
             local ci, tot = r.take_idx, r.takes
             if ci <= 0 then ImGui.BeginDisabled(ctx, true) end
             if ImGui.SmallButton(ctx, "<##p"..i) then
@@ -866,32 +949,39 @@ local function loop()
           end
           if col_visible[4] then
             ImGui.TableSetColumnIndex(ctx, 4)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, reaper.format_timestr_pos(r.start, "", -1))
           end
           if col_visible[5] then
             ImGui.TableSetColumnIndex(ctx, 5)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, reaper.format_timestr_pos(r.start + r.len, "", -1))
           end
           if col_visible[6] then
             ImGui.TableSetColumnIndex(ctx, 6)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, reaper.format_timestr_len(r.len, r.start, 64, -1))
           end
           if col_visible[7] then
             ImGui.TableSetColumnIndex(ctx, 7)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, r.track)
           end
           if col_visible[8] then
             ImGui.TableSetColumnIndex(ctx, 8)
+            center_row_item(text_line_h)
             ImGui.Text(ctx, r.file)
           end
           -- Play button and color swatch drawn last, on top of the SpanAllColumns selectable
           ImGui.TableSetColumnIndex(ctx, 1)
           local play_clicked
           if play_img then
+            center_row_item(18)
             ImGui.PushStyleVar(ctx, ImGui.StyleVar_FramePadding, 2, 2)
             play_clicked = ImGui.ImageButton(ctx, "##play"..i, play_img, 14, 14)
             ImGui.PopStyleVar(ctx)
           else
+            center_row_item(text_line_h)
             play_clicked = ImGui.SmallButton(ctx, "▶##play"..i)
           end
           if play_clicked then
@@ -908,6 +998,7 @@ local function loop()
           if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Preview track") end
           -- Color swatch (col 0) — click to open color picker for this item (or all selected)
           ImGui.TableSetColumnIndex(ctx, 0)
+          center_row_item(14)
           do
             local raw     = r.color
             local has_col = (raw & 0x1000000) ~= 0
@@ -928,6 +1019,24 @@ local function loop()
           end
         end
         ImGui.EndTable(ctx)
+
+        -- Manual inner-V column dividers, clipped to the real header+row
+        -- height (see the BeginTable comment above for why these aren't
+        -- just TableFlags_BordersInnerV). Skips a boundary where the
+        -- captured x didn't move -- a column hidden via TableSetColumnEnabled
+        -- collapses to zero width, so its left edge coincides with its
+        -- visible neighbor's.
+        local content_bottom_y = row_rects[#display_rows] + row_h
+        local border_color = ImGui.GetStyleColor(ctx, ImGui.Col_TableBorderLight)
+        local cell_pad_x = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_CellPadding))
+        local draw_list = ImGui.GetWindowDrawList(ctx)
+        for col = 1, 8 do
+          local x, prev_x = col_left_x[col], col_left_x[col - 1]
+          if x and prev_x and x > prev_x + 2 then
+            local line_x = x - cell_pad_x
+            ImGui.DrawList_AddLine(draw_list, line_x, header_top_y, line_x, content_bottom_y, border_color, 1)
+          end
+        end
       end
       ImGui.PopStyleColor(ctx, 2)
 

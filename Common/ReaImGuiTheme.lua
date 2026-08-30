@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.30
+-- @version 1.32
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -9,6 +9,13 @@
 --   Fonts/fa-solid-900.ttf > Fonts/fa-solid-900.ttf
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
 -- @changelog
+--   08/29/26 - v1.32 theme.Push now pushes Col_TableRowBg/TableRowBgAlt,
+--                   standardizing the striped-table look already used in
+--                   Renamer's Quick Naming preview -- any TableFlags_RowBg
+--                   table gets it automatically. Added
+--                   theme.Get/Set/ResetTableRowAltColor.
+--   08/29/26 - v1.31 Added theme.PushBoldFont/PopBoldFont, exposing the
+--                   bold font PrimaryButton already used internally.
 --   08/29/26 - v1.30 Secondary accent's purpose changed from "active tab"
 --                   to "secondary action buttons" -- added
 --                   theme.SecondaryButton (same shape as PrimaryButton,
@@ -201,6 +208,16 @@ theme.DefaultSecondaryAccentColor = 0x94BAE3FF
 theme.GetSecondaryAccentColor, theme.SetSecondaryAccentColor, theme.ResetSecondaryAccentColor =
   make_color_setting("SecondaryAccentColor", theme.DefaultSecondaryAccentColor)
 
+-- Table row stripe: the overlay tint theme.Push applies to every other
+-- table row (Col_TableRowBgAlt) when a table uses TableFlags_RowBg --
+-- e.g. Subproject Manager's item list, Renamer's Quick Naming preview.
+-- Default matches Renamer's existing subtle white-at-low-alpha look
+-- (0xFFFFFF04); Col_TableRowBg (the un-tinted row) stays fully
+-- transparent and isn't separately customizable.
+theme.DefaultTableRowAltColor = 0xFFFFFF04
+theme.GetTableRowAltColor, theme.SetTableRowAltColor, theme.ResetTableRowAltColor =
+  make_color_setting("TableRowAltColor", theme.DefaultTableRowAltColor)
+
 -- Body font: family name (passed straight to ImGui.CreateFont, so a
 -- generic alias like "sans-serif" or an installed font name both work)
 -- and the size theme.PushBodyFont falls back to when not given one.
@@ -248,6 +265,8 @@ function theme.Push(ctx)
     {ImGui.Col_Header, 0x60606066},
     {ImGui.Col_HeaderHovered, 0x606060FF},
     {ImGui.Col_HeaderActive, 0x808080FF},
+    {ImGui.Col_TableRowBg, 0xFFFFFF00},
+    {ImGui.Col_TableRowBgAlt, theme.GetTableRowAltColor()},
     {ImGui.Col_Separator, 0x80808080},
     {ImGui.Col_SeparatorHovered, 0x808080C7},
     {ImGui.Col_SeparatorActive, 0x808080FF},
@@ -395,6 +414,19 @@ function theme.PushMonoFont(ctx, size)
 end
 
 function theme.PopMonoFont(ctx)
+  ImGui.PopFont(ctx)
+end
+
+-- Push the bold variant of the configured body font -- the same font
+-- object theme.PrimaryButton's label uses, exposed for anything else
+-- that wants bold text (e.g. table column headers) without duplicating
+-- the lazy-create-per-ctx caching. size defaults to the current font
+-- size, matching theme.PushIconFont's convention.
+function theme.PushBoldFont(ctx, size)
+  ImGui.PushFont(ctx, get_bold_font(ctx), size or ImGui.GetFontSize(ctx))
+end
+
+function theme.PopBoldFont(ctx)
   ImGui.PopFont(ctx)
 end
 
@@ -962,6 +994,7 @@ end
 local EXPORTABLE_SETTINGS = {
   {key = "AccentColor",          get = function() return theme.GetAccentColor() end,          set = theme.SetAccentColor,          kind = "color"},
   {key = "SecondaryAccentColor", get = function() return theme.GetSecondaryAccentColor() end,  set = theme.SetSecondaryAccentColor, kind = "color"},
+  {key = "TableRowAltColor",     get = function() return theme.GetTableRowAltColor() end,      set = theme.SetTableRowAltColor,     kind = "color"},
   {key = "BodyFontName",         get = function() return theme.GetBodyFontName() end,          set = theme.SetBodyFontName,         kind = "string"},
   {key = "BodyFontSize",         get = function() return theme.GetBodyFontSize() end,          set = theme.SetBodyFontSize,         kind = "number"},
   {key = "MonoFontName",         get = function() return theme.GetMonoFontName() end,          set = theme.SetMonoFontName,         kind = "string"},

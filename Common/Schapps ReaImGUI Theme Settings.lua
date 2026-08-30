@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme Settings
 -- @author Stephen Schappler
--- @version 1.6
+-- @version 1.7
 -- @about
 --   Settings window for Schapps ReaImGUI Theme (ReaImGuiTheme.lua) -- lets
 --   you customize the theme's primary/secondary accent colors and body/
@@ -9,6 +9,8 @@
 --   to REAPER's ExtState, so it persists across sessions and takes effect
 --   immediately in any other theme-using script window already open.
 -- @changelog
+--   08/29/26 v1.7 - Added Table Row Stripe color (ReaImGuiTheme.lua
+--                  v1.32) with a small striped-table preview.
 --   08/29/26 v1.6 - Secondary now means secondary action buttons, not
 --                  tabs (ReaImGuiTheme.lua v1.30) -- relabeled, and the
 --                  preview shows a Secondary Button next to Primary.
@@ -185,6 +187,13 @@ local function Loop()
     ImGui.SameLine(ctx)
     if ImGui.Button(ctx, "Reset##secondary") then theme.ResetSecondaryAccentColor() end
 
+    ImGui.TextDisabled(ctx, "Table Row Stripe -- every other row in a TableFlags_RowBg table")
+    local row_alt = theme.GetTableRowAltColor()
+    local row_alt_changed, new_row_alt = ImGui.ColorEdit4(ctx, "##table_row_alt_color", row_alt, ImGui.ColorEditFlags_AlphaBar)
+    if row_alt_changed then theme.SetTableRowAltColor(new_row_alt) end
+    ImGui.SameLine(ctx)
+    if ImGui.Button(ctx, "Reset##table_row_alt") then theme.ResetTableRowAltColor() end
+
     ImGui.Spacing(ctx)
     ImGui.Separator(ctx)
     ImGui.Spacing(ctx)
@@ -236,6 +245,17 @@ local function Loop()
 
     preview_active_idx = theme.TabBar(ctx, "##preview_tabs", preview_tabs, preview_active_idx, PREVIEW_TAB_BAR_OPTS)
     ImGui.TextDisabled(ctx, "Right-click a tab for color/rename/delete, or + to add one")
+
+    if ImGui.BeginTable(ctx, "##preview_table", 2, ImGui.TableFlags_RowBg) then
+      for i = 1, 4 do
+        ImGui.TableNextRow(ctx)
+        ImGui.TableSetColumnIndex(ctx, 0)
+        ImGui.Text(ctx, "Row " .. i)
+        ImGui.TableSetColumnIndex(ctx, 1)
+        ImGui.Text(ctx, "Value " .. i)
+      end
+      ImGui.EndTable(ctx)
+    end
 
     theme.PushMonoFont(ctx)
     ImGui.Text(ctx, "Monospace 0123456789")
