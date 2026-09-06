@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.19
+-- @version 1.21
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,20 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   08/30/26 v1.21 - Reordering a track above an already-pinned video
+--                    track leaves that track's items visually invisible
+--                    (still playing, just not drawn). Redraw hints
+--                    (B_TCPPIN toggling, TrackList_AdjustWindows/
+--                    UpdateArrange, MarkTrackItemsDirty, an arrange-view
+--                    nudge) and an Undo/Redo pair all failed -- trying a
+--                    real track-list change next (insert a throwaway
+--                    track, then delete it), since that's confirmed to
+--                    force the redraw when done manually.
+--   08/30/26 v1.20 - Added "Always keep Text Overlay track first" checkbox
+--                    -- when on, the track is reordered to index 0 before
+--                    each new overlay is created, and pinned to the TCP
+--                    (B_TCPPIN, undocumented but confirmed working) if the
+--                    video track below it is pinned too.
 --   08/30/26 v1.19 - Add Text Overlay From Items' overlap stacking only
 --                    ever moved overlapping lanes upward (clamped at the
 --                    top edge), so captions anchored near ypos=0 all
@@ -610,17 +624,70 @@ local function FindTrackByGUID(guid)
   return nil
 end
 
-local function FindOrCreateOverlayTrack()
+-- If keep_first is true, moves the track to index 0 whenever it isn't
+-- already there -- e.g. a video track added after this one, or the user
+-- just dragging it down -- and, if whatever track was/is right below it
+-- is pinned to the top of the TCP, pins this one too (via B_TCPPIN,
+-- undocumented in the API reference but confirmed working:
+-- https://forum.cockos.com/showthread.php?t=303402), so it stays visually
+-- above a pinned video track instead of scrolling normally beneath a pin
+-- boundary it isn't part of. Only ever sets B_TCPPIN, never clears it --
+-- if the user unpins the video track later and wants this one unpinned
+-- too, that's a manual call, not something this should silently undo.
+--
+-- Second return value, needs_redraw_fix: true when this call just
+-- reordered a track above an already-pinned one, which leaves that
+-- pinned track's items visually invisible in the arrange view (still
+-- playing, just not drawn) until something forces a real redraw.
+-- Confirmed it's a stale-redraw bug, not a real data problem: pressing
+-- Ctrl+Z right after creating an overlay makes the video track's items
+-- reappear without undoing the overlay itself. None of these "this
+-- changed, please redraw" hints fixed it, tried in this order: toggling
+-- the affected track's B_TCPPIN off/on; TrackList_AdjustWindows +
+-- UpdateArrange; MarkTrackItemsDirty; nudging and restoring the arrange
+-- view's visible time range. Caller uses this flag to do what Ctrl+Z
+-- actually did -- see the Undo/Redo pair after Undo_EndBlock in
+-- CreateOverlayItem/CreateOverlayItemsFromSelectedItems.
+local function FindOrCreateOverlayTrack(keep_first)
+  local track
   local ok, guid = reaper.GetProjExtState(0, EXT_NAMESPACE, "trk_guid")
   if ok and guid ~= "" then
-    local track = FindTrackByGUID(guid)
-    if track then return track end
+    track = FindTrackByGUID(guid)
   end
-  reaper.InsertTrackAtIndex(0, false)
-  local track = reaper.GetTrack(0, 0)
-  reaper.GetSetMediaTrackInfo_String(track, "P_NAME", TRACK_NAME, true)
-  reaper.SetProjExtState(0, EXT_NAMESPACE, "trk_guid", reaper.GetTrackGUID(track))
-  return track
+  if not track then
+    reaper.InsertTrackAtIndex(0, false)
+    track = reaper.GetTrack(0, 0)
+    reaper.GetSetMediaTrackInfo_String(track, "P_NAME", TRACK_NAME, true)
+    reaper.SetProjExtState(0, EXT_NAMESPACE, "trk_guid", reaper.GetTrackGUID(track))
+  end
+
+  local needs_redraw_fix = false
+
+  if keep_first then
+    -- Whatever's currently right below where this track belongs -- read
+    -- before reordering, since after moving track to index 0 that same
+    -- neighbor would otherwise be pushed to index 1 and still findable,
+    -- but reading it first keeps the "below" relationship unambiguous
+    -- whether or not a move actually happens this call.
+    local below = reaper.GetTrack(0, 0)
+    if below == track then below = reaper.GetTrack(0, 1) end
+    local below_is_pinned = below and reaper.GetMediaTrackInfo_Value(below, "B_TCPPIN") == 1
+
+    local moved = false
+    if reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER") ~= 1 then
+      reaper.SetOnlyTrackSelected(track)
+      reaper.ReorderSelectedTracks(0, 0)
+      moved = true
+    end
+
+    if below_is_pinned and reaper.GetMediaTrackInfo_Value(track, "B_TCPPIN") ~= 1 then
+      reaper.SetMediaTrackInfo_Value(track, "B_TCPPIN", 1)
+    end
+
+    needs_redraw_fix = moved and below_is_pinned
+  end
+
+  return track, needs_redraw_fix
 end
 
 -- Inserts a video-processor item on `track` spanning [pos, pos_end), attaches
@@ -675,8 +742,26 @@ end
 -- Creates a new overlay item on the dedicated track, at the current time
 -- selection (or a default-length item at the edit cursor if there isn't
 -- one), and applies `style` to it.
-local function CreateOverlayItem(style, close_fx_window)
-  local track = FindOrCreateOverlayTrack()
+-- Fixes the stale-redraw bug documented above FindOrCreateOverlayTrack.
+-- Neither redraw *hints* (MarkTrackItemsDirty, TrackList_AdjustWindows,
+-- UpdateArrange, an arrange-view nudge/restore) nor an Undo/Redo pair
+-- actually cleared it, but the user found that inserting a track
+-- *anywhere* in the project makes the invisible items reappear -- a real
+-- track-list-structure change, not just a "this needs a repaint" flag.
+-- Insert at the very end so it can't disturb track order/selection, then
+-- delete it immediately; net project state is unchanged. Call this
+-- between PreventUIRefresh(-1) and Undo_EndBlock so it's bundled into
+-- the same single undo point as the rest of the caller's work rather
+-- than adding a separate one.
+local function ForceRedrawViaTrackInsertDelete()
+  local idx = reaper.CountTracks(0)
+  reaper.InsertTrackAtIndex(idx, false)
+  local tmp = reaper.GetTrack(0, idx)
+  if tmp then reaper.DeleteTrack(tmp) end
+end
+
+local function CreateOverlayItem(style, close_fx_window, keep_track_first)
+  local track, needs_redraw_fix = FindOrCreateOverlayTrack(keep_track_first)
 
   local orig_ts_start, orig_ts_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
   local orig_cursor = reaper.GetCursorPosition()
@@ -699,6 +784,7 @@ local function CreateOverlayItem(style, close_fx_window)
   reaper.SetEditCurPos(orig_cursor, false, false)
 
   reaper.PreventUIRefresh(-1)
+  if needs_redraw_fix then ForceRedrawViaTrackInsertDelete() end
   reaper.Undo_EndBlock("Add Text Overlay", -1)
   reaper.UpdateArrange()
 
@@ -760,7 +846,7 @@ local function assign_overlap_lanes(entries)
   end
 end
 
-local function CreateOverlayItemsFromSelectedItems(style, close_fx_window)
+local function CreateOverlayItemsFromSelectedItems(style, close_fx_window, keep_track_first)
   local n = reaper.CountSelectedMediaItems(0)
   if n == 0 then
     reaper.ShowMessageBox("No items selected.", "Add Text Overlay From Items", 0)
@@ -786,7 +872,7 @@ local function CreateOverlayItemsFromSelectedItems(style, close_fx_window)
 
   assign_overlap_lanes(entries)
 
-  local track = FindOrCreateOverlayTrack()
+  local track, needs_redraw_fix = FindOrCreateOverlayTrack(keep_track_first)
   local orig_ts_start, orig_ts_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
   local orig_cursor = reaper.GetCursorPosition()
 
@@ -827,6 +913,7 @@ local function CreateOverlayItemsFromSelectedItems(style, close_fx_window)
   reaper.SetEditCurPos(orig_cursor, false, false)
 
   reaper.PreventUIRefresh(-1)
+  if needs_redraw_fix then ForceRedrawViaTrackInsertDelete() end
   reaper.Undo_EndBlock("Add Text Overlay From Items", -1)
   reaper.UpdateArrange()
 
@@ -1037,6 +1124,7 @@ local function set_bool_ext_state(key, val)
 end
 
 local auto_close_fx_window = get_bool_ext_state("auto_close_fx_window", true)
+local keep_track_first     = get_bool_ext_state("keep_track_first", false)
 
 local available_fonts = discover_system_fonts()
 local font_filter     = ""
@@ -1575,6 +1663,19 @@ local function loop()
       set_bool_ext_state("auto_close_fx_window", auto_close_fx_window)
     end
 
+    local keep_first_changed, keep_first_val = ImGui.Checkbox(ctx, "Always keep Text Overlay track first", keep_track_first)
+    if keep_first_changed then
+      keep_track_first = keep_first_val
+      set_bool_ext_state("keep_track_first", keep_track_first)
+    end
+    if ImGui.IsItemHovered(ctx) then
+      ImGui.SetTooltip(ctx,
+        "Moves the \"Text Overlay\" track to the very top of the track " ..
+        "list whenever a new overlay is created. If your video track is " ..
+        "pinned to the top of the TCP, this one is pinned too, so it " ..
+        "stays above it.")
+    end
+
     ImGui.Spacing(ctx)
 
     local action_btn_gap = 10
@@ -1584,7 +1685,7 @@ local function loop()
       -- Keep the active style's saved values in sync with buf before
       -- creating the item -- see update_active_style's comment for why.
       update_active_style()
-      local new_item = CreateOverlayItem(buf, auto_close_fx_window)
+      local new_item = CreateOverlayItem(buf, auto_close_fx_window, keep_track_first)
       if new_item then
         -- buf already holds everything just baked into new_item -- absorb
         -- the upcoming selection-change sig without re-reading it back.
@@ -1595,7 +1696,7 @@ local function loop()
     ImGui.SameLine(ctx, 0, action_btn_gap)
     if theme.PrimaryButton(ctx, "Add Text Overlay From Items", action_btn_w, 0, nil, theme.Icons.IMPORT) then
       update_active_style()
-      local new_items = CreateOverlayItemsFromSelectedItems(buf, auto_close_fx_window)
+      local new_items = CreateOverlayItemsFromSelectedItems(buf, auto_close_fx_window, keep_track_first)
       if #new_items > 0 then
         -- Each created item's text/ypos is overridden per-item -- skip the
         -- upcoming selection-change resync so it doesn't stomp buf with

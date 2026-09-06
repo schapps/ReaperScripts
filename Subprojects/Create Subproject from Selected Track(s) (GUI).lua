@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.8
+-- @version 1.9
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   09/06/26 - v1.9 Added a "Version Track" option that appends _v01 to the subproject name, so Duplicate Subproject Version can find it and continue the sequence.
 --   08/23/26 - v1.8 Create button now uses the shared theme's
 --                   PrimaryButton style, with a square-plus icon.
 --   5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
@@ -61,6 +62,7 @@ local tail_buf       = "0.000" -- seconds
 local copy_video          = reaper.GetExtState("CreateSubproject", "CopyVideoTracks") == "true"
 local close_after         = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local run_dynamic_split   = reaper.GetExtState("CreateSubproject", "RunDynamicSplit") == "true"
+local version_track       = reaper.GetExtState("CreateSubproject", "VersionTrack") == "true"
 local open           = true    -- window open/close flag
 
 -- ============================================================
@@ -149,6 +151,17 @@ local function activateProjectByName(targetName)
   end
 end
 
+-- Appends "_v01" to `base` for Version Track mode, unless it already ends
+-- in a "_vNN" suffix (so re-running this on an already-versioned name
+-- doesn't stack a second one). Duplicate Subproject Version reads this
+-- same "_vNN" pattern to know the next version to suggest.
+local function apply_version_suffix(base)
+  if base:match("_v%d%d$") then
+    return base
+  end
+  return base ~= "" and (base .. "_v01") or "v01"
+end
+
 local function isTimeSelectionPresent()
   local startTime, endTime = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
   return startTime ~= endTime
@@ -206,8 +219,18 @@ local function createSubproject()
   -- The track moves into the subproject, so the name sticks there
   -- and also appears on the parent timeline item. Do NOT touch the
   -- track handle after 41997 — it is stale.
-  if name_buf ~= "" and first_track then
-    reaper.GetSetMediaTrackInfo_String(first_track, "P_NAME", name_buf, true)
+  if first_track then
+    local final_name = name_buf
+    if final_name == "" then
+      local _, existing = reaper.GetSetMediaTrackInfo_String(first_track, "P_NAME", "", false)
+      final_name = existing or ""
+    end
+    if version_track then
+      final_name = apply_version_suffix(final_name)
+    end
+    if final_name ~= "" then
+      reaper.GetSetMediaTrackInfo_String(first_track, "P_NAME", final_name, true)
+    end
   end
 
   if isTimeSelectionPresent() or areItemsSelected() then
@@ -369,6 +392,14 @@ local function loop()
       local _, new_close_after = ImGui.Checkbox(ctx, "Close Subproject After Creation", close_after)
       close_after = new_close_after
 
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_version_track = ImGui.Checkbox(ctx, "Version Track (append _v01)", version_track)
+      version_track = new_version_track
+      if ImGui.IsItemHovered(ctx) then
+        ImGui.SetTooltip(ctx, "Marks this as version 1 so Duplicate Subproject Version can find it and continue the sequence (v02, v03, ...).")
+      end
+
       ImGui.EndTable(ctx)
     end
 
@@ -393,6 +424,7 @@ local function loop()
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "VersionTrack", version_track and "true" or "false", true)
       createSubproject()
     end
     if no_tracks then ImGui.EndDisabled(ctx) end
@@ -403,6 +435,7 @@ local function loop()
       reaper.SetExtState("CreateSubproject", "CopyVideoTracks", copy_video and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "VersionTrack", version_track and "true" or "false", true)
       createSubproject()
     end
 
