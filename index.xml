@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="211c994216fabed027d1c47d8d7ec0bfe72935b6">
+<index version="1" name="SPS Scripts" commit="927287267d6b9bdd0f2345679002194874715e60">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -9120,6 +9120,20 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/2112bcbf52a104499293be85134fc91800e0dea9/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
+      <version name="1.9" author="Stephen Schappler" time="2026-09-06T17:48:39Z">
+        <changelog><![CDATA[09/06/26 - v1.9 Added a "Version Track" option that appends _v01 to the subproject name, so Duplicate Subproject Version can find it and continue the sequence.
+08/23/26 - v1.8 Create button now uses the shared theme's
+                PrimaryButton style, with a square-plus icon.
+5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/927287267d6b9bdd0f2345679002194874715e60/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
       <metadata>
@@ -9167,6 +9181,15 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 02/12/25 - v1.1 Modifying the script so that it takes the user back to the parent project at the end.
 02/12/25 - v1.2 Adding in take markers that show the name of the rpp version for each take]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3dadc7c66523e4f06f66b309b7f355328c1ce155/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
+      </version>
+      <version name="2.2" author="Stephen Schappler" time="2026-09-06T17:48:39Z">
+        <changelog><![CDATA[09/06/26 - v2.2 Added a "Close Subproject After Duplication" option, matching Create Subproject's.
+09/06/26 - v2.1 Dialog now opens with no items selected and picks up the selection live, instead of requiring items to be selected before launch.
+09/06/26 - v2.0 Added a ReaImGui dialog to manually name the new version and see the current one; validates all target files before touching the project and fixed Undo blocks left unclosed on error.
+02/12/25 - v1.2 Adding in take markers that show the name of the rpp version for each take
+02/12/25 - v1.1 Modifying the script so that it takes the user back to the parent project at the end.
+02/11/25 - v1.0 Creating the script.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/927287267d6b9bdd0f2345679002194874715e60/Subprojects/Duplicate%20Subproject%20Items%20to%20New%20Take,%20Copying%20RPP%20to%20New%20Version.lua</source>
       </version>
     </reapack>
     <reapack name="Explode Selected Subprojects to Tracks.lua" type="script" desc="Explode Selected Subprojects to Tracks">
@@ -10303,6 +10326,49 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
                 preset and won't be recognized by this version.
 08/27/26 v0.1 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/211c994216fabed027d1c47d8d7ec0bfe72935b6/Video/Text%20Overlay%20(GUI).lua</source>
+      </version>
+      <version name="1.21" author="Stephen Schappler" time="2026-09-06T17:48:39Z">
+        <changelog><![CDATA[08/30/26 v1.21 - Reordering a track above an already-pinned video
+                 track leaves that track's items visually invisible
+                 (still playing, just not drawn). Redraw hints
+                 (B_TCPPIN toggling, TrackList_AdjustWindows/
+                 UpdateArrange, MarkTrackItemsDirty, an arrange-view
+                 nudge) and an Undo/Redo pair all failed -- trying a
+                 real track-list change next (insert a throwaway
+                 track, then delete it), since that's confirmed to
+                 force the redraw when done manually.
+08/30/26 v1.20 - Added "Always keep Text Overlay track first" checkbox
+                 -- when on, the track is reordered to index 0 before
+                 each new overlay is created, and pinned to the TCP
+                 (B_TCPPIN, undocumented but confirmed working) if the
+                 video track below it is pinned too.
+08/30/26 v1.19 - Add Text Overlay From Items' overlap stacking only
+                 ever moved overlapping lanes upward (clamped at the
+                 top edge), so captions anchored near ypos=0 all
+                 stacked on top of each other with nowhere to go. It
+                 now grows downward instead when the base position is
+                 in the top half of the frame.
+08/30/26 v1.18 - Info popup now centers over the main window (was
+                 anchored at the icon, could run off-screen), is
+                 wider (520px), and its last paragraph now actually
+                 wraps -- it was plain TextDisabled, not TextWrapped,
+                 so it ran past the popup's edge uncontained. Height
+                 is capped at 480 with a scrollbar past that.
+08/30/26 v1.17 - Added an info icon next to the style tab bar with a
+                 popup explaining Add Text Overlay vs. Add Text
+                 Overlay From Items and how time selection is used.
+08/29/26 v1.16 - Style tab bar now uses the shared theme.TabBar
+                 (ReaImGuiTheme.lua v1.29) instead of its own
+                 duplicated implementation.
+08/27/26 v1.15- adding new feature to create labels from selected items
+08/27/26 v0.3 - clean up GUI and make improvements
+08/27/26 v0.2 - Replaced REAPER's stock grayscale-only overlay preset
+                with a custom variant adding full RGB text/background
+                color and a drop shadow (enable + X/Y offset + alpha
+                scale). Existing items created with v1.0 use the old
+                preset and won't be recognized by this version.
+08/27/26 v0.1 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/927287267d6b9bdd0f2345679002194874715e60/Video/Text%20Overlay%20(GUI).lua</source>
       </version>
     </reapack>
   </category>
