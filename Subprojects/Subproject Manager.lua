@@ -1,12 +1,13 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.29
+-- @version 1.30
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   09/06/26 - v1.30 "Duplicate New Version" now hands off to the standalone Duplicate Subproject Version script (selects the valid items, then launches it) instead of running its own, since that script now does the same job with per-source version naming and validation.
 --   08/30/26 - v1.29 Shift+Click on the take-version </> buttons now also
 --                   triggers the whole-RPP-group move, same as Ctrl+Click.
 --   08/30/26 - v1.28 Ctrl+Click on a row's take-version </> buttons now
@@ -149,6 +150,11 @@ if not reaper.file_exists(theme_path) then
   theme_path = script_dir .. "../Common/ReaImGuiTheme.lua"
 end
 local theme = dofile(theme_path)
+
+-- Sibling script the "Duplicate New Version" button hands off to (see
+-- openDuplicateSubprojectScript below) instead of running its own
+-- duplicate-and-version logic.
+local duplicate_script_path = script_dir .. "Duplicate Subproject Items to New Take, Copying RPP to New Version.lua"
 
 -- ============================================================
 -- Context + state
@@ -360,131 +366,32 @@ end
 
 
 -- ============================================================
--- Feature: duplicate selected subproject items to new versioned takes
+-- Feature: hand selected subproject items off to the standalone
+-- Duplicate Subproject Version script, rather than duplicating its
+-- (now more capable -- per-source version naming, mismatch warnings,
+-- collision checks) logic here a second time. That script reads
+-- REAPER's own item selection, so this narrows the selection down to
+-- just the valid subproject items first -- the same set Subproject
+-- Manager itself would have limited the old inline version to.
 -- ============================================================
-local function duplicateToNewVersion(items)
+local function openDuplicateSubprojectScript(items)
   if not items or #items == 0 then
     reaper.ShowMessageBox("No subproject items selected.", "Error", 0)
     return
   end
-
-  reaper.Undo_BeginBlock()
-  local parentName = getCurrentProjectName()
-  local versionMap = {}
-
-  -- First pass: copy RPP to new version, add new take
-  for _, item in ipairs(items) do
-    local take = reaper.GetActiveTake(item)
-    if not take then
-      reaper.ShowMessageBox("One of the items has no active take.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    local src = reaper.GetMediaItemTake_Source(take)
-    if not src then
-      reaper.ShowMessageBox("Unable to retrieve source.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    local origFile = reaper.GetMediaSourceFileName(src, "")
-    if not origFile or origFile == "" then
-      reaper.ShowMessageBox("Could not determine subproject file path.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    local folder, filename = origFile:match("^(.-)[\\/]([^\\/]-)$")
-    if not folder then
-      reaper.ShowMessageBox("Failed to parse file path.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    local base, ext = filename:match("^(.*)%.([^.]+)$")
-    if not base or ext:lower() ~= "rpp" then
-      reaper.ShowMessageBox("Invalid subproject file.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-
-    local newFilePath = versionMap[origFile]
-    if not newFilePath then
-      local origBase, curVer = base:match("^(.*)_v(%d+)$")
-      local newVer = curVer and tonumber(curVer) + 1 or 2
-      repeat
-        newFilePath = string.format("%s/%s_v%02d.%s", folder, origBase or base, newVer, ext)
-        newVer = newVer + 1
-      until not reaper.file_exists(newFilePath)
-
-      local infile = io.open(origFile, "rb")
-      if not infile then
-        reaper.ShowMessageBox("Could not open:\n" .. origFile, "Error", 0)
-        reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-      end
-      local content = infile:read("*all"); infile:close()
-      local outfile = io.open(newFilePath, "wb")
-      if not outfile then
-        reaper.ShowMessageBox("Could not create:\n" .. newFilePath, "Error", 0)
-        reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-      end
-      outfile:write(content); outfile:close()
-      versionMap[origFile] = newFilePath
-    end
-
-    local newTake = reaper.AddTakeToMediaItem(item)
-    if not newTake then
-      reaper.ShowMessageBox("Failed to add take.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    local newSrc = reaper.PCM_Source_CreateFromFile(newFilePath)
-    if not newSrc then
-      reaper.ShowMessageBox("Failed to create PCM source.", "Error", 0)
-      reaper.Undo_EndBlock("Duplicate subproject to new version", -1); return
-    end
-    reaper.SetMediaItemTake_Source(newTake, newSrc)
-    reaper.SetMediaItemTakeInfo_Value(newTake, "D_STARTOFFS",
-      reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS"))
-    local ok, tname = reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
-    if ok then reaper.GetSetMediaItemTakeInfo_String(newTake, "P_NAME", tname, true) end
-    reaper.SetMediaItemInfo_Value(item, "I_CURTAKE", reaper.CountTakes(item) - 1)
+  if not reaper.file_exists(duplicate_script_path) then
+    reaper.MB("Duplicate Subproject script not found:\n\n" .. duplicate_script_path, "Error", 0)
+    return
   end
 
-  -- Second pass: open and render each unique new RPP once, skipping duplicates
-  local rendered = {}
+  reaper.Main_OnCommand(40289, 0) -- Unselect all items
   for _, item in ipairs(items) do
-    if item then
-      local src = getActiveSrc(item)
-      if src then
-        local fp = reaper.GetMediaSourceFileName(src, "")
-        if fp and fp:sub(-4):lower() == ".rpp" and not rendered[fp] then
-          rendered[fp] = true
-          openAndRenderRPPPROX(fp, false)
-          activateProjectByName(parentName)
-        end
-      end
-    end
+    reaper.SetMediaItemSelected(item, true)
   end
-
-  -- Restore original selection
-  restoreSelection(items)
-
-  -- Add take markers showing the new versioned filename
-  for _, item in ipairs(items) do
-    if item then
-      local tc = reaper.CountTakes(item)
-      if tc > 1 then
-        local newTake = reaper.GetTake(item, tc - 1)
-        if newTake then
-          local src = reaper.GetMediaItemTake_Source(newTake)
-          if src then
-            local fp    = reaper.GetMediaSourceFileName(src, "")
-            local fname = fp:match("([^\\/]+)%.rpp$")
-            if fname then
-              local offs = reaper.GetMediaItemTakeInfo_Value(newTake, "D_STARTOFFS")
-              reaper.SetTakeMarker(newTake, -1, fname, offs)
-            end
-          end
-        end
-      end
-    end
-  end
-
   reaper.UpdateArrange()
-  reaper.TrackList_AdjustWindows(false)
-  reaper.Undo_EndBlock("Duplicate subprojects (versioned, new takes, markers)", -1)
+
+  local cmd_id = reaper.AddRemoveReaScript(true, 0, duplicate_script_path, false)
+  reaper.Main_OnCommand(cmd_id, 0)
 end
 
 -- ============================================================
@@ -1190,7 +1097,7 @@ local function loop()
     end
     ImGui.SameLine(ctx)
     if theme.PrimaryButton(ctx, "Duplicate New Version", btn_w, 0, nil, theme.Icons.DUPLICATE) then
-      duplicateToNewVersion(valid_selected)
+      openDuplicateSubprojectScript(valid_selected)
     end
     ImGui.SameLine(ctx)
     if theme.PrimaryButton(ctx, "Explode Subprojects", btn_w, 0, nil, theme.Icons.TRACKS) then

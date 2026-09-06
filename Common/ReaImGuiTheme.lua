@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.32
+-- @version 1.33
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -9,6 +9,11 @@
 --   Fonts/fa-solid-900.ttf > Fonts/fa-solid-900.ttf
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
 -- @changelog
+--   09/06/26 - v1.33 Added theme.TableFlags (the standard RowBg +
+--                   BordersInnerH combo already used by every table in
+--                   this repo) and theme.TableHeadersRow (bold header
+--                   row), so new tables can match the existing style by
+--                   calling these instead of re-copying the flags.
 --   08/29/26 - v1.32 theme.Push now pushes Col_TableRowBg/TableRowBgAlt,
 --                   standardizing the striped-table look already used in
 --                   Renamer's Quick Naming preview -- any TableFlags_RowBg
@@ -428,6 +433,29 @@ end
 
 function theme.PopBoldFont(ctx)
   ImGui.PopFont(ctx)
+end
+
+-- ============================================================
+-- Standard data-table style: striped rows (theme.Push already colors
+-- Col_TableRowBg/TableRowBgAlt so any TableFlags_RowBg table gets the
+-- striping automatically) plus a horizontal rule between rows, no
+-- vertical borders. This is the flag combination already used by every
+-- "list of rows" table in this repo (e.g. Subproject Manager's take
+-- list) -- theme.TableFlags exists so new tables match it by
+-- construction instead of re-guessing/copying the flags by hand.
+-- ============================================================
+theme.TableFlags = ImGui.TableFlags_RowBg | ImGui.TableFlags_BordersInnerH
+
+-- Wraps ImGui.TableHeadersRow in the bold body font, matching every
+-- other table header in this repo (e.g. Subproject Manager's take
+-- list, via its own manual theme.PushBoldFont/TableHeader loop for
+-- click-to-sort columns). For a plain, non-sortable header row, call
+-- this right where TableHeadersRow would normally go, immediately
+-- after the TableSetupColumn calls.
+function theme.TableHeadersRow(ctx)
+  theme.PushBoldFont(ctx)
+  ImGui.TableHeadersRow(ctx)
+  theme.PopBoldFont(ctx)
 end
 
 -- Scales an 0xRRGGBBAA color's RGB channels by `factor` (alpha untouched),
