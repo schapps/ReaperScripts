@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.9
+-- @version 1.10
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   09/13/26 - v1.10 Added a "Subprojects Folder" option that saves each subproject's .RPP/render into its own "Subprojects/<name>" folder inside the project directory instead of the project's normal media/recording path, and copies all referenced (non-video) media into a "Media" subfolder there so the subproject is self-contained.
 --   09/06/26 - v1.9 Added a "Version Track" option that appends _v01 to the subproject name, so Duplicate Subproject Version can find it and continue the sequence.
 --   08/23/26 - v1.8 Create button now uses the shared theme's
 --                   PrimaryButton style, with a square-plus icon.
@@ -63,6 +64,7 @@ local copy_video          = reaper.GetExtState("CreateSubproject", "CopyVideoTra
 local close_after         = reaper.GetExtState("CreateSubproject", "CloseAfterCreation") == "true"
 local run_dynamic_split   = reaper.GetExtState("CreateSubproject", "RunDynamicSplit") == "true"
 local version_track       = reaper.GetExtState("CreateSubproject", "VersionTrack") == "true"
+local subproject_folder   = reaper.GetExtState("CreateSubproject", "SubprojectFolder") == "true"
 local open           = true    -- window open/close flag
 
 -- ============================================================
@@ -200,6 +202,114 @@ local function pasteVideoTracksAtTop(chunks, subproj)
   reaper.TrackList_AdjustWindows(false)
 end
 
+-- Strips characters that are invalid in file/folder names on Windows or macOS
+-- so the subproject name can double as a folder name.
+local function sanitizeFolderName(name)
+  name = (name or ""):gsub('[\\/:%*%?"<>|]', "_")
+  return name:match("^%s*(.-)%s*$")
+end
+
+-- Subproject creation (41997) writes the new .RPP/render to the project's
+-- current recording path (RECORD_PATH), which is what REAPER's docs call the
+-- project's "media" path. Temporarily pointing RECORD_PATH at a relative
+-- "Subprojects/<name>" folder redirects just this operation into its own
+-- subfolder of the project directory, without touching the user's normal
+-- recording path setting.
+local function beginSubprojectFolderOverride(name)
+  if not subproject_folder then return nil end
+  local _, original = reaper.GetSetProjectInfo_String(0, "RECORD_PATH", "", false)
+  local sanitized = sanitizeFolderName(name)
+  local target = sanitized ~= "" and ("Subprojects/" .. sanitized) or "Subprojects"
+  reaper.GetSetProjectInfo_String(0, "RECORD_PATH", target, true)
+  return original
+end
+
+local function endSubprojectFolderOverride(original)
+  if not subproject_folder then return end
+  reaper.GetSetProjectInfo_String(0, "RECORD_PATH", original or "", true)
+end
+
+local VIDEO_EXTENSIONS = {
+  mp4 = true, mov = true, avi = true, wmv = true, mkv = true, mpg = true,
+  mpeg = true, m4v = true, webm = true, mxf = true, vob = true, flv = true,
+  ogv = true, asf = true, ["3gp"] = true,
+}
+
+local function isVideoFile(path)
+  local ext = path:match("%.([^.\\/]+)$")
+  return ext ~= nil and VIDEO_EXTENSIONS[ext:lower()] == true
+end
+
+-- Appends " (1)", " (2)", ... before the extension until the name is free,
+-- so consolidating media never silently clobbers an unrelated file that
+-- already has the same name in the destination folder.
+local function uniqueMediaDestPath(dir, filename)
+  local base, ext = filename:match("^(.*)%.([^.]+)$")
+  base = base or filename
+  local candidate = dir .. "/" .. filename
+  local n = 1
+  while reaper.file_exists(candidate) do
+    candidate = ext and (dir .. "/" .. base .. " (" .. n .. ")." .. ext)
+                     or (dir .. "/" .. base .. " (" .. n .. ")")
+    n = n + 1
+  end
+  return candidate
+end
+
+local function copyFileBytes(src_path, dst_path)
+  local src_f = io.open(src_path, "rb")
+  if not src_f then return false end
+  local data = src_f:read("a")
+  src_f:close()
+  local dst_f = io.open(dst_path, "wb")
+  if not dst_f then return false end
+  dst_f:write(data)
+  dst_f:close()
+  return true
+end
+
+-- Copies every non-video media file referenced by the subproject's items
+-- into a "Media" folder alongside its .RPP, and repoints those takes at the
+-- copies, so the subproject folder is self-contained. Video files are left
+-- referencing their original location (they're typically large, shared with
+-- other projects, and already handled separately via pasteVideoTracksAtTop).
+local function consolidateSubprojectMedia(subproj, media_dir)
+  local copied_path = {} -- origFile -> new path (or false on failure), copy once per source
+  local num_tracks = reaper.CountTracks(subproj)
+  for ti = 0, num_tracks - 1 do
+    local track = reaper.GetTrack(subproj, ti)
+    local num_items = reaper.CountTrackMediaItems(track)
+    for ii = 0, num_items - 1 do
+      local item = reaper.GetTrackMediaItem(track, ii)
+      local num_takes = reaper.CountTakes(item)
+      for tk = 0, num_takes - 1 do
+        local take = reaper.GetTake(item, tk)
+        if take and not reaper.TakeIsMIDI(take) then
+          local src = reaper.GetMediaItemTake_Source(take)
+          local origFile = src and reaper.GetMediaSourceFileName(src, "") or ""
+          if origFile ~= "" and not isVideoFile(origFile) then
+            local newFilePath = copied_path[origFile]
+            if newFilePath == nil then
+              reaper.RecursiveCreateDirectory(media_dir, 0)
+              local filename = origFile:match("([^\\/]+)$") or origFile
+              local dest = uniqueMediaDestPath(media_dir, filename)
+              newFilePath = copyFileBytes(origFile, dest) and dest or false
+              copied_path[origFile] = newFilePath
+            end
+            if newFilePath then
+              local new_source = reaper.PCM_Source_CreateFromFile(newFilePath)
+              if new_source then
+                reaper.SetMediaItemTake_Source(take, new_source)
+                reaper.PCM_Source_Destroy(src)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 local function createSubproject()
   local tail_seconds = tonumber(tail_buf) or 0.0
   local manual_chans = nil
@@ -211,6 +321,7 @@ local function createSubproject()
   local video_chunks = copy_video and collectVideoTrackChunks() or {}
 
   local first_track = reaper.GetSelectedTrack(0, 0)
+  local final_name = ""
 
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
@@ -220,7 +331,7 @@ local function createSubproject()
   -- and also appears on the parent timeline item. Do NOT touch the
   -- track handle after 41997 — it is stale.
   if first_track then
-    local final_name = name_buf
+    final_name = name_buf
     if final_name == "" then
       local _, existing = reaper.GetSetMediaTrackInfo_String(first_track, "P_NAME", "", false)
       final_name = existing or ""
@@ -236,10 +347,12 @@ local function createSubproject()
   if isTimeSelectionPresent() or areItemsSelected() then
     local parentName = getCurrentProjectName()
 
+    local original_record_path = beginSubprojectFolderOverride(final_name)
     runCommand(40290)  -- Time selection: Set time selection to items
     runCommand(41997)  -- Move tracks to subproject
     runCommand(41205)  -- Move position of item to edit cursor
     runCommand(41816)  -- Open associated project in new tab
+    endSubprojectFolderOverride(original_record_path)
 
     -- Grab an explicit handle to the subproject. reaper.EnumProjects(-1) returns
     -- the currently focused project (the subproject tab just opened), which is
@@ -263,6 +376,15 @@ local function createSubproject()
 
     runCommand(40031)  -- View: Zoom Time Selection
     runCommand(42332)  -- Save project and render RPP-Prox
+
+    if subproject_folder then
+      local _, subproj_rpp_path = reaper.EnumProjects(-1, "")
+      local subproj_dir = subproj_rpp_path and subproj_rpp_path:match("^(.*)[\\/][^\\/]-$")
+      if subproj_dir then
+        consolidateSubprojectMedia(subproj, subproj_dir .. "/Media")
+        runCommand(40026)  -- File: Save project (persist relinked sources)
+      end
+    end
 
     if close_after then runCommand(40860) end  -- Close current project tab
 
@@ -289,8 +411,10 @@ local function createSubproject()
   else
     -- Basic path: no time selection or items — just create and open
     local parentName = getCurrentProjectName()
+    local original_record_path = beginSubprojectFolderOverride(final_name)
     runCommand(41997)
     runCommand(41816)
+    endSubprojectFolderOverride(original_record_path)
 
     if #video_chunks > 0 then
       local subproj = reaper.EnumProjects(-1, "")
@@ -400,6 +524,20 @@ local function loop()
         ImGui.SetTooltip(ctx, "Marks this as version 1 so Duplicate Subproject Version can find it and continue the sequence (v02, v03, ...).")
       end
 
+      ImGui.TableNextRow(ctx)
+      ImGui.TableSetColumnIndex(ctx, 0)
+      local _, new_subproject_folder = ImGui.Checkbox(ctx, "Use Subprojects Folder", subproject_folder)
+      subproject_folder = new_subproject_folder
+      if ImGui.IsItemHovered(ctx) then
+        ImGui.SetTooltip(ctx, "Saves this subproject's .RPP and rendered audio into its own\n"
+          .. "folder named after the subproject, inside a \"Subprojects\" folder\n"
+          .. "in the project directory (e.g. Subprojects/<name>/).\n\n"
+          .. "Also copies every non-video media file the subproject references\n"
+          .. "into a \"Media\" subfolder there and relinks to the copies, so the\n"
+          .. "subproject is self-contained. Video files are left referencing\n"
+          .. "their original location.")
+      end
+
       ImGui.EndTable(ctx)
     end
 
@@ -425,6 +563,7 @@ local function loop()
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "VersionTrack", version_track and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "SubprojectFolder", subproject_folder and "true" or "false", true)
       createSubproject()
     end
     if no_tracks then ImGui.EndDisabled(ctx) end
@@ -436,6 +575,7 @@ local function loop()
       reaper.SetExtState("CreateSubproject", "CloseAfterCreation", close_after and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "RunDynamicSplit", run_dynamic_split and "true" or "false", true)
       reaper.SetExtState("CreateSubproject", "VersionTrack", version_track and "true" or "false", true)
+      reaper.SetExtState("CreateSubproject", "SubprojectFolder", subproject_folder and "true" or "false", true)
       createSubproject()
     end
 

@@ -1,0 +1,12 @@
+-- @description Schapps ReaSurroundPan presets
+-- @author Stephen Schappler
+-- @version 1.0
+-- @changelog
+--    Adding the presets
+-- @provides
+--    [data] plugin_presets/ReaSurroundPan_Presets.RPL > schapps_plugin_presets/ReaSurroundPan_Presets.RPL
+
+
+-- @about
+--    # ReaSurroundPan Presets
+--    Contains basic presets for ReaSurroundPan. Import the RPL file in Data/schapps_plugin_preset_libraries/
