@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="a2a1b39a68172b8c5d2bb657a8c79df3a3c89240">
+<index version="1" name="SPS Scripts" commit="de99c411d71f02bbcbc5a4808c019415538f9271">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -1804,6 +1804,12 @@
       <version name="2.9" author="Stephen Schappler" time="2026-07-20T21:31:18Z">
         <changelog><![CDATA[Updating the toolbar]]></changelog>
         <source type="data" file="CA_Toolbar/reaper-menu.ini">https://github.com/schapps/ReaperScripts/raw/48296d5c1d5e083fdfcea3f6a96a7ded44f00f0b/Packages/reaper-menu.ini</source>
+      </version>
+    </reapack>
+    <reapack name="Schapps_ReaSurroundPan_Presets.data" type="data" desc="Schapps ReaSurroundPan presets">
+      <version name="1.0" author="Stephen Schappler" time="2026-09-15T19:18:07Z">
+        <changelog><![CDATA[Adding the presets]]></changelog>
+        <source type="data" file="schapps_plugin_presets/ReaSurroundPan_Presets.RPL">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/Packages/plugin_presets/ReaSurroundPan_Presets.RPL</source>
       </version>
     </reapack>
     <reapack name="Schapps_Toolbar_Icons.data" type="data" desc="Schapps Toolbar Icons">
@@ -8908,6 +8914,16 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/a2a1b39a68172b8c5d2bb657a8c79df3a3c89240/ReaStartDashboard/GeistMono-Regular.ttf</source>
         <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/a2a1b39a68172b8c5d2bb657a8c79df3a3c89240/ReaStartDashboard/ReaStartDashboardLogo.png</source>
       </version>
+      <version name="1.1.3" author="Stephen Schappler" time="2026-09-15T19:18:07Z">
+        <changelog><![CDATA[v1.1.3 - Mac text input field fix. Improvements to cover art.]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Bold.ttf">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/Geist-Bold.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/Geist-Regular.ttf</source>
+        <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/GeistMono-Regular.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/ReaStartDashboard/ReaStartDashboardLogo.png</source>
+      </version>
     </reapack>
   </category>
   <category name="Renamer">
@@ -9285,6 +9301,21 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 3/31/26 - v1.1 Added in option to auto close subproject after creation
 3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/927287267d6b9bdd0f2345679002194874715e60/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.10" author="Stephen Schappler" time="2026-09-15T19:18:07Z">
+        <changelog><![CDATA[09/13/26 - v1.10 Added a "Subprojects Folder" option that saves each subproject's .RPP/render into its own "Subprojects/<name>" folder inside the project directory instead of the project's normal media/recording path, and copies all referenced (non-video) media into a "Media" subfolder there so the subproject is self-contained.
+09/06/26 - v1.9 Added a "Version Track" option that appends _v01 to the subproject name, so Duplicate Subproject Version can find it and continue the sequence.
+08/23/26 - v1.8 Create button now uses the shared theme's
+                PrimaryButton style, with a square-plus icon.
+5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
+5/07/26 - v1.6 Color Changes
+5/06/26 - v1.5 Removing Provides
+4/27/26 - v1.4 Fixing window title
+4/27/26 - v1.3 Adding provides for ReaImGui Theme
+3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
+3/31/26 - v1.1 Added in option to auto close subproject after creation
+3/28/26 - v1.0 Initial release with ReaImGUI dialog]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/de99c411d71f02bbcbc5a4808c019415538f9271/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create Subproject from Selected Track(s).lua" type="script" desc="Create Subproject from Selected Track(s)">
