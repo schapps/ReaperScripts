@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.10
+-- @version 1.11
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,19 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
---   09/13/26 - v1.10 Added a "Subprojects Folder" option that saves each subproject's .RPP/render into its own "Subprojects/<name>" folder inside the project directory instead of the project's normal media/recording path, and copies all referenced (non-video) media into a "Media" subfolder there so the subproject is self-contained.
---   09/06/26 - v1.9 Added a "Version Track" option that appends _v01 to the subproject name, so Duplicate Subproject Version can find it and continue the sequence.
---   08/23/26 - v1.8 Create button now uses the shared theme's
---                   PrimaryButton style, with a square-plus icon.
---   5/18/26 - v1.7 Remove Cancel button, rename Ok to Create
---   5/07/26 - v1.6 Color Changes
---   5/06/26 - v1.5 Removing Provides
---   4/27/26 - v1.4 Fixing window title
---   4/27/26 - v1.3 Adding provides for ReaImGui Theme
---   3/31/26 - v1.2 Added option to run Dynamic Split on rendered item after creation
---   3/31/26 - v1.1 Added in option to auto close subproject after creation
---   3/28/26 - v1.0 Initial release with ReaImGUI dialog
-
+--   09/15/26 - v1.11 Tweaking language in tooltips and gui
 
 
 -- ============================================================
@@ -518,10 +506,10 @@ local function loop()
 
       ImGui.TableNextRow(ctx)
       ImGui.TableSetColumnIndex(ctx, 0)
-      local _, new_version_track = ImGui.Checkbox(ctx, "Version Track (append _v01)", version_track)
+      local _, new_version_track = ImGui.Checkbox(ctx, "Track Version (append _v01)", version_track)
       version_track = new_version_track
       if ImGui.IsItemHovered(ctx) then
-        ImGui.SetTooltip(ctx, "Marks this as version 1 so Duplicate Subproject Version can find it and continue the sequence (v02, v03, ...).")
+        ImGui.SetTooltip(ctx, "Marks initial subproject as version 1 so Duplicate Subproject script can find it and continue the sequence (v02, v03, ...).")
       end
 
       ImGui.TableNextRow(ctx)
