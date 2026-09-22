@@ -39,10 +39,37 @@ local EXT_KEY    = "RenameSelectedTracks"
 local DIM_TEXT   = 0xA0A0A0FF
 local ERROR_TEXT = 0xE06C6CFF
 local ARROW_TEXT = 0x7FB8AEFF
-local LABEL_W    = 136
-local NUM_W      = 90
-local PREVIEW_H  = 112
 local POS_LABELS = { "End", "Start", "At Index" }
+
+-- Left settings rail / right preview split, following the geometry in
+-- Items/Smart Export Selected Items (GUI).lua. Inside a bare BeginGroup,
+-- anything sized -1 (tables, separators, buttons) fills the *window*, not
+-- the rail -- so every such item below is given an explicit width, and the
+-- indented ones get the rail width minus their own indent.
+local LEFT_COL_W     = 336
+local LEFT_PAD       = 10   -- breathing room between the rail's edges and its content
+local TOP_PAD        = 8    -- matching breathing room above the first row
+local RAIL_GUTTER    = 12   -- gap between the stages' content and the scrollbar
+local INDENT         = 16
+local LEFT_CONTENT_W = LEFT_COL_W - LEFT_PAD * 2
+-- Recomputed each frame in loop(): the stages scroll inside a child window,
+-- whose scrollbar plus RAIL_GUTTER eat into the width its content can use.
+-- INNER_W is that usable width -- the rules span it, and the field tables
+-- get it minus their own indent.
+local INNER_W        = LEFT_CONTENT_W
+local SECTION_W      = LEFT_CONTENT_W - INDENT      -- tables inside a section body
+local SUB_W          = LEFT_CONTENT_W - INDENT * 2  -- tables inside a sub-option
+
+-- Height of the pinned footer (rule + Apply + status), measured at the end
+-- of each frame and used to size the scroll area above it on the next one.
+-- Seeded with a close guess so the first frame lands near-right; the
+-- measurement corrects it before anyone can see the difference.
+local left_footer_h  = 64
+local LABEL_W        = 136
+local NUM_W          = 90
+local RAIL_BG        = 0x222222FF  -- matches the theme's Col_ChildBg, so the
+                                   -- stages' scroll child blends into the rail
+local RULE_COLOR     = 0x3A3F45FF
 
 -- ============================================================
 -- Settings (persisted to ExtState). DEFAULTS doubles as the type map the
@@ -281,6 +308,14 @@ local WIN_FLAGS = ImGui.WindowFlags_NoCollapse
 -- UI helpers
 -- ============================================================
 
+-- Disabled items don't register hover without HoveredFlags_AllowWhenDisabled,
+-- and several tooltips here exist precisely to explain why a field is greyed.
+local function tooltipLast(text)
+  if text and ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
+    ImGui.SetTooltip(ctx, text)
+  end
+end
+
 -- Checkbox + bold label. Returns the section's enabled state; callers wrap
 -- the section body in BeginDisabled when it's off.
 local function sectionHeader(label, key)
@@ -293,16 +328,11 @@ local function sectionHeader(label, key)
   return S[key]
 end
 
--- Disabled items don't register hover without HoveredFlags_AllowWhenDisabled,
--- and several tooltips here exist precisely to explain why a field is greyed.
-local function tooltipLast(text)
-  if text and ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
-    ImGui.SetTooltip(ctx, text)
-  end
-end
-
-local function beginFields(id)
-  if not ImGui.BeginTable(ctx, id, 2) then return false end
+-- outer_w pins the table to the rail instead of the window: without it a
+-- WidthStretch column stretches across the whole window, shoving the
+-- preview column off the right edge.
+local function beginFields(id, outer_w)
+  if not ImGui.BeginTable(ctx, id, 2, 0, outer_w or SECTION_W, 0) then return false end
   ImGui.TableSetupColumn(ctx, "##l", ImGui.TableColumnFlags_WidthFixed, LABEL_W)
   ImGui.TableSetupColumn(ctx, "##f", ImGui.TableColumnFlags_WidthStretch)
   return true
@@ -340,9 +370,15 @@ local function checkField(label, key, tooltip)
   tooltipLast(tooltip)
 end
 
-local function sectionGap()
+-- ImGui.Separator() spans the window's content width inside a bare
+-- BeginGroup, which would draw a line straight across the preview column --
+-- so the rail's rules are drawn by hand at the rail's own width.
+local function railRule(width)
   ImGui.Spacing(ctx)
-  ImGui.Separator(ctx)
+  local sx, sy = ImGui.GetCursorScreenPos(ctx)
+  ImGui.DrawList_AddRectFilled(ImGui.GetWindowDrawList(ctx),
+    sx, sy, sx + (width or INNER_W), sy + 1, RULE_COLOR)
+  ImGui.Dummy(ctx, 0, 1)
   ImGui.Spacing(ctx)
 end
 
@@ -352,7 +388,7 @@ end
 local function drawReplace()
   local on = sectionHeader("REPLACE", "replace_on")
   if not on then ImGui.BeginDisabled(ctx, true) end
-  ImGui.Indent(ctx, 16)
+  ImGui.Indent(ctx, INDENT)
 
   if beginFields("##replace_fields") then
     textField("Find:", "find")
@@ -363,7 +399,7 @@ local function drawReplace()
   ImGui.Spacing(ctx)
   checkField("Clear Existing Name", "clear_name",
     "Blank the name first, then build it from the stages below")
-  -- Lua patterns have no case-insensitive flag, so Match case is pinned on
+  -- Lua patterns have no case-insensitive flag, so Match Case is pinned on
   -- and disabled in pattern mode rather than silently doing nothing.
   if S.regex then ImGui.BeginDisabled(ctx, true) end
   local _, mc = ImGui.Checkbox(ctx, "Match Case##match_case", S.regex or S.match_case)
@@ -375,14 +411,14 @@ local function drawReplace()
     "The replacement can reference captures as %1, %2, ...\n" ..
     "REAPER's Lua has patterns rather than full regex.")
 
-  ImGui.Unindent(ctx, 16)
+  ImGui.Unindent(ctx, INDENT)
   if not on then ImGui.EndDisabled(ctx) end
 end
 
 local function drawTrim()
   local on = sectionHeader("TRIM", "trim_on")
   if not on then ImGui.BeginDisabled(ctx, true) end
-  ImGui.Indent(ctx, 16)
+  ImGui.Indent(ctx, INDENT)
 
   -- Range replaces the From Beginning/From End counts rather than stacking
   -- with them -- the two readings of "trim 2 from the front AND keep 3..6"
@@ -403,8 +439,8 @@ local function drawTrim()
     "To 0 runs to the last.")
 
   if not S.range_on then ImGui.BeginDisabled(ctx, true) end
-  ImGui.Indent(ctx, 16)
-  if beginFields("##range_fields") then
+  ImGui.Indent(ctx, INDENT)
+  if beginFields("##range_fields", SUB_W) then
     intField("From:", "range_from", 0)
     intField("To:", "range_to", 0)
     ImGui.EndTable(ctx)
@@ -413,17 +449,17 @@ local function drawTrim()
   checkField("Count From End", "count_from_end",
     "Measure From/To from the end of the name instead of\n" ..
     "the beginning, so From 1 To 3 keeps the last three characters.")
-  ImGui.Unindent(ctx, 16)
+  ImGui.Unindent(ctx, INDENT)
   if not S.range_on then ImGui.EndDisabled(ctx) end
 
-  ImGui.Unindent(ctx, 16)
+  ImGui.Unindent(ctx, INDENT)
   if not on then ImGui.EndDisabled(ctx) end
 end
 
 local function drawAdd()
   local on = sectionHeader("ADD", "add_on")
   if not on then ImGui.BeginDisabled(ctx, true) end
-  ImGui.Indent(ctx, 16)
+  ImGui.Indent(ctx, INDENT)
 
   if beginFields("##add_fields") then
     textField("Prefix:", "prefix")
@@ -434,14 +470,14 @@ local function drawAdd()
     ImGui.EndTable(ctx)
   end
 
-  ImGui.Unindent(ctx, 16)
+  ImGui.Unindent(ctx, INDENT)
   if not on then ImGui.EndDisabled(ctx) end
 end
 
 local function drawNumbering()
   local on = sectionHeader("NUMBERING", "num_on")
   if not on then ImGui.BeginDisabled(ctx, true) end
-  ImGui.Indent(ctx, 16)
+  ImGui.Indent(ctx, INDENT)
 
   if beginFields("##num_fields") then
     fieldLabel("Position:")
@@ -481,7 +517,7 @@ local function drawNumbering()
     "Letters instead of digits: 1=A, 26=Z, 27=AA.\n" ..
     "Starting Number and Increment still apply.")
 
-  ImGui.Unindent(ctx, 16)
+  ImGui.Unindent(ctx, INDENT)
   if not on then ImGui.EndDisabled(ctx) end
 end
 
@@ -492,98 +528,150 @@ local function loop()
   dirty = false
   local color_count, var_count = theme.Push(ctx)
 
-  ImGui.SetNextWindowSize(ctx, 480, 760, ImGui.Cond_FirstUseEver)
+  ImGui.SetNextWindowSizeConstraints(ctx, LEFT_COL_W + 240, 0, 3000, 10000)
+  ImGui.SetNextWindowSize(ctx, 880, 720, ImGui.Cond_FirstUseEver)
   local visible, open = ImGui.Begin(ctx, "RENAME SELECTED TRACKS", true, WIN_FLAGS)
 
   if visible then
     local n_sel = reaper.CountSelectedTracks(0)
 
-    ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
-    ImGui.Text(ctx, n_sel .. (n_sel == 1 and " track selected" or " tracks selected"))
-    ImGui.PopStyleColor(ctx)
+    -- Built once up front, before any widget can mutate S this frame, so the
+    -- Apply button and the preview beside it always act on the same list --
+    -- what you see listed is exactly what Apply writes.
+    local changes, err = buildPreview()
 
-    ImGui.Spacing(ctx)
+    -- ---- Left column: settings rail ----
+    -- avail_h is "from here to the bottom of the window at its current
+    -- size", so the rail's tint stretches the full height rather than
+    -- stopping at the last field.
+    local _, avail_h = ImGui.GetContentRegionAvail(ctx)
+    local lx0, ly0 = ImGui.GetCursorScreenPos(ctx)
+    ImGui.DrawList_AddRectFilled(ImGui.GetWindowDrawList(ctx),
+      lx0, ly0, lx0 + LEFT_COL_W, ly0 + avail_h, RAIL_BG, 4)
 
-    -- Reserve the preview list + Apply button at the bottom, so the stages
-    -- scroll on their own and Apply never leaves the window.
-    local btn_h      = theme.PrimaryButtonHeight(ctx)
-    local _, spacing = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
-    local reserve    = PREVIEW_H + btn_h + ImGui.GetTextLineHeight(ctx) + spacing * 7
-    local stages_h   = math.max(select(2, ImGui.GetContentRegionAvail(ctx)) - reserve, 140)
+    -- The stages scroll inside a child sized to whatever the footer leaves,
+    -- so its tables lose the scrollbar's width.
+    local sb_w = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ScrollbarSize)
+    INNER_W   = LEFT_CONTENT_W - sb_w - RAIL_GUTTER
+    SECTION_W = INNER_W - INDENT
+    SUB_W     = INNER_W - INDENT * 2
 
-    -- Per BeginChild's own doc, EndChild must be called regardless of this
-    -- return value -- only the body below is skipped when not visible.
-    local stages_visible = ImGui.BeginChild(ctx, "##stages", 0, stages_h)
+    ImGui.BeginGroup(ctx)
+    -- Indent shifts every subsequent item's left edge by LEFT_PAD; paired
+    -- with sizing content to LEFT_CONTENT_W so nothing touches the rail's
+    -- edges. Must be un-indented before EndGroup below.
+    ImGui.Indent(ctx, LEFT_PAD)
+    ImGui.Dummy(ctx, 0, TOP_PAD)
+
+    -- ---- Scrolling stages ----
+    -- A child window here is safe as long as EndChild is called
+    -- unconditionally (see Renamer/Lib/QuickNamingGui.lua's note): skipping
+    -- it when BeginChild returns false is what unbalances ReaImGui's window
+    -- stack. The child's background is the theme's Col_ChildBg, the same
+    -- color as the rail, so the scroll region is invisible.
+    local stages_h = math.max(avail_h - TOP_PAD * 2 - left_footer_h, 120)
+    local stages_visible = ImGui.BeginChild(ctx, "##stages", LEFT_CONTENT_W, stages_h)
     if stages_visible then
       drawReplace()
-      sectionGap()
+      railRule()
       drawTrim()
-      sectionGap()
+      railRule()
       drawAdd()
-      sectionGap()
+      railRule()
       drawNumbering()
     end
     ImGui.EndChild(ctx)
 
-    ImGui.Separator(ctx)
-    ImGui.Spacing(ctx)
+    -- ---- Pinned footer ----
+    local _, footer_top_y = ImGui.GetCursorScreenPos(ctx)
 
-    -- ---- Preview ----
-    local changes, err = buildPreview()
+    -- Full rail width: the footer is outside the scroll area, so no
+    -- scrollbar to clear.
+    railRule(LEFT_CONTENT_W)
+
+    -- Apply: explicit width rather than -1, which would fill to the
+    -- window's edge instead of the rail's.
+    local can_apply = #changes > 0 and not err
+    if not can_apply then ImGui.BeginDisabled(ctx, true) end
+    local do_apply = theme.PrimaryButton(ctx, "Apply", LEFT_CONTENT_W, 0, nil, theme.Icons.PENCIL)
+      or (can_apply and ImGui.IsWindowFocused(ctx) and (
+            ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
+            or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
+    if not can_apply then ImGui.EndDisabled(ctx) end
+
+    local status_text = n_sel .. (n_sel == 1 and " track selected" or " tracks selected")
+    local status_w = ImGui.CalcTextSize(ctx, status_text)
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + (LEFT_CONTENT_W - status_w) / 2)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
+    ImGui.Text(ctx, status_text)
+    ImGui.PopStyleColor(ctx)
+
+    local _, footer_bottom_y = ImGui.GetCursorScreenPos(ctx)
+    left_footer_h = footer_bottom_y - footer_top_y
+
+    ImGui.Dummy(ctx, 0, TOP_PAD)
+    ImGui.Unindent(ctx, LEFT_PAD)
+    ImGui.EndGroup(ctx)
+
+    -- ---- Right column: live preview ----
+    -- Gap is 20 + LEFT_PAD: the left group's measured bounding box ends
+    -- LEFT_PAD short of the tint rect's right edge (its content is inset),
+    -- so the offset needs that back to read as an even 20px gutter.
+    ImGui.SameLine(ctx, 0, 20 + LEFT_PAD)
+
+    ImGui.BeginGroup(ctx)
+    ImGui.Dummy(ctx, 0, TOP_PAD)  -- aligns with the rail's first row
+
+    theme.PushBoldFont(ctx)
+    ImGui.Text(ctx, "PREVIEW")
+    theme.PopBoldFont(ctx)
 
     if err then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, ERROR_TEXT)
       ImGui.Text(ctx, "Pattern error: " .. err)
     else
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
-      ImGui.Text(ctx, ("Preview -- %d name%s will change"):format(
-        #changes, #changes == 1 and "" or "s"))
+      ImGui.Text(ctx, ("%d of %d selected track%s will be renamed"):format(
+        #changes, n_sel, n_sel == 1 and "" or "s"))
     end
     ImGui.PopStyleColor(ctx)
 
-    local list_visible = ImGui.BeginChild(ctx, "##preview", 0, PREVIEW_H, ImGui.ChildFlags_Borders)
-    if list_visible then
-      if #changes == 0 then
-        ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
-        if n_sel == 0 then
-          ImGui.Text(ctx, "Select one or more tracks.")
-        elseif not anyStageOn() then
-          ImGui.Text(ctx, "Enable a stage above.")
-        elseif not err then
-          ImGui.Text(ctx, "No changes with the current settings.")
-        end
-        ImGui.PopStyleColor(ctx)
-      else
-        for _, c in ipairs(changes) do
-          ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
-          ImGui.Text(ctx, ("%d."):format(c.num))
-          ImGui.PopStyleColor(ctx)
-          ImGui.SameLine(ctx)
-          ImGui.Text(ctx, c.old == "" and "(unnamed)" or c.old)
-          ImGui.SameLine(ctx)
-          ImGui.PushStyleColor(ctx, ImGui.Col_Text, ARROW_TEXT)
-          ImGui.Text(ctx, "\u{2192}")
-          ImGui.PopStyleColor(ctx)
-          ImGui.SameLine(ctx)
-          ImGui.Text(ctx, c.new == "" and "(unnamed)" or c.new)
-        end
-      end
-    end
-    ImGui.EndChild(ctx)
-
     ImGui.Spacing(ctx)
 
-    -- ---- Apply ----
-    local can_apply = #changes > 0 and not err
-    if not can_apply then ImGui.BeginDisabled(ctx, true) end
-    local do_apply = theme.PrimaryButton(ctx, "Apply", -1, 0, nil, theme.Icons.PENCIL)
-      or (can_apply and ImGui.IsWindowFocused(ctx) and (
-            ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)
-            or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter)))
-    if do_apply then
-      applyChanges(changes)
+    -- Plain in-window rows rather than a scrolling child: nesting a
+    -- BeginChild inside these groups is what triggered the ReaImGui
+    -- window-stack assertion documented in Smart Export's preview.
+    if #changes == 0 then
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
+      if n_sel == 0 then
+        ImGui.Text(ctx, "Select one or more tracks.")
+      elseif not anyStageOn() then
+        ImGui.Text(ctx, "Enable a stage on the left.")
+      elseif not err then
+        ImGui.Text(ctx, "No changes with the current settings.")
+      end
+      ImGui.PopStyleColor(ctx)
+    else
+      for _, c in ipairs(changes) do
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
+        ImGui.Text(ctx, ("%d."):format(c.num))
+        ImGui.PopStyleColor(ctx)
+        ImGui.SameLine(ctx)
+        ImGui.Text(ctx, c.old == "" and "(unnamed)" or c.old)
+        ImGui.SameLine(ctx)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, ARROW_TEXT)
+        ImGui.Text(ctx, "\u{2192}")
+        ImGui.PopStyleColor(ctx)
+        ImGui.SameLine(ctx)
+        ImGui.Text(ctx, c.new == "" and "(unnamed)" or c.new)
+      end
     end
-    if not can_apply then ImGui.EndDisabled(ctx) end
+
+    ImGui.EndGroup(ctx)
+
+    -- Deferred until both columns are drawn, so the rename and its undo
+    -- block never run with widgets still queued behind it.
+    if do_apply then applyChanges(changes) end
 
     ImGui.End(ctx)
   end
