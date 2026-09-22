@@ -203,10 +203,12 @@ local function loop()
       match_case = new_case
       saveOptions()
     end
-    if use_patterns then ImGui.EndDisabled(ctx) end
-    if ImGui.IsItemHovered(ctx) and use_patterns then
+    -- AllowWhenDisabled: a disabled item registers no hover without it, and
+    -- this tooltip exists precisely to explain why the box is greyed out.
+    if use_patterns and ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
       ImGui.SetTooltip(ctx, "Lua patterns are always case-sensitive")
     end
+    if use_patterns then ImGui.EndDisabled(ctx) end
 
     ImGui.SameLine(ctx, 0, 20)
     local _, new_pat = ImGui.Checkbox(ctx, "Use Lua patterns", use_patterns)
