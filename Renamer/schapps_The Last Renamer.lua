@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.16
+-- @version 1.17
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.17 Right-clicking a dropdown now offers "Rename Selected..." to rename the selected option (and its short code) in place
 --   v1.16 Respect Overlaps now numbers each overlapping item group separately (01, 02, 03...)
 --   v1.15 Export button (both naming modes) now uses theme.SecondaryButton
 --         instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
