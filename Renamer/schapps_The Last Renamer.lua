@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.15
+-- @version 1.16
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.16 Respect Overlaps now numbers each overlapping item group separately (01, 02, 03...)
 --   v1.15 Export button (both naming modes) now uses theme.SecondaryButton
 --         instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
 --   v1.14 DrawTabAccent now delegates to the shared theme.DrawTabAccent
@@ -885,7 +886,7 @@ function LoadTargets()
       wgt.overlap = overlap
       SetCurrentValue("opt_overlap", overlap)
     end
-    acendan.ImGui_Tooltip("If checked, enumeration will not increment on items that overlap with neighbors on this track.")
+    acendan.ImGui_Tooltip("If checked, items that overlap each other on the same track share a number; each overlapping group gets the next number.")
   end
 
   if wgt.target == "Items" and wgt.mode == "Selected" and GetPreviousValue("opt_nvk_only", false) == "true" then
@@ -2583,6 +2584,34 @@ function ProcessRegions(mode, num_mkrs_rgns, name, enumeration, meta, preview)
   return error
 end
 
+-- Clusters queued items that overlap (directly or via a chain) on the same track.
+-- Returns a table mapping queue index -> group id; non-overlapping items get their own group.
+function GetOverlapGroups(queue)
+  local by_track = {}
+  for idx, item_data in ipairs(queue) do
+    local track = reaper.GetMediaItem_Track(item_data[1])
+    by_track[track] = by_track[track] or {}
+    table.insert(by_track[track], idx)
+  end
+
+  local group_of, next_group = {}, 0
+  for _, indices in pairs(by_track) do
+    table.sort(indices, function(a, b) return queue[a][4] < queue[b][4] end)
+    local group_end = nil
+    for _, idx in ipairs(indices) do
+      local item_start, item_end = queue[idx][4], queue[idx][5]
+      if not group_end or item_start >= group_end then
+        next_group = next_group + 1
+        group_end  = item_end
+      else
+        group_end = math.max(group_end, item_end)
+      end
+      group_of[idx] = next_group
+    end
+  end
+  return group_of
+end
+
 function ProcessItems(mode, num_items, name, enumeration, meta, preview)
   local error         = nil
   local queue         = {}
@@ -2641,40 +2670,24 @@ function ProcessItems(mode, num_items, name, enumeration, meta, preview)
     if meta then return queue end
     enumeration.num = #queue
     local rows = preview and {} or nil
-    local prev_had_overlap = false
-    for _, item_data in ipairs(queue) do
+    local group_of   = wgt.overlap and GetOverlapGroups(queue) or nil
+    local group_nums = {}
+    for idx, item_data in ipairs(queue) do
       local item, take, wildcards, item_start, item_end, item_num, item_name = table.unpack(item_data)
 
-      local has_overlap = false
-      if wgt.overlap then
-        local track            = reaper.GetMediaItem_Track(item)
-        local track_num_items  = reaper.CountTrackMediaItems(track)
-        if track_num_items > 0 then
-          for i = 0, track_num_items - 1 do
-            local track_item       = reaper.GetTrackMediaItem(track, i)
-            if item ~= track_item then
-              local track_item_start = reaper.GetMediaItemInfo_Value(track_item, "D_POSITION")
-              local track_item_end   = track_item_start + reaper.GetMediaItemInfo_Value(track_item, "D_LENGTH")
-              has_overlap = item_start < track_item_end and item_end > track_item_start
-              if has_overlap then break end
-            elseif i == 0 then
-              has_overlap = true
-              break
-            end
-          end
-        end
-        -- Pre-increment only when transitioning OUT of an overlap group.
-        -- Non-overlap items after a pure non-overlap sequence use SanitizeName's
-        -- own auto-increment instead, so the first item correctly starts at `start`.
-        if not has_overlap and prev_had_overlap then
-          enumeration.start = enumeration.start + 1
-        end
-        prev_had_overlap = has_overlap
+      -- Each overlap group takes the next number the first time it's seen;
+      -- later members of the same group reuse that number without incrementing.
+      local new_name
+      local group = group_of and group_of[idx]
+      if group and group_nums[group] and type(enumeration.start) == "number" then
+        local next_start = enumeration.start
+        enumeration.start = group_nums[group]
+        new_name = SanitizeName(name, enumeration, wildcards, true)
+        enumeration.start = next_start
+      else
+        if group then group_nums[group] = enumeration.start end
+        new_name = SanitizeName(name, enumeration, wildcards)
       end
-
-      -- Overlap items: skip auto-increment (they share the same number).
-      -- Non-overlap items: allow auto-increment so each gets a unique number.
-      local new_name = SanitizeName(name, enumeration, wildcards, has_overlap)
       if preview then
         rows[#rows + 1] = { current = item_name, new = new_name }
       else
