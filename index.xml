@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="de99c411d71f02bbcbc5a4808c019415538f9271">
+<index version="1" name="SPS Scripts" commit="be061e37e510f866871137b628a4ef4e3131a501">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -905,6 +905,22 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T21:02:57Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/1f68c97b9e0ef320da1a6e07da92d271e6585050/Items/Insert%20Marker%20at%20Start%20of%20Selected%20Items.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Move Selected Items to Duplicate Tracks.lua" type="script" desc="Move Selected Items to Duplicate Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Gives every selected item its own track. For each track holding more than one selected item, the track is duplicated (name, FX, routing, envelopes and all other settings included) once per extra item, and the items are spread one per duplicate directly below the original. The first item stays on the original track and every item keeps its original start time, length and take settings.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-09-22T17:25:52Z">
+        <changelog><![CDATA[09/22/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/be061e37e510f866871137b628a4ef4e3131a501/Items/Move%20Selected%20Items%20to%20Duplicate%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Rearrange Selected Item Position Based on Color.lua" type="script" desc="Rearrange Selected Item Position Based on Color">
@@ -10336,6 +10352,22 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/6214eb3e582c35d1de64e838e79d61774e45e844/Tracks/Create%20New%20Tracks%20with%20Parent%20Folder%20Track.lua</source>
       </version>
     </reapack>
+    <reapack name="Find and Replace in Track Names.lua" type="script" desc="Find and Replace in Track Names">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Finds and replaces text in the names of all selected tracks. Shows a live preview of every name that will change before applying. Options: match case, and Lua pattern mode for regex-style matching with %1 capture references in the replacement. Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-09-22T00:40:37Z">
+        <changelog><![CDATA[09/21/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/19e666beb176c3f4c4a30f6a4e59fdcccd462900/Tracks/Find%20and%20Replace%20in%20Track%20Names.lua</source>
+      </version>
+    </reapack>
     <reapack name="Indent selected folder track.lua" type="script" desc="Indent selected folder track">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -10366,6 +10398,26 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
       </metadata>
       <version name="1.4.1" author="Aaron Cendan (modified by Stephen Schappler)" time="2025-10-08T00:01:56Z">
         <source main="main" file="acendan_Insert new track respect folders (no color match).lua">https://github.com/schapps/ReaperScripts/raw/034f697435bea5f9d8d825903bddcdbb0a082507/Tracks/Insert%20New%20Track%20Respect%20Folders%20(No%20Color%20Match).lua</source>
+      </version>
+    </reapack>
+    <reapack name="Rename Selected Tracks.lua" type="script" desc="Rename Selected Tracks">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Batch renaming for all selected tracks, in four independently toggleable stages applied top to bottom:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab Replace - find/replace (literal or Lua pattern), optionally clearing the existing name first.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab Trim - drop N characters from the beginning and/or end, or keep only a character range.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab Add - prefix, suffix, and/or insert text at a character index.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab Numbering - append/prepend an incrementing number or letter. A live preview lists every name that will change before applying. Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).\sa180\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-09-22T01:20:23Z">
+        <changelog><![CDATA[09/21/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/5c24a88d4dba134f59caa7e3456d61186f007f3d/Tracks/Rename%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Send Source Track to Selected Tracks.lua" type="script" desc="Send Source Track to Selected Tracks">
