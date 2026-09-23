@@ -979,6 +979,47 @@ function M.CommitAddItem(field, source_path, new_value, new_short)
   return true, nil, BuildReselectRequests(field, new_value)
 end
 
+-- Orchestrates a rename request: replaces the value (and short code, if
+-- applicable) at item_index in place. Every field sharing this list keeps
+-- its selection, following the renamed value if that's what it had
+-- selected. Returns an array of {path, new_value} reselection requests.
+function M.CommitRenameItem(field, source_path, item_index, new_value, new_short)
+  if not source_path or not field.__value_line then
+    return false, "This option list can't be edited from the GUI (unsupported format)."
+  end
+  if field.short and not field.__short_line then
+    return false, "Could not locate this list's short-code line in the scheme file."
+  end
+  local old_value = field.value[item_index]
+  if old_value == nil then
+    return false, "The option to rename no longer exists. Please reload the scheme."
+  end
+
+  local new_values = { table.unpack(field.value) }
+  new_values[item_index] = new_value
+  if not M.WriteSchemeList(source_path, field.__value_line, new_values) then
+    return false, "Failed to save renamed option to the scheme file. See error above."
+  end
+
+  if field.short then
+    local new_shorts = { table.unpack(field.short) }
+    new_shorts[item_index] = new_short
+    if not M.WriteSchemeList(source_path, field.__short_line, new_shorts) then
+      return false, "Value was renamed, but the short code failed to save. Please check the YAML file."
+    end
+  end
+
+  local function remap(f)
+    if f.selected == item_index then return new_value end
+    return f.selected and f.value[f.selected] or nil
+  end
+  local requests = { { path = field.__path, new_value = remap(field) } }
+  for _, other in ipairs(field.__shared_fields or {}) do
+    requests[#requests + 1] = { path = other.__path, new_value = remap(other) }
+  end
+  return true, nil, requests
+end
+
 -- Orchestrates a move-up/move-down request: swaps item_index with
 -- item_index + direction in both value and short (if present). Reselects
 -- whatever was already selected before the swap (by value, not index/not

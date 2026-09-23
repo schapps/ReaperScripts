@@ -1,7 +1,8 @@
 -- @noindex
 -- SchemeEditorGui: ImGui-facing half of the scheme-editing feature. Renders
 -- the dropdown combos plus their right-click context menus (dropdown-level
--- "Add Item...", per-item "Move Up"/"Move Down") and the Add Item popup.
+-- "Add Item...", "Rename Selected...", per-item "Move Up"/"Move Down") and
+-- the Add Item / Rename Item popups.
 -- Depends on SchemeEditor.lua (the pure logic/file-I/O module) and on the
 -- main script's `acendan` helper table, both injected via init() since
 -- dofile'd chunks don't share the main script's `local` variables.
@@ -23,6 +24,16 @@ SchemeEditorGui.LIST_ACTIONS = {
       field.__new_short_input = ""
       field.__new_item_error  = nil
       field.__open_add_item_popup = true
+    end },
+  { label = "Rename Selected...",
+    enabled = function(field) return field.selected and field.value[field.selected] ~= nil end,
+    handler = function(field)
+      local i = field.selected
+      field.__rename_index       = i
+      field.__rename_value_input = tostring(field.value[i])
+      field.__rename_short_input = field.short and tostring(field.short[i] or "") or ""
+      field.__rename_item_error  = nil
+      field.__open_rename_item_popup = true
     end },
 }
 
@@ -53,7 +64,10 @@ local function DrawListContextMenu(ctx, field, title)
   if reaper.ImGui_BeginPopupContextItem(ctx, "ListCtx_" .. title) then
     DrawWildcardWarning(ctx, field)
     for _, action in ipairs(SchemeEditorGui.LIST_ACTIONS) do
+      local en = not action.enabled or action.enabled(field)
+      if not en then reaper.ImGui_BeginDisabled(ctx) end
       if reaper.ImGui_MenuItem(ctx, action.label) then action.handler(field) end
+      if not en then reaper.ImGui_EndDisabled(ctx) end
     end
     reaper.ImGui_EndPopup(ctx)
   end
@@ -84,6 +98,29 @@ local function DrawItemContextMenu(ctx, field, source_path, title, i)
   return reload_requests
 end
 
+-- Validates a value/short-code pair typed into the Add/Rename popups.
+-- skip_index excludes the item being renamed from the duplicate check (so a
+-- case-only rename is allowed). Returns trimmed value, trimmed short, err.
+local function ValidateItemInput(field, value_input, short_input, skip_index)
+  local trimmed_value = (value_input or ""):match("^%s*(.-)%s*$")
+  local trimmed_short = (short_input or ""):match("^%s*(.-)%s*$")
+  local err = nil
+  if trimmed_value == "" then
+    err = "Value cannot be blank."
+  else
+    for i, existing in ipairs(field.value) do
+      if i ~= skip_index and tostring(existing):lower() == trimmed_value:lower() then
+        err = "\"" .. trimmed_value .. "\" already exists in this list."
+        break
+      end
+    end
+  end
+  if not err and field.short and trimmed_short == "" then
+    err = "Short code cannot be blank."
+  end
+  return trimmed_value, trimmed_short, err
+end
+
 -- Popup opened by the "Add Item..." menu entry - ported from the former
 -- "+"-button popup, now triggered via field.__open_add_item_popup instead.
 local function DrawAddItemPopup(ctx, field, source_path, title)
@@ -105,23 +142,8 @@ local function DrawAddItemPopup(ctx, field, source_path, title)
         field.__new_short_input or "")
     end
 
-    local trimmed_value = (field.__new_value_input or ""):match("^%s*(.-)%s*$")
-    local trimmed_short  = (field.__new_short_input or ""):match("^%s*(.-)%s*$")
-
-    local err = nil
-    if trimmed_value == "" then
-      err = "Value cannot be blank."
-    else
-      for _, existing in ipairs(field.value) do
-        if tostring(existing):lower() == trimmed_value:lower() then
-          err = "\"" .. trimmed_value .. "\" already exists in this list."
-          break
-        end
-      end
-    end
-    if not err and field.short and trimmed_short == "" then
-      err = "Short code cannot be blank."
-    end
+    local trimmed_value, trimmed_short, err = ValidateItemInput(field,
+      field.__new_value_input, field.__new_short_input)
 
     if err then
       reaper.ImGui_TextColored(ctx, 0xFF0000FF, err)
@@ -140,6 +162,74 @@ local function DrawAddItemPopup(ctx, field, source_path, title)
         reaper.ImGui_CloseCurrentPopup(ctx)
       else
         field.__new_item_error = save_err
+      end
+    end
+    if not can_submit then reaper.ImGui_EndDisabled(ctx) end
+
+    reaper.ImGui_SameLine(ctx)
+    if reaper.ImGui_Button(ctx, "Cancel") then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    end
+
+    reaper.ImGui_EndPopup(ctx)
+  end
+  return reload_requests
+end
+
+-- Popup opened by the "Rename Selected..." menu entry. Edits the value (and
+-- short code, if any) at field.__rename_index in place.
+local function DrawRenameItemPopup(ctx, field, source_path, title)
+  if field.__open_rename_item_popup then
+    field.__open_rename_item_popup = nil
+    reaper.ImGui_OpenPopup(ctx, "RenameItem_" .. title)
+  end
+
+  local reload_requests = nil
+  if reaper.ImGui_BeginPopup(ctx, "RenameItem_" .. title) then
+    local i = field.__rename_index
+    local old_value = i and field.value[i]
+    if old_value == nil then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+      reaper.ImGui_EndPopup(ctx)
+      return nil
+    end
+
+    reaper.ImGui_Text(ctx, "Rename \"" .. tostring(old_value) .. "\" in \"" .. field.field .. "\"")
+    DrawWildcardWarning(ctx, field)
+
+    local rv
+    if reaper.ImGui_IsWindowAppearing(ctx) then reaper.ImGui_SetKeyboardFocusHere(ctx) end
+    rv, field.__rename_value_input = reaper.ImGui_InputText(ctx, "New Value##rename_" .. title,
+      field.__rename_value_input or "", reaper.ImGui_InputTextFlags_AutoSelectAll())
+    if field.short then
+      rv, field.__rename_short_input = reaper.ImGui_InputText(ctx, "Short Code##rename_" .. title,
+        field.__rename_short_input or "")
+    end
+
+    local trimmed_value, trimmed_short, err = ValidateItemInput(field,
+      field.__rename_value_input, field.__rename_short_input, i)
+    local unchanged = trimmed_value == tostring(old_value) and
+        (not field.short or trimmed_short == tostring(field.short[i] or ""))
+
+    if err then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, err)
+    elseif field.__rename_item_error then
+      reaper.ImGui_TextColored(ctx, 0xFF0000FF, field.__rename_item_error)
+    end
+
+    local can_submit = not err and not unchanged
+    if not can_submit then reaper.ImGui_BeginDisabled(ctx) end
+    local submit = reaper.ImGui_Button(ctx, "Save") or
+        (can_submit and reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter()))
+    if submit then
+      local ok, save_err, rr = Editor.CommitRenameItem(field, source_path, i, trimmed_value,
+        field.short and trimmed_short or nil)
+      if ok then
+        field.__rename_item_error = nil
+        reload_requests = rr
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      else
+        field.__rename_item_error = save_err
       end
     end
     if not can_submit then reaper.ImGui_EndDisabled(ctx) end
@@ -179,6 +269,8 @@ function SchemeEditorGui.ComboBox(ctx, field, source_path)
   DrawListContextMenu(ctx, field, title)
   local rr_add = DrawAddItemPopup(ctx, field, source_path, title)
   if rr_add then reload_requests = rr_add end
+  local rr_rename = DrawRenameItemPopup(ctx, field, source_path, title)
+  if rr_rename then reload_requests = rr_rename end
 
   reaper.ImGui_SameLine(ctx)
   reaper.ImGui_PushItemFlag(ctx, reaper.ImGui_ItemFlags_NoTabStop(), true)
@@ -207,6 +299,8 @@ function SchemeEditorGui.AutoFillComboBox(ctx, field, source_path, filter)
   DrawListContextMenu(ctx, field, title)
   local rr_add = DrawAddItemPopup(ctx, field, source_path, title)
   if rr_add then reload_requests = rr_add end
+  local rr_rename = DrawRenameItemPopup(ctx, field, source_path, title)
+  if rr_rename then reload_requests = rr_rename end
 
   local tabbed = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Tab()) and
       not reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Mod_Shift())
