@@ -1,6 +1,6 @@
 -- @description Rename Selected Tracks
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Batch renaming for all selected tracks, in four independently
 --   toggleable stages applied top to bottom:
