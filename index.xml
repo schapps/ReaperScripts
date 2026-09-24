@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="3e655ca4e416189e91d344f14304420316e1d942">
+<index version="1" name="SPS Scripts" commit="14a0df3bf2cd34d8ba1f95dc7a47a108a583bca5">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -752,6 +752,10 @@
       <version name="0.2" author="Stephen Schappler" time="2026-09-24T21:37:11Z">
         <changelog><![CDATA[2026-09-24 v0.2 - Working prototype]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3e655ca4e416189e91d344f14304420316e1d942/Items/Arrange%20Items%20by%20Name.lua</source>
+      </version>
+      <version name="0.3" author="Stephen Schappler" time="2026-09-24T22:39:28Z">
+        <changelog><![CDATA[2026-09-24 v0.3 - More features]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/14a0df3bf2cd34d8ba1f95dc7a47a108a583bca5/Items/Arrange%20Items%20by%20Name.lua</source>
       </version>
     </reapack>
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
