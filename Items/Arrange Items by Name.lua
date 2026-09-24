@@ -1,5 +1,5 @@
 -- @description Arrange Items by Name
--- @version 0.2
+-- @version 0.3
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @about
@@ -9,7 +9,7 @@
 --   Useful for organizing large batches of imported recordings (e.g. Foley
 --   surface/action variants) onto their own tracks by naming convention.
 -- @changelog
---   2026-09-24 v0.2 - Working prototype
+--   2026-09-24 v0.3 - More features
 
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
@@ -69,6 +69,8 @@ local S = {
     return get_bool("SortAlpha", false) and "alpha" or "grouped"
   end)(),                                                  -- "grouped" | "alpha" | "priority"
   track_priority   = get_str("TrackPriority", ""),
+  cascade_on       = get_bool("CascadeOn", false),
+  cascade_gap      = get_num("CascadeGap", 1.0),
   sort_items_on    = get_bool("SortItemsOn", false),
   sort_order       = get_str("SortOrder", ""),
   sort_layout      = get_str("SortLayout", "slots"),       -- "slots" | "repack"
@@ -89,6 +91,8 @@ local function save_settings()
   reaper.SetExtState(NS, "Placement", S.placement, true)
   reaper.SetExtState(NS, "TrackOrder", S.track_order, true)
   reaper.SetExtState(NS, "TrackPriority", S.track_priority, true)
+  reaper.SetExtState(NS, "CascadeOn", tostring(S.cascade_on), true)
+  reaper.SetExtState(NS, "CascadeGap", tostring(S.cascade_gap), true)
   reaper.SetExtState(NS, "SortItemsOn", tostring(S.sort_items_on), true)
   reaper.SetExtState(NS, "SortOrder", S.sort_order, true)
   reaper.SetExtState(NS, "SortLayout", S.sort_layout, true)
@@ -245,6 +249,19 @@ local function parse_sort_order(spec)
   return words
 end
 
+-- Levels are separated by ";" (or "|"), words within a level by ",". So
+-- "light, normal, heavy; slow, fast" is two ordered sets applied as
+-- successive sort keys: intensity first, speed to break its ties. Empty
+-- levels are dropped, so a trailing ";" is harmless.
+local function parse_priority_levels(spec)
+  local levels = {}
+  for chunk in (spec or ""):gmatch("[^;|]+") do
+    local words = parse_sort_order(chunk)
+    if #words > 0 then levels[#levels + 1] = words end
+  end
+  return levels
+end
+
 -- Returns two things about a name: its rank -- the index of the earliest
 -- listed word it contains, or one past the end when it matches none -- and
 -- its "family", the lowercased name with that word removed. Track ordering
@@ -272,10 +289,27 @@ local function rank_and_family(name, words)
   return #words + 1, lower
 end
 
--- Item ordering wants the rank on its own.
-local function sort_rank(name, words)
-  local rank = rank_and_family(name, words)
-  return rank
+-- One rank per level, plus the family left after every matched word has
+-- been stripped. Stripping is progressive: level 2 matches against what
+-- level 1 left behind, so "Roll Heavy Slow" yields ranks {heavy, slow} and
+-- the family "bendmetalsolid roll".
+local function ranks_and_family(name, levels)
+  local ranks, family = {}, name:lower()
+  for i, words in ipairs(levels) do
+    ranks[i], family = rank_and_family(family, words)
+  end
+  return ranks, family
+end
+
+-- Lexicographic over the rank vectors. A missing level counts as 0 so a
+-- shorter vector sorts first, though in practice both sides come from the
+-- same level list and are the same length.
+local function compare_ranks(a, b)
+  for i = 1, math.max(#a, #b) do
+    local x, y = a[i] or 0, b[i] or 0
+    if x ~= y then return x < y and -1 or 1 end
+  end
+  return 0
 end
 
 -- Compares digit runs numerically and everything else as text, so the
@@ -307,10 +341,11 @@ local function natural_less(a, b)
   end
 end
 
--- Shared by both sort paths. Entries must already carry a .rank; computing
--- it here would redo the pattern matching O(n log n) times.
+-- Shared by both sort paths. Entries must already carry a .ranks vector;
+-- computing it here would redo the pattern matching O(n log n) times.
 local function entry_less(a, b)
-  if a.rank ~= b.rank then return a.rank < b.rank end
+  local c = compare_ranks(a.ranks, b.ranks)
+  if c ~= 0 then return c < 0 end
   if a.name ~= b.name then return natural_less(a.name, b.name) end
   return a.ord < b.ord  -- selection order: keeps identically-named items stable
 end
@@ -362,6 +397,48 @@ local function repack_items(list, gap)
   return moved
 end
 
+-- Sequences whole blocks along the timeline in track order, so the first
+-- track's material plays first and the arrangement staircases down and to
+-- the right. Each group is shifted by a single delta, so whatever spacing
+-- the items have inside their own track survives untouched -- this runs
+-- after the per-track layout and only decides where each block starts.
+-- Anchored at the earliest position anything currently occupies, so the
+-- material stays where it already lives on the timeline.
+local function cascade_groups(ordered, gap)
+  local start = math.huge
+  for _, g in ipairs(ordered) do
+    for _, e in ipairs(g.items) do
+      local p = reaper.GetMediaItemInfo_Value(e.item, "D_POSITION")
+      if p < start then start = p end
+    end
+  end
+  if start == math.huge then return 0 end
+
+  local cursor, moved = start, 0
+  for _, g in ipairs(ordered) do
+    if #g.items > 0 then
+      local b_start, b_end = math.huge, -math.huge
+      for _, e in ipairs(g.items) do
+        local p = reaper.GetMediaItemInfo_Value(e.item, "D_POSITION")
+        local l = reaper.GetMediaItemInfo_Value(e.item, "D_LENGTH")
+        if p < b_start then b_start = p end
+        if p + l > b_end then b_end = p + l end
+      end
+
+      local delta = cursor - b_start
+      if delta ~= 0 then
+        for _, e in ipairs(g.items) do
+          local p = reaper.GetMediaItemInfo_Value(e.item, "D_POSITION")
+          reaper.SetMediaItemInfo_Value(e.item, "D_POSITION", p + delta)
+          moved = moved + 1
+        end
+      end
+      cursor = cursor + (b_end - b_start) + gap
+    end
+  end
+  return moved
+end
+
 -- Picks the layout the settings ask for. Both take an already-sorted list.
 local function layout_items(list, settings)
   if settings.sort_layout == "repack" then
@@ -372,9 +449,9 @@ end
 
 -- Sorts each group's items in place.
 local function sort_group_items(groups, settings)
-  local words = parse_sort_order(settings.sort_order)
+  local levels = parse_priority_levels(settings.sort_order)
   for _, g in ipairs(groups) do
-    for _, e in ipairs(g.items) do e.rank = sort_rank(e.name, words) end
+    for _, e in ipairs(g.items) do e.ranks = ranks_and_family(e.name, levels) end
     table.sort(g.items, entry_less)
   end
 end
@@ -476,8 +553,8 @@ local function order_groups(groups, settings)
     return groups
   end
 
-  local words = settings.track_order == "priority"
-    and parse_sort_order(settings.track_priority) or {}
+  local levels = settings.track_order == "priority"
+    and parse_priority_levels(settings.track_priority) or {}
 
   local by_priority = settings.track_order == "priority"
 
@@ -486,20 +563,18 @@ local function order_groups(groups, settings)
     -- The effective name, so a track renamed in the preview sorts where its
     -- new name puts it rather than where the computed label did.
     local name = track_name_overrides[g.key] or g.label
-    local rank, family = 1, name:lower()
-    if by_priority then rank, family = rank_and_family(name, words) end
-    list[i] = {group = g, name = name, ord = i, rank = rank, family = family}
+    local ranks, family = {}, name:lower()
+    if by_priority then ranks, family = ranks_and_family(name, levels) end
+    list[i] = {group = g, name = name, ord = i, ranks = ranks, family = family}
   end
 
-  -- Family before rank: this is what keeps a family together and orders
+  -- Family before ranks: this is what keeps a family together and orders
   -- light/normal/heavy inside it, rather than pulling every Light track to
-  -- the top. In "alpha" mode every rank is 1 and the family is the whole
-  -- name, so this collapses to a natural alphabetical sort.
+  -- the top. In "alpha" mode the rank vectors are empty and the family is
+  -- the whole name, so this collapses to a natural alphabetical sort.
   table.sort(list, function(a, b)
     if a.family ~= b.family then return natural_less(a.family, b.family) end
-    if a.rank ~= b.rank then return a.rank < b.rank end
-    if a.name ~= b.name then return natural_less(a.name, b.name) end
-    return a.ord < b.ord
+    return entry_less(a, b)
   end)
 
   local ordered = {}
@@ -536,13 +611,20 @@ local function apply_groups(groups)
       end
     end
 
+    -- Block sequencing runs last, over the groups in track order.
+    local cascaded = S.cascade_on and cascade_groups(groups, S.cascade_gap) or 0
+
     reaper.PreventUIRefresh(-1)
     reaper.UpdateArrange()
     reaper.Undo_EndBlock("Sort items by name", -1)
 
-    status_msg = moved == 0 and "Already in order."
-      or ("Reordered %d item%s on %d track%s"):format(
-           moved, moved == 1 and "" or "s", track_count, track_count == 1 and "" or "s")
+    if moved == 0 and cascaded == 0 then
+      status_msg = "Already in order."
+    else
+      status_msg = ("Reordered %d item%s on %d track%s"):format(
+        moved, moved == 1 and "" or "s", track_count, track_count == 1 and "" or "s")
+      if cascaded > 0 then status_msg = status_msg .. ", cascaded" end
+    end
     cached_sig = nil
     return
   end
@@ -585,6 +667,10 @@ local function apply_groups(groups)
     track_count = track_count + 1
   end
 
+  -- After every track exists and its items are laid out, so the blocks
+  -- being sequenced are final.
+  local cascaded = S.cascade_on and cascade_groups(ordered, S.cascade_gap) or 0
+
   reaper.TrackList_AdjustWindows(false)
   reaper.PreventUIRefresh(-1)
   reaper.UpdateArrange()
@@ -592,6 +678,7 @@ local function apply_groups(groups)
 
   status_msg = ("Arranged %d item%s onto %d track%s"):format(
     total_items, total_items == 1 and "" or "s", track_count, track_count == 1 and "" or "s")
+  if cascaded > 0 then status_msg = status_msg .. ", cascaded" end
 
   cached_sig = nil  -- force a fresh preview (track numbers/order just changed)
 end
@@ -709,11 +796,20 @@ end
 -- set" and "priority applied" is invisible until Apply -- which is exactly
 -- the trap the greyed placeholder text set earlier.
 local function priority_readout(spec)
-  local words = parse_sort_order(spec)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Text, #words > 0 and ACCENT_TEXT or DIM_TEXT)
-  ImGui.TextWrapped(ctx, #words > 0
-    and table.concat(words, "  \u{2192}  ")
-    or  "No priority words \u{2014} natural order only")
+  local levels = parse_priority_levels(spec)
+  if #levels == 0 then
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM_TEXT)
+    ImGui.TextWrapped(ctx, "No priority words \u{2014} natural order only")
+    ImGui.PopStyleColor(ctx)
+    return
+  end
+  -- One line per level, numbered once there is more than one, so the
+  -- precedence between sets is visible rather than inferred from the text.
+  ImGui.PushStyleColor(ctx, ImGui.Col_Text, ACCENT_TEXT)
+  for i, words in ipairs(levels) do
+    local body = table.concat(words, "  \u{2192}  ")
+    ImGui.TextWrapped(ctx, #levels > 1 and ("%d.  %s"):format(i, body) or body)
+  end
   ImGui.PopStyleColor(ctx)
 end
 
@@ -801,10 +897,8 @@ local function draw_output()
       "nothing and only reorders items where they already are.")
   end
 
-  -- Nothing is created in keep mode, so there is no track order to choose.
-  local keep = S.placement == "keep"
-  if keep then ImGui.BeginDisabled(ctx, true) end
-
+  -- Left live even in keep mode: no tracks are created there, but this
+  -- order still drives the preview and the cascade sequence.
   if begin_field_table("##track_order_fields") then
     combo_field("Track Order:", "track_order", "track_order", {
       {"grouped",  "As Grouped"},
@@ -813,17 +907,21 @@ local function draw_output()
     })
     if ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
       ImGui.SetTooltip(ctx,
-        "The order the new tracks are created in.\n" ..
+        "The order the new tracks are created in -- and, with\n" ..
+        "Cascade on, the order their material is sequenced in.\n" ..
+        "In Keep Current Tracks nothing is reordered in the\n" ..
+        "track list; this still sets the preview and cascade order.\n\n" ..
         "As Grouped keeps the order the groups were found in;\n" ..
         "Priority Words ranks track names the same way the\n" ..
-        "item priority list ranks item names.")
+        "item priority list ranks item names, including\n" ..
+        "several \";\"-separated sets.")
     end
 
     if S.track_order == "priority" then
       field_label("Track Priority:")
       ImGui.SetNextItemWidth(ctx, -1)
       local changed, v = ImGui.InputTextWithHint(ctx, "##track_priority",
-        "e.g. light, normal, heavy", S.track_priority)
+        "e.g. light, normal, heavy; slow, fast", S.track_priority)
       if changed then S.track_priority = v; save_settings() end
     end
 
@@ -832,7 +930,33 @@ local function draw_output()
 
   if S.track_order == "priority" then priority_readout(S.track_priority) end
 
-  if keep then ImGui.EndDisabled(ctx) end
+  ImGui.Spacing(ctx)
+  check_field("Cascade Tracks Across Timeline", "cascade_on")
+  if ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
+    ImGui.SetTooltip(ctx,
+      "Sequence each track's block of items along the timeline in\n" ..
+      "track order, so the first track plays first and the\n" ..
+      "arrangement staircases down and to the right.\n\n" ..
+      "Spacing inside a track is untouched -- each block moves as\n" ..
+      "a unit. The cascade starts where the earliest item already\n" ..
+      "sits, so the material stays put on the timeline.")
+  end
+
+  if S.cascade_on then
+    if begin_field_table("##cascade_fields") then
+      field_label("Cascade Gap (s):")
+      ImGui.SetNextItemWidth(ctx, -1)
+      local changed, v = ImGui.InputDouble(ctx, "##cascade_gap", S.cascade_gap, 0.1, 1.0, "%.3f")
+      if changed then
+        S.cascade_gap = math.max(0, v)
+        save_settings()
+      end
+      if ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
+        ImGui.SetTooltip(ctx, "Silence between one track's block and the next, in seconds.")
+      end
+      ImGui.EndTable(ctx)
+    end
+  end
 
   ImGui.Unindent(ctx, INDENT)
 end
@@ -869,7 +993,7 @@ local function draw_item_sort()
     -- The hint is prefixed "e.g." on purpose: ReaImGui greys a hint into an
     -- empty field, and a bare "light, normal, heavy" there is
     -- indistinguishable from the same text actually entered.
-    local changed, v = ImGui.InputTextWithHint(ctx, "##sort_order", "e.g. light, normal, heavy", S.sort_order)
+    local changed, v = ImGui.InputTextWithHint(ctx, "##sort_order", "e.g. light, normal, heavy; slow, fast", S.sort_order)
     if changed then S.sort_order = v; save_settings() end
     ImGui.EndTable(ctx)
   end
@@ -878,8 +1002,12 @@ local function draw_item_sort()
     ImGui.SetTooltip(ctx,
       "Comma-separated words, in the order you want them.\n" ..
       "An item sorts by the first word its name contains;\n" ..
-      "names matching none go last. Ties break naturally,\n" ..
-      "so _02 precedes _10. Leave blank for plain natural order.")
+      "names matching none go last.\n\n" ..
+      "Separate several sets with \";\" to sort on more than one:\n" ..
+      "  light, normal, heavy; slow, fast\n" ..
+      "ranks by intensity first, then uses speed to break ties.\n\n" ..
+      "Ties break naturally, so _02 precedes _10.\n" ..
+      "Leave blank for plain natural order.")
   end
 
   priority_readout(S.sort_order)
