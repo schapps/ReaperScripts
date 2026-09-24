@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="be061e37e510f866871137b628a4ef4e3131a501">
+<index version="1" name="SPS Scripts" commit="0e0d9bf53138c73e40a0e57e88533521061ccb4e">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -734,6 +734,22 @@
     </reapack>
   </category>
   <category name="Items">
+    <reapack name="Arrange Items by Name.lua" type="script" desc="Arrange Items by Name">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI dialog that groups the selected media items by similarities in their take names, previews the proposed track groups, and (on Apply) creates one new track per group and moves that group's items onto it. Useful for organizing large batches of imported recordings (e.g. Foley surface/action variants) onto their own tracks by naming convention.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="0.1" author="Stephen Schappler" time="2026-09-24T19:45:53Z">
+        <changelog><![CDATA[2026-09-24 v0.1 - Testing]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0e0d9bf53138c73e40a0e57e88533521061ccb4e/Items/Arrange%20Items%20by%20Name.lua</source>
+      </version>
+    </reapack>
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
