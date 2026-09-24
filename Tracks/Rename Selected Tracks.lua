@@ -1,6 +1,6 @@
 -- @description Rename Selected Tracks
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Batch renaming for all selected tracks, in four independently
 --   toggleable stages applied top to bottom:
@@ -14,7 +14,7 @@
 --   Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).
 -- @link https://www.stephenschappler.com
 -- @changelog
---   09/21/26 v1.0 - Initial release
+--   09/21/26 v1.1 - GUI Update
 
 if not reaper.ImGui_GetBuiltinPath then
   reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
