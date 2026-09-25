@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.15
+-- @version 1.16
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.16 Fixing bug with Capture Name and enumeration
 --   v1.15 Export button (both naming modes) now uses theme.SecondaryButton
 --         instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
 --   v1.14 DrawTabAccent now delegates to the shared theme.DrawTabAccent
@@ -2151,49 +2152,143 @@ local function ApplyFieldMatch(field, match_type, match_val)
   end
 end
 
--- Count how many parts the fields at indices [start_i..#fields] will consume,
--- scanning from the END of parts. Used to reserve space for trailing fields
--- so a greedy text field doesn't swallow them.
-local function CountTrailingParts(fields, start_i, parent, parts, from_idx)
-  local count = 0
-  for i = #fields, start_i, -1 do
-    local f = fields[i]
+-- Every visible field under `fields`, in the same depth-first order
+-- FillFields itself walks them. Shared by CollectFollowingFields below.
+local function CollectVisibleFields(fields, parent, out)
+  for _, f in ipairs(fields) do
     if PassesIDCheck(f, parent) then
-      local part_idx = #parts - count
-      if part_idx < from_idx then break end
-      if type(f.value) == "boolean" then
-        if f.btrue and parts[part_idx]:lower() == f.btrue:lower() then
-          count = count + 1
-        end
-        -- else: boolean absent, takes 0 parts
-      elseif type(f.value) == "number" or f.numwild then
-        count = count + 1
-      elseif type(f.value) == "table" then
-        count = count + 1
-      elseif type(f.value) == "string" then
+      out[#out + 1] = f
+      if f.fields then CollectVisibleFields(f.fields, f, out) end
+    end
+  end
+end
+
+-- Every visible field FillFields will reach AFTER the one at `index` --
+-- crucially including the ones in ENCLOSING levels, not just later
+-- siblings. That distinction is the whole point: a scheme's tail fields
+-- (User Input / Loop / Enumeration) commonly live at the TOP level while
+-- the greedy text field that precedes them is nested inside an id-gated
+-- branch (e.g. Badlands' "Material Name", a child of Main Category).
+-- Scanning siblings alone, every remaining sibling of such a field is
+-- gated to some OTHER branch and so reserves nothing, and the greedy
+-- field swallows the entire rest of the name -- enumeration token,
+-- boolean keyword and all.
+--
+-- `ancestors` is the stack of levels FillFields descended through to get
+-- here, innermost last; we walk it back outwards so the returned order
+-- matches the real traversal order.
+local function CollectFollowingFields(fields, index, parent, ancestors)
+  local out = {}
+  local function rest(list, from, p)
+    for j = from, #list do
+      local f = list[j]
+      if PassesIDCheck(f, p) then
+        out[#out + 1] = f
+        if f.fields then CollectVisibleFields(f.fields, f, out) end
+      end
+    end
+  end
+  rest(fields, index + 1, parent)
+  for a = #ancestors, 1, -1 do
+    local frame = ancestors[a]
+    rest(frame.fields, frame.index + 1, frame.parent)
+  end
+  return out
+end
+
+-- Copy of `ancestors` with one more level pushed on. Copied rather than
+-- mutated-and-popped so sibling recursions can't see each other's frames.
+local function PushFrame(ancestors, fields, index, parent)
+  local out = {}
+  for i = 1, #ancestors do out[i] = ancestors[i] end
+  out[#out + 1] = { fields = fields, index = index, parent = parent }
+  return out
+end
+
+-- Count how many parts the fields in `following` will consume, scanning
+-- from the END of parts. Used to reserve space for later fields so a
+-- greedy text field doesn't swallow them.
+local function CountTrailingParts(following, parts, from_idx)
+  local count = 0
+  for i = #following, 1, -1 do
+    local f = following[i]
+    local part_idx = #parts - count
+    if part_idx < from_idx then break end
+    if type(f.value) == "boolean" then
+      if f.btrue and f.btrue ~= "" and parts[part_idx]:lower() == f.btrue:lower() then
         count = count + 1
       end
+      -- else: boolean absent, takes 0 parts
+    else
+      count = count + 1
     end
   end
   return count
 end
 
+-- Is this name part unmistakably some LATER field's token rather than
+-- text the user typed? Two shapes qualify, and only two:
+--
+--   * a boolean field's keyword ("lp" for Badlands' Loop), which is a
+--     fixed literal declared by the scheme -- if it's in the name at all,
+--     it's that checkbox, not prose;
+--   * a pure-numeric part when a later Enumeration field exists, i.e.
+--     the "_01" tail Rename() appends.
+--
+-- Used to hand parts BACK after the reservation math above, which can
+-- still overshoot: reservation works on counts, so it can't tell that the
+-- single part it left for a greedy field is itself a later field's token
+-- (Badlands' empty "User Input" sitting between Material Name and Loop
+-- would otherwise be forced to take "lp", since the greedy branch always
+-- claims at least one part). Without this, capturing
+-- "IMP_..._Dirt_lp_01" and renaming again yields "..._Dirt_lp_01_lp_01",
+-- stacking both tokens on every pass.
+--
+-- Deliberately NOT extended to dropdown options: those are free-text-ish
+-- words ("Metal", "Water") that a Material Name or User Input could
+-- legitimately contain, so releasing them would lose real typing.
+local function ClaimedByLaterField(following, part)
+  local lower   = part:lower()
+  local numeric = part:match("^%d+$") ~= nil
+  for _, f in ipairs(following) do
+    if type(f.value) == "boolean" then
+      if f.btrue and f.btrue ~= "" and f.btrue:lower() == lower then return true end
+      if f.bfalse and f.bfalse ~= "" and f.bfalse:lower() == lower then return true end
+    elseif numeric and (type(f.value) == "number" or f.numwild) then
+      return true
+    end
+  end
+  return false
+end
+
 -- Recursively walk fields in order, consuming name parts as they match.
 -- state.idx is shared across all recursive calls via the table reference.
-local function FillFields(fields, parent, parts, state)
+local function FillFields(fields, parent, parts, state, ancestors)
+  ancestors = ancestors or {}
   for i, field in ipairs(fields) do
     if state.idx > #parts then return end
     if not PassesIDCheck(field, parent) then
-      if field.fields then FillFields(field.fields, field, parts, state) end
+      if field.fields then
+        FillFields(field.fields, field, parts, state, PushFrame(ancestors, fields, i, parent))
+      end
     else
       local match_type, match_val, n
 
       if type(field.value) == "string" then
-        -- Greedy text field: consume all parts not reserved by trailing fields
-        local trailing = CountTrailingParts(fields, i + 1, parent, parts, state.idx)
+        -- Greedy text field: consume all parts not reserved by later fields
+        local following = CollectFollowingFields(fields, i, parent, ancestors)
+        local trailing = CountTrailingParts(following, parts, state.idx)
         local available = #parts - state.idx + 1
         n = math.max(1, available - trailing)
-        local val = table.concat(parts, wgt.data.separator, state.idx, state.idx + n - 1)
+        -- Then give back any tail part that is plainly a later field's own
+        -- token rather than typed text (see ClaimedByLaterField). Allowed
+        -- to reach 0: a text field the name has nothing for captures as
+        -- empty and consumes nothing, leaving those parts for the fields
+        -- they actually belong to.
+        while n > 0 and ClaimedByLaterField(following, parts[state.idx + n - 1]) do
+          n = n - 1
+        end
+        local val = n > 0 and table.concat(parts, wgt.data.separator, state.idx, state.idx + n - 1) or ""
         if not val:match("^%d+$") then
           match_type, match_val = "string", val
         end
@@ -2205,7 +2300,9 @@ local function FillFields(fields, parent, parts, state)
         ApplyFieldMatch(field, match_type, match_val)
         state.idx = state.idx + (n or 0)
       end
-      if field.fields then FillFields(field.fields, field, parts, state) end
+      if field.fields then
+        FillFields(field.fields, field, parts, state, PushFrame(ancestors, fields, i, parent))
+      end
     end
   end
 end
@@ -2224,6 +2321,47 @@ function GetSelectedItemName()
   return name ~= "" and name or nil
 end
 
+-- Does the active scheme have an Enumeration field of its own? Used by
+-- StripEnumerationSuffix below. Mirrors LoadField's own "is this the
+-- enumeration field" test (`type(field.value) == "number" or
+-- field.numwild`) and LoadFields' PassesIDCheck-gated walk, so it sees
+-- exactly the fields the user currently sees -- a numeric field hidden
+-- behind an unselected parent id can't lay claim to anything.
+local function HasEnumerationField(fields, parent)
+  for _, field in ipairs(fields) do
+    if PassesIDCheck(field, parent) then
+      if type(field.value) == "number" or field.numwild then return true end
+      if field.fields and HasEnumerationField(field.fields, field) then return true end
+    end
+  end
+  return false
+end
+
+-- Drops a trailing pure-numeric part ("01", "002", "7") off a captured
+-- name's parts. Scheme Naming's counterpart to QuickNamingGui's own
+-- StripTrailingEnumeration, and there for the same reason: Rename()
+-- appends an enumeration token even when the scheme declares no
+-- Enumeration field (see the fallback `enumeration` table it builds in
+-- exactly that case), but on the way back in that token has no field of
+-- its own to land in -- the greedy text field swallows it instead, so
+-- capturing "Foo_Bar_01" and renaming again yields "Foo_Bar_01_01",
+-- compounding a token on every pass.
+--
+-- Only when the scheme has NO Enumeration field of its own, though. When
+-- it has one, a trailing number is legitimately THAT field's value:
+-- CountTrailingParts already reserves a part for it so the greedy text
+-- field can't take it, and re-renaming reuses it as the start value
+-- rather than stacking a second token -- nothing to strip there.
+--
+-- Strips at most one token, same as QuickNamingGui's version, and never
+-- the last remaining part, so an item named just "01" still captures.
+local function StripEnumerationSuffix(parts)
+  if #parts < 2 then return end
+  if not parts[#parts]:match("^%d+$") then return end
+  if HasEnumerationField(wgt.data.fields, nil) then return end
+  table.remove(parts)
+end
+
 function AutoFillFromItem(item, force)
   if not wgt.data or not wgt.data.fields or not wgt.data.separator then return end
   local take = reaper.GetActiveTake(item)
@@ -2233,6 +2371,7 @@ function AutoFillFromItem(item, force)
 
   local parts = SplitBySep(name, wgt.data.separator)
   if #parts == 0 then return end
+  StripEnumerationSuffix(parts)
 
   -- Guard: skip autofill if the name doesn't match the scheme's first meaningful field.
   -- This prevents overwriting fields when the user selects unprocessed items.
