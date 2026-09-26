@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 1.1.3
+-- @version 1.1.4
 -- @changelog
---    v1.1.3 - Mac text input field fix. Improvements to cover art.
+--    v1.1.4 - Bringing track templates up to parity with projects
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
