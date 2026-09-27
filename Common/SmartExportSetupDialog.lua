@@ -1,3 +1,4 @@
+-- @noindex
 -- Shared ReaImGui "export destination" dialog for the Smart Export Selected Items
 -- scripts (Items/Smart Export Selected Items.lua and its companion Configure action).
 -- Not a standalone script -- dofile() this and call the returned .Show(opts).

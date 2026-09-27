@@ -1,3 +1,4 @@
+-- @noindex
 -- Shared video RENDER_FORMAT blob encoder for Video/Export Time Selection as
 -- Video (GUI).lua.
 --
