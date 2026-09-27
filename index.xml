@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0a6f32dca7e66c097b76f4800e763d44f6af6705">
+<index version="1" name="SPS Scripts" commit="b9c5943f96c50e75a94df673575490ee80584da8">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -1311,23 +1311,6 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/60627a084b4e834d0f0049b95c00f2118d08c67c/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
-    <reapack name="Smart Export Selected Items - Configure.lua" type="script" desc="Smart Export Selected Items - Configure">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Opens the export-destination setup dialog for "Smart Export Selected Items" at any time, so the output directory/filename pattern can be changed without hand-editing the sidecar config file. Does not export anything itself.\par}
-}
-]]></description>
-        <link rel="website">https://www.stephenschappler.com</link>
-      </metadata>
-      <version name="1.0" author="Stephen Schappler" time="2026-08-12T00:38:16Z">
-        <changelog><![CDATA[08/11/26 v1.0 - Initial release]]></changelog>
-        <source main="main">https://github.com/schapps/ReaperScripts/raw/abede4a5b5a3f73c0f167186af372ab874bf2657/Items/Smart%20Export%20Selected%20Items%20-%20Configure.lua</source>
-        <source file="Common/SmartExportSetupDialog.lua">https://github.com/schapps/ReaperScripts/raw/abede4a5b5a3f73c0f167186af372ab874bf2657/Common/SmartExportSetupDialog.lua</source>
-      </version>
-    </reapack>
     <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -1335,6 +1318,7 @@
 \widowctrl\hyphauto
 
 {\pard \ql \f0 \sa180 \li0 \fi0 A script to easily export selected items of many different channel counts all at once. SWS extension is required. No render preset setup needed.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Optional sidecar config keys (Smart Export Selected Items - User Config.lua): mono_downmix_enabled = true -- auto-downmix highly-correlated stereo items to mono before export mono_downmix_threshold = 0.9 -- L/R correlation (-1..1) required to trigger the downmix\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -1414,6 +1398,33 @@
 05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
 05/26/25 v2.1 - First-run ReaImGUI setup dialog with folder browse]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/5d857f9a93594002018a54e0e1db1bef0b4094d1/Items/Smart%20Export%20Selected%20Items.lua</source>
+      </version>
+      <version name="2.5" author="Stephen Schappler" time="2026-09-27T02:17:32Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path
+05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
+05/26/25 v2.1 - First-run ReaImGUI setup dialog with folder browse
+08/11/26 v2.2 - Auto-downmix highly-correlated stereo items to mono before export
+08/11/26 v2.3 - Stop silently inheriting output dir/pattern from the GUI script's
+                last-used template via ExtState; this script now only ever uses
+                its own sidecar config file / hardcoded defaults. Restored the
+                first-run setup dialog (removed by mistake when the GUI script was
+                added) via a new shared Common/SmartExportSetupDialog.lua, and
+                added a "Smart Export Selected Items - Configure" action to reopen
+                it any time without hand-editing the config file. @provides bundles
+                Common/SmartExportSetupDialog.lua so ReaPack installs it automatically.
+08/12/26 v2.4 - Correlated stereo downmix now uses mono (left) take channel mode
+                instead of mono (mixdown), so only the left channel is kept.
+09/26/26 v2.5 - "Smart Export Selected Items - Configure" is now bundled with this package]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/b9c5943f96c50e75a94df673575490ee80584da8/Items/Smart%20Export%20Selected%20Items.lua</source>
+        <source main="main" file="Smart Export Selected Items - Configure.lua">https://github.com/schapps/ReaperScripts/raw/b9c5943f96c50e75a94df673575490ee80584da8/Items/Smart%20Export%20Selected%20Items%20-%20Configure.lua</source>
+        <source file="Common/SmartExportSetupDialog.lua">https://github.com/schapps/ReaperScripts/raw/b9c5943f96c50e75a94df673575490ee80584da8/Common/SmartExportSetupDialog.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
