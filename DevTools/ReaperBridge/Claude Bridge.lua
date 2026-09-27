@@ -1,3 +1,4 @@
+-- @noindex
 -- Claude Bridge: dev-only file-polling bridge for driving the test REAPER from the shell.
 -- Loaded by <resource>/Scripts/__startup.lua in the test install. Not a ReaPack package.
 --

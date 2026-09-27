@@ -17,4 +17,5 @@ Scripts launched with `rt run` go through a wrapper that logs errors (including 
 defer/ReaImGui loops) and auto-answers modal prompts, so nothing blocks the bridge. A modal
 dialog opened any other way will block it until someone clicks it away.
 
-Not a ReaPack package: the CI workflows pass `--ignore 'DevTools/**'` to reapack-index.
+Not a ReaPack package: `Claude Bridge.lua` has `@noindex` and the CI workflows pass `--ignore DevTools`
+(reapack-index ignores are path prefixes, not globs).
