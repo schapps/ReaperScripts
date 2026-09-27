@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="be061e37e510f866871137b628a4ef4e3131a501">
+<index version="1" name="SPS Scripts" commit="f3b81b4530e7b26692680382a1b66b86d09ab629">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -734,6 +734,30 @@
     </reapack>
   </category>
   <category name="Items">
+    <reapack name="Arrange Items by Name.lua" type="script" desc="Arrange Items by Name">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaImGUI dialog that groups the selected media items by similarities in their take names, previews the proposed track groups, and (on Apply) creates one new track per group and moves that group's items onto it. Useful for organizing large batches of imported recordings (e.g. Foley surface/action variants) onto their own tracks by naming convention.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="0.1" author="Stephen Schappler" time="2026-09-24T19:45:53Z">
+        <changelog><![CDATA[2026-09-24 v0.1 - Testing]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0e0d9bf53138c73e40a0e57e88533521061ccb4e/Items/Arrange%20Items%20by%20Name.lua</source>
+      </version>
+      <version name="0.2" author="Stephen Schappler" time="2026-09-24T21:37:11Z">
+        <changelog><![CDATA[2026-09-24 v0.2 - Working prototype]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/3e655ca4e416189e91d344f14304420316e1d942/Items/Arrange%20Items%20by%20Name.lua</source>
+      </version>
+      <version name="0.3" author="Stephen Schappler" time="2026-09-24T22:39:28Z">
+        <changelog><![CDATA[2026-09-24 v0.3 - More features]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/14a0df3bf2cd34d8ba1f95dc7a47a108a583bca5/Items/Arrange%20Items%20by%20Name.lua</source>
+      </version>
+    </reapack>
     <reapack name="Copy FIlename of Selected Item and Focus Media Explorer Search.lua" type="script" desc="Copy Filename of Selected Item and Focus Media Explorer Search">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -9204,6 +9228,39 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/60627a084b4e834d0f0049b95c00f2118d08c67c/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/60627a084b4e834d0f0049b95c00f2118d08c67c/Renamer/Lib/yaml.lua</source>
       </version>
+      <version name="1.16" author="Aaron Cendan, modified by Stephen Schappler" time="2026-09-25T22:07:56Z">
+        <changelog><![CDATA[v1.16 Fixing bug with Capture Name and enumeration
+v1.15 Export button (both naming modes) now uses theme.SecondaryButton
+      instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
+v1.14 DrawTabAccent now delegates to the shared theme.DrawTabAccent
+      (ReaImGuiTheme.lua v1.29) instead of its own duplicate.
+v1.13 Fixed unresolved merge conflict markers in SchemeStructureEditor.lua that broke script loading
+v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+      shared theme (Common/ReaImGuiTheme.lua), on both naming
+      modes
+v1.11 UI/UX improvements
+v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/f3b81b4530e7b26692680382a1b66b86d09ab629/Renamer/Lib/yaml.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="Subprojects">
@@ -10418,6 +10475,10 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
       <version name="1.0" author="Stephen Schappler" time="2026-09-22T01:20:23Z">
         <changelog><![CDATA[09/21/26 v1.0 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/5c24a88d4dba134f59caa7e3456d61186f007f3d/Tracks/Rename%20Selected%20Tracks.lua</source>
+      </version>
+      <version name="1.1" author="Stephen Schappler" time="2026-09-24T19:48:51Z">
+        <changelog><![CDATA[09/21/26 v1.1 - GUI Update]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/209b2834362544aa30deea0ab6e0203c7007c80f/Tracks/Rename%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Send Source Track to Selected Tracks.lua" type="script" desc="Send Source Track to Selected Tracks">
