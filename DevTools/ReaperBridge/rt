@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# rt: drive the test REAPER install through Claude Bridge.lua.
+# Usage: rt <command> [args]   (run `rt help` for the list)
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RES="${RT_RESOURCE:-/Applications/Reaper_Testing_Mac}"
+APP="$RES/REAPER.app"
+BRIDGE="$RES/ClaudeBridge"
+SCRIPTS_DEST="$RES/Scripts/SPS Scripts"
+JSFX_DEST="$RES/Effects/SPS Scripts/JSFX"
+TIMEOUT="${RT_TIMEOUT:-15}"
+
+die() { echo "rt: $*" >&2; exit 1; }
+
+is_running() { pgrep -f "$APP/Contents/MacOS/REAPER" >/dev/null; }
+
+# Send Lua source (arg 1) to the bridge; print output; exit 1 on error or timeout.
+send() {
+  local code="$1" timeout="${2:-$TIMEOUT}"
+  is_running || die "test REAPER is not running (rt start)"
+  mkdir -p "$BRIDGE/inbox" "$BRIDGE/outbox"
+  local id; id="$(date +%s)_$$_$RANDOM"
+  printf '%s' "$code" > "$BRIDGE/inbox/$id.tmp"
+  mv "$BRIDGE/inbox/$id.tmp" "$BRIDGE/inbox/$id.lua"
+  local out="$BRIDGE/outbox/$id.txt" waited=0
+  while [[ ! -f "$out" ]]; do
+    sleep 0.05
+    waited=$((waited + 1))
+    if (( waited > timeout * 20 )); then
+      rm -f "$BRIDGE/inbox/$id.lua"
+      die "timed out after ${timeout}s (bridge not running, or REAPER blocked by a modal dialog?)"
+    fi
+  done
+  local status; status="$(head -n 1 "$out")"
+  local body; body="$(tail -n +2 "$out")"
+  [[ -n "$body" ]] && printf '%s\n' "$body"
+  rm -f "$out"
+  [[ "$status" == "OK" ]]
+}
+
+lua_str() { # quote a string as a Lua long-bracket literal
+  printf '[==[%s]==]' "$1"
+}
+
+# Map a repo path (absolute or relative) to its mirrored path in the test install.
+test_path() {
+  local p="$1"
+  [[ "$p" = /* ]] || p="$REPO/$p"
+  p="$(cd "$(dirname "$p")" && pwd)/$(basename "$p")"
+  if [[ "$p" == "$REPO/"* ]]; then
+    local rel="${p#"$REPO/"}"
+    if [[ "$rel" == JSFX/* ]]; then echo "$JSFX_DEST/${rel#JSFX/}"; else echo "$SCRIPTS_DEST/$rel"; fi
+  else
+    echo "$p"
+  fi
+}
+
+cmd_sync() {
+  rsync -a --exclude '.*' --exclude 'JSFX/' --exclude 'DevTools/' --exclude 'Examples/' \
+    --exclude 'index.xml' --exclude 'reapack-index.conf' --exclude 'README.md' \
+    "$REPO/" "$SCRIPTS_DEST/"
+  mkdir -p "$JSFX_DEST"
+  rsync -a "$REPO/JSFX/" "$JSFX_DEST/"
+  echo "synced repo -> $SCRIPTS_DEST"
+}
+
+ping() { ( send 'return 1' "${1:-2}" ) >/dev/null 2>&1; } # subshell: send's die must not exit rt
+
+# Point the test install's __startup.lua at this checkout's bridge (run once per machine).
+cmd_install() {
+  [[ -d "$RES/Scripts" ]] || die "no REAPER resource folder at $RES (set RT_RESOURCE)"
+  local startup="$RES/Scripts/__startup.lua"
+  if [[ -f "$startup" ]] && ! grep -q "Claude Bridge.lua" "$startup"; then
+    die "$startup already exists; add: dofile([[$REPO/DevTools/ReaperBridge/Claude Bridge.lua]])"
+  fi
+  cat > "$startup" <<LUA
+-- Test install only: start the Claude dev bridge (DevTools/ReaperBridge in the ReaperScripts repo).
+local bridge = [[$REPO/DevTools/ReaperBridge/Claude Bridge.lua]]
+if reaper.file_exists(bridge) then dofile(bridge) end
+LUA
+  echo "installed $startup (restart REAPER to load the bridge)"
+}
+
+cmd_start() {
+  if is_running; then
+    ping 5 && { echo "bridge ok"; return 0; }
+    die "REAPER is running but the bridge did not answer"
+  fi
+  rm -f "$BRIDGE/bridge.pid"
+  open -n -a "$APP" --args -nosplash
+  local i
+  for i in $(seq 1 60); do
+    sleep 0.5
+    if is_running && [[ -f "$BRIDGE/bridge.pid" ]] && ping 2; then
+      echo "bridge ok"; return 0
+    fi
+  done
+  die "REAPER started but the bridge never answered"
+}
+
+cmd_stop() {
+  is_running || { echo "not running"; return 0; }
+  # Deferred so the bridge replies before REAPER quits. 40004 = File: Quit REAPER
+  send 'H.reset(); reaper.defer(function() reaper.Main_OnCommand(40004, 0) end)' 5 >/dev/null
+  local i
+  for i in $(seq 1 20); do is_running || { echo "stopped"; return 0; }; sleep 0.5; done
+  die "REAPER did not quit (save prompt open?)"
+}
+
+# Launch a script via the error-catching wrapper, wait, then report new errors/console output.
+cmd_run() {
+  local script="${1:?script}" answers="${2:-}" wait="${RT_WAIT:-1.5}"
+  cmd_sync >/dev/null
+  if [[ -n "${RT_INTERACTIVE:-}" ]]; then
+    echo "return false" > "$BRIDGE/answers.lua"
+  else
+    echo "return { $answers }" > "$BRIDGE/answers.lua"
+  fi
+  local errs=0 cons=0
+  [[ -f "$BRIDGE/errors.log" ]] && errs=$(wc -c < "$BRIDGE/errors.log")
+  [[ -f "$BRIDGE/console.log" ]] && cons=$(wc -c < "$BRIDGE/console.log")
+  send "return H.run_script($(lua_str "$(test_path "$script")"))" || return 1
+  sleep "$wait"
+  if [[ -f "$BRIDGE/console.log" ]] && (( $(wc -c < "$BRIDGE/console.log") > cons )); then
+    echo "--- console ---"; tail -c +$((cons + 1)) "$BRIDGE/console.log"; echo
+  fi
+  if [[ -f "$BRIDGE/errors.log" ]] && (( $(wc -c < "$BRIDGE/errors.log") > errs )); then
+    echo "--- ERRORS ---"; tail -c +$((errs + 1)) "$BRIDGE/errors.log"
+    return 1
+  fi
+}
+
+cmd_shot() {
+  local pattern="${1:-REAPER}" file="${2:-}"
+  [[ -n "$file" ]] || file="$BRIDGE/shots/$(date +%Y%m%d_%H%M%S).png"
+  mkdir -p "$(dirname "$file")"
+  local rect
+  rect="$(send "local r = H.window_rect($(lua_str "$pattern"))
+    if not r then error('no visible window matching: ' .. $(lua_str "$pattern")) end
+    return string.format('%d,%d,%d,%d', r.x, r.y, r.w, r.h)")"
+  screencapture -x -o -R "$rect" "$file"
+  echo "$file"
+}
+
+usage() {
+  cat <<EOF
+rt - drive the test REAPER ($RES)
+
+  install               write the test install's __startup.lua to load this checkout's bridge
+  start                 launch test REAPER (if needed) and wait for the bridge
+  stop                  open a blank project (no save prompt) and quit
+  sync                  copy repo scripts/JSFX into the test install
+  eval '<lua>'          run Lua in the bridge; print() and return values are shown
+  eval -                read Lua from stdin
+  file <path.lua>       run a local Lua file in the bridge
+  run <script> [answers]
+                        sync, then run a repo script as an action in its own Lua state; errors
+                        (even in defer/ImGui loops) are logged instead of a modal dialog.
+                        Waits RT_WAIT (1.5s) and prints new console output and errors.
+                        Modal prompts are answered from [answers] (Lua table fields), e.g.
+                          'MB={6,7}, GetUserInputs={{true,"Foo,Bar"}}'
+                        and otherwise get a cancel-style default. RT_INTERACTIVE=1 shows real
+                        dialogs (blocks the bridge until you click)
+  errors                full script error log (defer-loop errors land here later too)
+  log                   full ShowConsoleMsg log from scripts launched with run
+  reset                 blank project in the current tab, no save prompt
+  state                 dump tracks/items/markers/regions/selection
+  windows               list visible top-level windows (spot error dialogs, ImGui windows)
+  wintext <title>       read text of a window (e.g. an error dialog)
+  console               read the ReaScript console text
+  clear                 clear the ReaScript console
+  shot [title] [file]   screenshot a window by title substring (default: main window)
+
+Snippets get helpers: H.snapshot(), H.windows(), H.window_text(t), H.console(),
+H.window_rect(t), H.reset(), H.run_script(path), serialize(v).
+EOF
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  install) cmd_install ;;
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  sync)    cmd_sync ;;
+  eval)    if [[ "${1:-}" == "-" ]]; then send "$(cat)"; else send "${1:?lua code}"; fi ;;
+  file)    send "$(cat "${1:?path}")" ;;
+  run)     cmd_run "$@" ;;
+  errors)  cat "$BRIDGE/errors.log" 2>/dev/null || true ;;
+  log)     cat "$BRIDGE/console.log" 2>/dev/null || true ;;
+  reset)   send 'return H.reset()' ;;
+  state)   send 'return H.snapshot()' ;;
+  windows) send 'for _, w in ipairs(H.windows()) do print(w.title) end' ;;
+  wintext) send "return H.window_text($(lua_str "${1:?title}"))" ;;
+  console) send 'return H.console()' ;;
+  clear)   send 'reaper.ClearConsole()' ;;
+  shot)    cmd_shot "$@" ;;
+  help|-h|--help) usage ;;
+  *) die "unknown command: $cmd (rt help)" ;;
+esac
