@@ -1,15 +1,9 @@
--- @description Smart Export Selected Items - Configure
--- @version 1.0
--- @about
---   Opens the export-destination setup dialog for "Smart Export Selected Items"
---   at any time, so the output directory/filename pattern can be changed without
---   hand-editing the sidecar config file. Does not export anything itself.
--- @author Stephen Schappler
--- @link https://www.stephenschappler.com
--- @provides
---   [nomain] ../Common/SmartExportSetupDialog.lua > Common/SmartExportSetupDialog.lua
--- @changelog
---   08/11/26 v1.0 - Initial release
+-- @noindex
+-- Smart Export Selected Items - Configure
+-- Opens the export-destination setup dialog for "Smart Export Selected Items" at any time,
+-- so the output directory/filename pattern can be changed without hand-editing the sidecar
+-- config file. Does not export anything itself. Installed as part of the
+-- "Smart Export Selected Items" package (see its @provides).
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("(.*[/\\])")
