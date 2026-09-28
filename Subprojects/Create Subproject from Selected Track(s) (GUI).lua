@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.11
+-- @version 1.12
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   09/28/26 - v1.12 Auto channels now sets the subproject's master track channel count to the selected track's channel count (the widest, if several are selected) before saving and rendering, so the rendered subproject item always matches its source track.
 --   09/15/26 - v1.11 Tweaking language in tooltips and gui
 
 
@@ -78,6 +79,17 @@ end
 
 local function setTrackChannelCount(track, channelCount)
   reaper.SetMediaTrackInfo_Value(track, "I_NCHAN", channelCount)
+end
+
+-- Highest I_NCHAN across the selected tracks, so a subproject built from
+-- several tracks never renders narrower than its widest source track.
+local function getSelectedTracksChannelCount()
+  local max_chans = 0
+  for i = 0, reaper.CountSelectedTracks(0) - 1 do
+    local track = reaper.GetSelectedTrack(0, i)
+    max_chans = math.max(max_chans, math.floor(reaper.GetMediaTrackInfo_Value(track, "I_NCHAN")))
+  end
+  return max_chans > 0 and max_chans or nil
 end
 
 local function adjustTrackChannelCountToMatchItem(item)
@@ -305,6 +317,10 @@ local function createSubproject()
     manual_chans = math.max(2, math.floor(tonumber(channels_buf) or 2))
   end
 
+  -- Channel count for the subproject's master track. In Auto mode, read it from
+  -- the selected track(s) now — their handles go stale once 41997 moves them.
+  local master_chans = manual_chans or getSelectedTracksChannelCount()
+
   -- Collect video track chunks from parent BEFORE any tracks are moved
   local video_chunks = copy_video and collectVideoTrackChunks() or {}
 
@@ -349,10 +365,11 @@ local function createSubproject()
     local subproj = reaper.EnumProjects(-1, "")
 
     -- Set subproject master track channel count before rendering so the
-    -- RPP-Prox output has the correct number of channels.
-    if not channels_auto and manual_chans then
+    -- RPP-Prox output has the correct number of channels (manual value, or
+    -- in Auto mode the source track's count).
+    if master_chans then
       local master = reaper.GetMasterTrack(subproj)
-      if master then setTrackChannelCount(master, manual_chans) end
+      if master then setTrackChannelCount(master, master_chans) end
     end
 
     -- Paste copied video tracks at the top of the subproject track list
@@ -462,6 +479,11 @@ local function loop()
       ImGui.SameLine(ctx)
       local _, new_auto = ImGui.Checkbox(ctx, "Auto##ch_auto", channels_auto)
       channels_auto = new_auto
+      if ImGui.IsItemHovered(ctx) then
+        ImGui.SetTooltip(ctx, "Sets the subproject's master channel count to match the\n"
+          .. "selected track (the widest one, if several are selected),\n"
+          .. "so the rendered subproject item has the same channel count.")
+      end
       ImGui.TableSetColumnIndex(ctx, 1)
       ImGui.Text(ctx, "Channels")
 
