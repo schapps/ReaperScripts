@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="62669a7eaf0176241f2f6068a27bcc3169f1ac12">
+<index version="1" name="SPS Scripts" commit="f1f955bbe8ad7b0eacb5608fb4f7aec82db1f90a">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -10416,6 +10416,25 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
       <version name="1.1" author="Stephen Schappler" time="2026-01-09T00:46:50Z">
         <changelog><![CDATA[1/8/2026 Adding Script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/29de9554ea65327aca6660a730ffbf319eb46c71/Tracks/Add%20Track%20Icons%20Based%20on%20Channel%20Count.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Create Folder Track from Selected Tracks (GUI).lua" type="script" desc="Create Folder Track from Selected Tracks (GUI)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Wraps the selected tracks in a new folder track. The folder is inserted where the first selected track sits and every selected track is moved into it as a child. Options:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Folder Name: optional name for the new folder track.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Name folder after first selected track: used when Folder Name is left empty.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Clear child track names: blanks the names of the moved tracks. Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).\sa180\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-09-29T17:27:05Z">
+        <changelog><![CDATA[09/29/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/f1f955bbe8ad7b0eacb5608fb4f7aec82db1f90a/Tracks/Create%20Folder%20Track%20from%20Selected%20Tracks%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Create New Tracks with Parent Folder Track.lua" type="script" desc="Create New Tracks with Parent Folder Track">
