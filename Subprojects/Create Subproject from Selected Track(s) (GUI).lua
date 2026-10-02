@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.12
+-- @version 1.13
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/02/26 - v1.13 After rendering, a 2-channel subproject item whose L/R correlation is 0.9 or higher (effectively mono content) has its take channel mode set to Mono (downmix). Fixed the post-render channel count adjustment (and this new check) acting on the last item in the project instead of the subproject item when tracks below the subproject had items.
 --   09/28/26 - v1.12 Auto channels now sets the subproject's master track channel count to the selected track's channel count (the widest, if several are selected) before saving and rendering, so the rendered subproject item always matches its source track.
 --   09/15/26 - v1.11 Tweaking language in tooltips and gui
 
@@ -101,10 +102,86 @@ local function adjustTrackChannelCountToMatchItem(item)
   end
 end
 
-local function getLastRenderedItem()
-  local numItems = reaper.CountMediaItems(0)
-  if numItems == 0 then return nil end
-  return reaper.GetMediaItem(0, numItems - 1)
+-- ============================================================
+-- Stereo correlation / mono downmix (same analysis as Smart Export
+-- Selected Items' auto-downmix)
+-- ============================================================
+local CORRELATION_ANALYSIS_SAMPLERATE = 8000
+local CORRELATION_BLOCK_FRAMES        = 8192
+local MONO_CORRELATION_THRESHOLD      = 0.9
+local CHANMODE_MONO_DOWNMIX           = 2
+
+-- Returns Pearson correlation coefficient (-1..1) of L/R channels across the
+-- full range of audio available from the take's audio accessor, or nil if it
+-- couldn't be computed.
+local function computeStereoCorrelation(take)
+  local accessor = reaper.CreateTakeAudioAccessor(take)
+  if not accessor then return nil end
+
+  -- Query the accessor's own valid time range rather than assuming it lines up
+  -- with the item's project-time D_POSITION/D_LENGTH -- passing project-time
+  -- positions directly yields 0 samples every call.
+  local start_pos = reaper.GetAudioAccessorStartTime(accessor)
+  local end_pos   = reaper.GetAudioAccessorEndTime(accessor)
+
+  local samplerate   = CORRELATION_ANALYSIS_SAMPLERATE
+  local num_channels = 2
+  local block_frames = CORRELATION_BLOCK_FRAMES
+  local samplebuffer = reaper.new_array(block_frames * num_channels)
+
+  local sum_l, sum_r, sum_l2, sum_r2, sum_lr, n = 0.0, 0.0, 0.0, 0.0, 0.0, 0
+  local pos = start_pos
+
+  while pos < end_pos do
+    samplebuffer.clear()
+    local ret = reaper.GetAudioAccessorSamples(accessor, samplerate, num_channels, pos, block_frames, samplebuffer)
+    if ret == -1 then break end
+    if ret == 1 then
+      -- GetAudioAccessorSamples' return value is a status flag (0/1/-1), NOT a
+      -- frame count, so clamp how many frames of this block fall inside our
+      -- analysis window ourselves.
+      local frames_in_range = math.min(block_frames, math.floor((end_pos - pos) * samplerate))
+      if frames_in_range > 0 then
+        local buf = samplebuffer.table()
+        for f = 0, frames_in_range - 1 do
+          local l = buf[f * num_channels + 1]
+          local r = buf[f * num_channels + 2]
+          sum_l  = sum_l  + l
+          sum_r  = sum_r  + r
+          sum_l2 = sum_l2 + l * l
+          sum_r2 = sum_r2 + r * r
+          sum_lr = sum_lr + l * r
+          n = n + 1
+        end
+      end
+    end
+    pos = pos + (block_frames / samplerate)
+  end
+
+  reaper.DestroyAudioAccessor(accessor)
+
+  if n < 2 then return nil end
+
+  local denom_l = n * sum_l2 - sum_l * sum_l
+  local denom_r = n * sum_r2 - sum_r * sum_r
+  local denom = math.sqrt(denom_l * denom_r)
+  if denom == 0 then
+    -- Both channels constant (e.g. silence/DC): identical constants = fully
+    -- correlated, differing constants = uncorrelated.
+    return (denom_l == 0 and denom_r == 0) and 1.0 or 0.0
+  end
+  return (n * sum_lr - sum_l * sum_r) / denom
+end
+
+-- Sets a 2-channel item's active take to Mono (downmix) when its L/R
+-- channels are correlated enough to be effectively mono content.
+local function downmixItemIfMono(item)
+  if getItemChannelCount(item) ~= 2 then return end
+  local take = reaper.GetActiveTake(item)
+  local corr = computeStereoCorrelation(take)
+  if corr and corr >= MONO_CORRELATION_THRESHOLD then
+    reaper.SetMediaItemTakeInfo_Value(take, "I_CHANMODE", CHANMODE_MONO_DOWNMIX)
+  end
 end
 
 local function runCommand(commandID)
@@ -355,6 +432,13 @@ local function createSubproject()
     runCommand(40290)  -- Time selection: Set time selection to items
     runCommand(41997)  -- Move tracks to subproject
     runCommand(41205)  -- Move position of item to edit cursor
+
+    -- 41997 leaves the new subproject item selected (41205 above relies on
+    -- that too). Grab it now, while still in the parent project, rather than
+    -- guessing later -- the last item in the project is only the subproject
+    -- item when no tracks below it have items.
+    local subprojItem = reaper.GetSelectedMediaItem(0, 0)
+
     runCommand(41816)  -- Open associated project in new tab
     endSubprojectFolderOverride(original_record_path)
 
@@ -395,18 +479,21 @@ local function createSubproject()
 
     activateProjectByName(parentName)
 
-    local lastItem = getLastRenderedItem()
-    if lastItem then
+    if subprojItem then
       if channels_auto then
-        adjustTrackChannelCountToMatchItem(lastItem)
+        adjustTrackChannelCountToMatchItem(subprojItem)
       else
-        local track = reaper.GetMediaItem_Track(lastItem)
+        local track = reaper.GetMediaItem_Track(subprojItem)
         if track then setTrackChannelCount(track, manual_chans) end
       end
     end
 
     local cmd_id = reaper.NamedCommandLookup("_XENAKIOS_RESETITEMLENMEDOFFS")
     reaper.Main_OnCommand(cmd_id, 0)
+
+    -- After the length reset so the whole render is analyzed, and before
+    -- Dynamic Split so every split piece inherits the channel mode.
+    if subprojItem then downmixItemIfMono(subprojItem) end
 
     if run_dynamic_split then runCommand(42951) end  -- Dynamic split items using most recent settings
 
