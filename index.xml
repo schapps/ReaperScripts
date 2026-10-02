@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="f1f955bbe8ad7b0eacb5608fb4f7aec82db1f90a">
+<index version="1" name="SPS Scripts" commit="8912ce2fdaa766830a438d574727e9cbfadf9351">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -1086,6 +1086,22 @@
         <changelog><![CDATA[9/27/24 v1.0 - Creating the script with Kei's help :)
 9/27/24 v1.1 - I am dumn and uploaded the wrong version. Fixed.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/9ce3634f506e3f30c1e27dc32f6098ecba0d525e/Items/Select%20Next%20Item%20Edge%20to%20the%20Right%20and%20Extend%20Time%20Selection.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Selected Items Counter (compact).lua" type="script" desc="Selected Items Counter (compact)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 One-row version of Selected Items Counter, sized to fit beside a REAPER toolbar: the whole window is 30pt tall, which ReaImGui scales with the UI the same way toolbar buttons scale (30/45/60px at 100/150/200%). Shows the live selected item count, and with a Target set, the count out of the target plus a small progress bar; the count turns green once the target is met. The Target is shared with Selected Items Counter. Right-click the counter to set the Target, dock/undock it, or close it. Requires: Schapps Script Resources (install from this repository first).\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.0" author="Stephen Schappler" time="2026-10-02T16:38:51Z">
+        <changelog><![CDATA[10/02/26 - v1.0 Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/8912ce2fdaa766830a438d574727e9cbfadf9351/Items/Selected%20Items%20Counter%20(compact).lua</source>
       </version>
     </reapack>
     <reapack name="Selected Items Counter.lua" type="script" desc="Selected Items Counter">
