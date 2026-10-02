@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="8912ce2fdaa766830a438d574727e9cbfadf9351">
+<index version="1" name="SPS Scripts" commit="b006c4d80f163a46cda4aa8b1d5ab857726b71fe">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -9485,6 +9485,12 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <changelog><![CDATA[09/28/26 - v1.12 Auto channels now sets the subproject's master track channel count to the selected track's channel count (the widest, if several are selected) before saving and rendering, so the rendered subproject item always matches its source track.
 09/15/26 - v1.11 Tweaking language in tooltips and gui]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/57f242ec97da98617833dc6965fa91601d38fe81/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
+      </version>
+      <version name="1.13" author="Stephen Schappler" time="2026-10-02T17:24:29Z">
+        <changelog><![CDATA[10/02/26 - v1.13 After rendering, a 2-channel subproject item whose L/R correlation is 0.9 or higher (effectively mono content) has its take channel mode set to Mono (downmix). Fixed the post-render channel count adjustment (and this new check) acting on the last item in the project instead of the subproject item when tracks below the subproject had items.
+09/28/26 - v1.12 Auto channels now sets the subproject's master track channel count to the selected track's channel count (the widest, if several are selected) before saving and rendering, so the rendered subproject item always matches its source track.
+09/15/26 - v1.11 Tweaking language in tooltips and gui]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/b006c4d80f163a46cda4aa8b1d5ab857726b71fe/Subprojects/Create%20Subproject%20from%20Selected%20Track(s)%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Duplicate Subproject Items to New Take, Copying RPP to New Version.lua" type="script" desc="Duplicate Subproject Items to New Take, Copying RPP to New Version">
