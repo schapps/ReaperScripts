@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.17
+-- @version 1.18
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.18 Now uses the shared theme's Push/Pop, so the accent color and fonts from Theme Settings apply here too
 --   v1.17 Right-clicking a dropdown now offers "Rename Selected..." to rename the selected option (and its short code) in place
 --         Respect Overlaps now numbers each overlapping item group separately (01, 02, 03...)
 --   v1.16 Fixing bug with Capture Name and enumeration
@@ -44,6 +45,15 @@ else
     "Missing ReaImGui", 0)
   return
 end
+
+-- Shared ReaImGUI theme (Common/ReaImGuiTheme.lua): base style, fonts,
+-- and widgets. Loaded here, before the acendan style helpers below
+-- capture it as an upvalue.
+local theme_path = script_path .. "Common/ReaImGuiTheme.lua"
+if not reaper.file_exists(theme_path) then
+  theme_path = script_path .. "../Common/ReaImGuiTheme.lua"
+end
+local theme = dofile(theme_path)
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~ INLINED UTILITIES ~~~~~~~~
@@ -275,93 +285,35 @@ function acendan.deleteProjectMarkers(delrgns, pos, contains, tolerance)
 end
 
 -- ImGui style tables (defined after require 'imgui')
+--
+-- The base palette, style vars, and body font all come from theme.Push
+-- (Common/ReaImGuiTheme.lua), so the configured accent color and fonts
+-- apply here like every other Schapps ReaImGui script. These tables only
+-- hold what this script layers on top: colors for slots the shared theme
+-- doesn't set, and the flattened active tab (overline in the accent color,
+-- read fresh each frame so a Theme Settings change applies live).
 acendan.ImGui_Styles = {}
--- Color values below are aligned to Common/ReaImGuiTheme.lua's shared
--- palette wherever that theme defines the same slot, so this script's
--- buttons/tabs/title bar match the rest of the Schapps ReaImGui scripts.
--- Slots the shared theme doesn't define (Table*, Plot*, DockingPreview,
--- ResizeGrip, TextSelectedBg, DragDropTarget) keep their original values.
 acendan.ImGui_Styles.colors = {
   { reaper.ImGui_Col_DragDropTarget,       0xCDA4DEFF },
-  { reaper.ImGui_Col_FrameBg,              0x333333FF },
-  { reaper.ImGui_Col_FrameBgHovered,       0x454545FF },
-  { reaper.ImGui_Col_FrameBgActive,        0x505050FF },
-  { reaper.ImGui_Col_CheckMark,            0xA08FE2FF },
-  { reaper.ImGui_Col_TitleBg,              0x222222FF },
-  { reaper.ImGui_Col_TitleBgCollapsed,     0x15181BFF },
-  { reaper.ImGui_Col_TitleBgActive,        0x333333FF },
-  { reaper.ImGui_Col_Button,               0x60606066 },
-  { reaper.ImGui_Col_ButtonHovered,        0x606060FF },
-  { reaper.ImGui_Col_ButtonActive,         0x808080FF },
-  { reaper.ImGui_Col_Text,                 0xE6E6E6FF },
-  { reaper.ImGui_Col_TextDisabled,         0xA0A0A0FF },
   { reaper.ImGui_Col_TextSelectedBg,       0xD8BFD864 },
-  { reaper.ImGui_Col_ChildBg,              0x222222FF },
-  { reaper.ImGui_Col_ResizeGrip,           0x60606066 },
-  { reaper.ImGui_Col_ResizeGripHovered,    0x606060FF },
-  { reaper.ImGui_Col_ResizeGripActive,     0x808080FF },
-  { reaper.ImGui_Col_Separator,            0x80808080 },
-  { reaper.ImGui_Col_SeparatorHovered,     0x808080C7 },
-  { reaper.ImGui_Col_SeparatorActive,      0x808080FF },
-  { reaper.ImGui_Col_Tab,                  0x232323FF },
-  { reaper.ImGui_Col_TabHovered,           0x333333FF },
-  -- Flattened into the window background (rather than the shared theme's
-  -- teal accent) with a purple overline below, matching how Smart Export
-  -- Selected Items treats its active tab.
   { reaper.ImGui_Col_TabSelected,          0x282828FF },
-  { reaper.ImGui_Col_TabSelectedOverline,  0xA08FE2FF },
-  { reaper.ImGui_Col_WindowBg,             0x282828FF },
-  { reaper.ImGui_Col_PopupBg,              0x202020FF },
-  { reaper.ImGui_Col_ScrollbarBg,          0x1C1C1CFF },
-  { reaper.ImGui_Col_ScrollbarGrab,        0x404040FF },
-  { reaper.ImGui_Col_ScrollbarGrabHovered, 0x535353FF },
-  { reaper.ImGui_Col_ScrollbarGrabActive,  0x666666FF },
-  { reaper.ImGui_Col_Header,               0x60606066 },
-  { reaper.ImGui_Col_HeaderHovered,        0x606060FF },
-  { reaper.ImGui_Col_HeaderActive,         0x808080FF },
-  { reaper.ImGui_Col_TableRowBg,           0xFFFFFF00 },
-  { reaper.ImGui_Col_TableRowBgAlt,        0xFFFFFF04 },
-  { reaper.ImGui_Col_SliderGrab,           0xA08FE2FF },
-  { reaper.ImGui_Col_SliderGrabActive,     0xA08FE2FF },
+  { reaper.ImGui_Col_TabSelectedOverline,  function() return theme.GetAccentColor() end },
   { reaper.ImGui_Col_PlotLines,            0xB19CD9FF },
   { reaper.ImGui_Col_PlotLinesHovered,     0xB19CD9FF },
   { reaper.ImGui_Col_PlotHistogram,        0xB19CD932 },
   { reaper.ImGui_Col_PlotHistogramHovered, 0xB19CD932 },
   { reaper.ImGui_Col_DockingPreview,       1123734963 },
-  { reaper.ImGui_Col_TabDimmed,            0x1E1E1EFF },
-  { reaper.ImGui_Col_TabDimmedSelected,    0x2A2A2AFF },
-  { reaper.ImGui_Col_Border,               0x3F3F3FFF },
   { reaper.ImGui_Col_TableBorderLight,     993737727  },
   { reaper.ImGui_Col_TableBorderStrong,    1330597887 },
   { reaper.ImGui_Col_TableHeaderBg,        858993663  },
 }
--- Matches Common/ReaImGuiTheme.lua's vars exactly -- these 7 are the only
--- ones the shared theme sets, so they're the only ones this script
--- overrides too now. Everything this table used to also set (Alpha,
--- DisabledAlpha, *BorderSize, ChildRounding, ItemInnerSpacing,
--- IndentSpacing, ScrollbarSize, GrabMinSize, ButtonTextAlign) already
--- equaled Dear ImGui's own built-in default, so dropping them changes
--- nothing. PopupRounding, TabRounding, WindowTitleAlign, and
--- SelectableTextAlign did NOT match the true default -- dropping those
--- now makes popups/tabs/the title bar/selectable-row text match every
--- other Schapps ReaImGui script (none of which touch these either),
--- instead of only this script looking different.
-acendan.ImGui_Styles.vars = {
-  { reaper.ImGui_StyleVar_WindowRounding(),    6 },
-  { reaper.ImGui_StyleVar_FrameRounding(),     4 },
-  { reaper.ImGui_StyleVar_GrabRounding(),      4 },
-  { reaper.ImGui_StyleVar_ScrollbarRounding(), 6 },
-  { reaper.ImGui_StyleVar_FramePadding(),      { 10, 6 } },
-  { reaper.ImGui_StyleVar_WindowPadding(),     { 12, 10 } },
-  { reaper.ImGui_StyleVar_ItemSpacing(),       { 10, 8 } },
-}
+-- Style vars multiplied by the UI-scale slider, on top of theme.Push's
+-- own values for them.
 acendan.ImGui_Styles.scalable = {
   reaper.ImGui_StyleVar_WindowPadding(),
   reaper.ImGui_StyleVar_FramePadding(),
   reaper.ImGui_StyleVar_ItemSpacing(),
 }
-acendan.ImGui_Styles.font = nil
-acendan.ImGui_Styles.mono_font = nil
 
 -- Hacky ChildWindow flag for autofill combo
 if not reaper.ImGui_WindowFlags_ChildWindow then
@@ -392,38 +344,7 @@ function acendan.ImGui_HSV(h, s, v, a)
   return reaper.ImGui_ColorConvertDouble4ToU32(r, g, b, a or 1.0)
 end
 
--- ImGui font & scale.
---
--- CreateFont's 2nd argument is FLAGS (e.g. FontFlags_Bold), not a pixel
--- size -- there is no size argument on CreateFont at all; the actual
--- rendered size always comes from whatever's passed to PushFont at each
--- call site (every push in this script already does this correctly).
--- This function used to pass a computed pixel size into that flags slot,
--- which (being a raw integer, not FontFlags_None) could silently flip on
--- unrelated flag bits -- e.g. any odd size would set bit 0, which is
--- FontFlags_Bold, making the font unpredictably bold depending on
--- whatever size/scale happened to be active when it was (re)created.
-function acendan.ImGui_SetFont(font_name)
-  font_name = font_name or "Arial"
-  if acendan.ImGui_Styles.font then reaper.ImGui_Detach(ctx, acendan.ImGui_Styles.font) end
-  acendan.ImGui_Styles.font = reaper.ImGui_CreateFont(font_name)
-  reaper.ImGui_Attach(ctx, acendan.ImGui_Styles.font)
-end
-
--- Monospace counterpart to ImGui_SetFont, same lifecycle (recreated
--- whenever ui_scale changes, via the same wgt.set_font flag). Used by
--- Quick Naming's name input, options list, and preview table
--- (Lib/QuickNamingGui.lua). Named explicitly (Menlo/Consolas) rather than
--- the generic "monospace" family alias, matching Smart Export Selected
--- Items' own mono_font -- the generic alias resolves to a different
--- actual typeface than what that script names directly.
-function acendan.ImGui_SetMonoFont()
-  local font_name = reaper.GetOS():find("Win") and "Consolas" or "Menlo"
-  if acendan.ImGui_Styles.mono_font then reaper.ImGui_Detach(ctx, acendan.ImGui_Styles.mono_font) end
-  acendan.ImGui_Styles.mono_font = reaper.ImGui_CreateFont(font_name)
-  reaper.ImGui_Attach(ctx, acendan.ImGui_Styles.mono_font)
-end
-
+-- ImGui scale.
 function acendan.ImGui_GetScale()
   return acendan.ImGui_GetSetting("ui_scale", 1.0)
 end
@@ -446,38 +367,34 @@ end
 
 -- ImGui style push/pop
 function acendan.ImGui_PushStyles()
-  local scale = acendan.ImGui_GetSetting("ui_scale", 1.0)
-  for idx, value in ipairs(acendan.ImGui_Styles.colors) do
+  local styles = acendan.ImGui_Styles
+  styles.theme_colors, styles.theme_vars = theme.Push(ctx)
+  styles.pushed_colors = 0
+  for _, value in ipairs(styles.colors) do
     if value[1] then
-      reaper.ImGui_PushStyleColor(ctx, value[1](), value[2])
-    else
-      acendan.dbg("ImGui style color has been removed at acendan.ImGui_Styles.colors index:" .. idx)
+      local color = value[2]
+      if type(color) == "function" then color = color() end
+      reaper.ImGui_PushStyleColor(ctx, value[1](), color)
+      styles.pushed_colors = styles.pushed_colors + 1
     end
   end
-  for _, value in ipairs(acendan.ImGui_Styles.vars) do
-    local style_var = value[1]
-    local style_val = value[2]
-    local is_table = type(style_val) == "table"
-    if acendan.tableContainsVal(acendan.ImGui_Styles.scalable, style_var) then
-      if is_table then
-        style_val = { style_val[1] * scale, style_val[2] * scale }
-      else
-        style_val = style_val * scale
-      end
-    end
-    if is_table then
-      reaper.ImGui_PushStyleVar(ctx, style_var, style_val[1], style_val[2])
-    else
-      reaper.ImGui_PushStyleVar(ctx, style_var, style_val)
-    end
+  local scale = acendan.ImGui_GetScale()
+  for _, style_var in ipairs(styles.scalable) do
+    local x, y = reaper.ImGui_GetStyleVar(ctx, style_var)
+    reaper.ImGui_PushStyleVar(ctx, style_var, x * scale, y * scale)
   end
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.font, reaper.ImGui_GetFontSize(ctx))
 end
 
 function acendan.ImGui_PopStyles()
-  reaper.ImGui_PopStyleColor(ctx, #acendan.ImGui_Styles.colors)
-  reaper.ImGui_PopStyleVar(ctx, #acendan.ImGui_Styles.vars)
-  reaper.ImGui_PopFont(ctx)
+  local styles = acendan.ImGui_Styles
+  reaper.ImGui_PopStyleVar(ctx, #styles.scalable)
+  reaper.ImGui_PopStyleColor(ctx, styles.pushed_colors)
+  theme.Pop(ctx, styles.theme_colors, styles.theme_vars)
+end
+
+-- The shared theme's configured monospace font (Theme Settings script).
+function acendan.ImGui_PushMonoFont(size)
+  theme.PushMonoFont(ctx, size)
 end
 
 -- ImGui widgets
@@ -624,18 +541,6 @@ end
 
 local COMPACT_FRAME_PADDING = { 10, 6 }
 
--- Shared ReaImGUI theme -- used here for theme.PrimaryButton (the Rename
--- action) and theme.DrawTabAccent (below). This script keeps its own
--- acendan.ImGui_Styles push/pop system (it has a UI-scale slider the
--- shared theme doesn't support), so rather than replacing that, the
--- color VALUES below have been aligned to match the shared theme's
--- palette instead.
-local theme_path = script_path .. "Common" .. SEP .. "ReaImGuiTheme.lua"
-if not reaper.file_exists(theme_path) then
-  theme_path = script_path .. ".." .. SEP .. "Common" .. SEP .. "ReaImGuiTheme.lua"
-end
-local theme = dofile(theme_path)
-
 -- Smart-Export-style 3px colored left-edge accent on whichever tab was
 -- most recently submitted via BeginTabItem -- delegates to the shared
 -- theme.DrawTabAccent (ReaImGuiTheme.lua), which works the same way
@@ -712,8 +617,6 @@ function Init()
   if not LoadScheme(wgt.scheme) then wgt.scheme = nil end
 
   ctx = reaper.ImGui_CreateContext(SCRIPT_NAME, CONFIG_FLAGS)
-  acendan.ImGui_SetFont()
-  acendan.ImGui_SetMonoFont()
   local scale = acendan.ImGui_GetScale()
   reaper.ImGui_SetNextWindowSize(ctx, wgt.window_w * scale, wgt.window_h * scale)
   acendan.ImGui_SetScale(scale)
@@ -1224,7 +1127,7 @@ function TabNaming()
   -- 13px literal, matching Smart Export Selected Items' own mono_font
   -- pushes exactly, rather than GetFontSize(ctx) (whatever the ambient
   -- default happens to be here, which may not actually be 13).
-  reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
+  acendan.ImGui_PushMonoFont(13)
   reaper.ImGui_TextColored(ctx, 0xFFFFFFFF, preview_name)
   reaper.ImGui_PopFont(ctx)
   reaper.ImGui_PopTextWrapPos(ctx)
@@ -1431,7 +1334,7 @@ function TabSettings()
   end
   acendan.ImGui_Tooltip("Show a button in the main panel to open an external app.")
 
-  if acendan.ImGui_ScaleSlider() then wgt.set_font = true end
+  acendan.ImGui_ScaleSlider()
 
   local num_hist = tonumber(GetPreviousValue("opt_num_hist", 10))
   local rv, num_hist = reaper.ImGui_SliderInt(ctx, "History Count", num_hist, 1, 50)
@@ -1632,9 +1535,6 @@ function Main()
     end
   end
 
-  if wgt.set_font then
-    acendan.ImGui_SetFont(); acendan.ImGui_SetMonoFont(); wgt.set_font = false
-  end
   acendan.ImGui_PushStyles()
 
   -- acendan.ImGui_Styles.vars now pushes FramePadding{10,6} (matching
@@ -1643,7 +1543,7 @@ function Main()
   -- both are what give the native title bar the right height/alignment,
   -- matching every other Schapps ReaImGui script's title bar.
   local rv, open = reaper.ImGui_Begin(ctx, "THE LAST RENAMER - SCHAPPS EDITION", true, WINDOW_FLAGS)
-  if not rv then return open end
+  if not rv then acendan.ImGui_PopStyles(); return open end
 
   -- Tracks whatever size the user has manually resized the window to (no
   -- per-mode auto-sizing - the window is plainly resizable, same size
@@ -1672,7 +1572,7 @@ function Main()
     if reaper.ImGui_BeginTabBar(ctx, "TabBar") then
       local do_restore_naming_mode = not wgt.naming_mode_restored
 
-      NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode, 0xA08FE2FF)
+      NamingModeTabItem("scheme", "Scheme Naming", TabNaming, do_restore_naming_mode, theme.GetAccentColor())
       NamingModeTabItem("quick", "Predictive Naming",
           function() QuickNamingGui.DrawTabContent(ctx, wgt) end, do_restore_naming_mode, 0xF789D4FF)
 

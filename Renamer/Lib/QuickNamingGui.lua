@@ -325,7 +325,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     -- InputText itself, since DrawGhostText measures via CalcTextSize
     -- against whatever font is currently active - popping early would
     -- size the ghost text using the wrong font.
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
+    acendan.ImGui_PushMonoFont(13)
 
     -- Reserve room for the Capture Name button, the "x" clear button, and
     -- the enum badge, all drawn after the input at normal
@@ -534,7 +534,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     if #candidates >= 1 then
       -- Monospace, 13px (literal, matching Smart Export) -- matches the
       -- name input and preview table above/below it.
-      reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
+      acendan.ImGui_PushMonoFont(13)
       -- Clicking a row is a genuine mouse-driven focus loss (needs_refocus =
       -- true), unlike Tab above.
       DrawOptionsList(ctx, candidates, wgt.quick.list_nav_idx, function(c) Accept(c, true) end)
@@ -569,7 +569,7 @@ function QuickNamingGui.DrawTabContent(ctx, wgt)
     local footer_h = wgt.quick.targets_footer_h or
         (reaper.ImGui_GetTextLineHeightWithSpacing(ctx) + 3 * reaper.ImGui_GetFrameHeightWithSpacing(ctx))
     local table_h = math.max(QUICK_PREVIEW_TABLE_HEIGHT * scale, avail_h - footer_h)
-    reaper.ImGui_PushFont(ctx, acendan.ImGui_Styles.mono_font, 13)
+    acendan.ImGui_PushMonoFont(13)
     if reaper.ImGui_BeginTable(ctx, "quick_naming_preview", 2, table_flags, avail_w, table_h) then
       reaper.ImGui_TableSetupColumn(ctx, "Current Name")
       reaper.ImGui_TableSetupColumn(ctx, "New Name")
