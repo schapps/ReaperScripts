@@ -1,12 +1,20 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.30
+-- @version 1.31
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/20/26 - v1.31 Fixed the table's last row getting clipped (and a
+--                   needless vertical scrollbar inside the table) whenever
+--                   long names made the table wide enough to need its
+--                   horizontal scrollbar -- that scrollbar is drawn inside
+--                   the table's fixed height, which had no room reserved
+--                   for it. Worst with a single row, which was left almost
+--                   entirely hidden. The table height now includes
+--                   ScrollbarSize.
 --   09/06/26 - v1.30 "Duplicate New Version" now hands off to the standalone Duplicate Subproject Version script (selects the valid items, then launches it) instead of running its own, since that script now does the same job with per-source version naming and validation.
 --   08/30/26 - v1.29 Shift+Click on the take-version </> buttons now also
 --                   triggers the whole-RPP-group move, same as Ctrl+Click.
@@ -727,8 +735,12 @@ local function loop()
       -- horizontal scrolling on wide rows). So BordersInnerV is dropped
       -- below and its vertical column dividers are drawn manually after
       -- EndTable instead, clipped to the real header+row height rather
-      -- than however tall the table auto-extended.
-      local table_h = row_h * (#display_rows + 1)
+      -- than however tall the table auto-extended. Also reserves room for
+      -- the ScrollX horizontal scrollbar, which is drawn inside table_h --
+      -- without it, wide content clips the last row and forces a vertical
+      -- scrollbar inside the table.
+      local scrollbar_sz = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ScrollbarSize)
+      local table_h = row_h * (#display_rows + 1) + scrollbar_sz
       local col_left_x, header_top_y = {}
       if ImGui.BeginTable(ctx, "##ptable", 9,
           ImGui.TableFlags_BordersInnerH | ImGui.TableFlags_RowBg
