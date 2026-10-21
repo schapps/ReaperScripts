@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="128593c377269b40dc0e8f9828ed232c4bbbabc9">
+<index version="1" name="SPS Scripts" commit="2d1d82011fc4c714a35a065fd518dd56f816dfe1">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -9017,6 +9017,16 @@ Moved resources path to inside UserPlugins directory.]]></changelog>
         <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/7df4df58b79ff0f3c14bccc0b23f8fb572c694e6/ReaStartDashboard/GeistMono-Regular.ttf</source>
         <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/7df4df58b79ff0f3c14bccc0b23f8fb572c694e6/ReaStartDashboard/ReaStartDashboardLogo.png</source>
       </version>
+      <version name="1.1.5" author="Stephen Schappler" time="2026-10-21T03:33:53Z">
+        <changelog><![CDATA[v1.1.5 - Fix for hanging when project dirs are on a server]]></changelog>
+        <source platform="windows" type="extension" file="reaper_reastart.dll">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/reaper_reastart.dll</source>
+        <source platform="darwin" type="extension" file="reaper_reastart.dylib">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/reaper_reastart.dylib</source>
+        <source type="extension" file="ReaStart/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/fa-solid-900.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Bold.ttf">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/Geist-Bold.ttf</source>
+        <source type="extension" file="ReaStart/Geist-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/Geist-Regular.ttf</source>
+        <source type="extension" file="ReaStart/GeistMono-Regular.ttf">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/GeistMono-Regular.ttf</source>
+        <source type="extension" file="ReaStart/ReaStartDashboardLogo.png">https://github.com/schapps/ReaperScripts/raw/2d1d82011fc4c714a35a065fd518dd56f816dfe1/ReaStartDashboard/ReaStartDashboardLogo.png</source>
+      </version>
     </reapack>
   </category>
   <category name="Renamer">
@@ -9347,6 +9357,42 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
         <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/eb0d0fd6d5f1c26aae7e019876559fbcec176532/Renamer/Lib/SchemeStructureEditorGui.lua</source>
         <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/eb0d0fd6d5f1c26aae7e019876559fbcec176532/Renamer/Lib/SchemeVisualizer.lua</source>
         <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/eb0d0fd6d5f1c26aae7e019876559fbcec176532/Renamer/Lib/yaml.lua</source>
+      </version>
+      <version name="1.18" author="Aaron Cendan, modified by Stephen Schappler" time="2026-10-21T03:33:53Z">
+        <changelog><![CDATA[v1.18 Now uses the shared theme's Push/Pop, so the accent color and fonts from Theme Settings apply here too
+v1.17 Right-clicking a dropdown now offers "Rename Selected..." to rename the selected option (and its short code) in place
+      Respect Overlaps now numbers each overlapping item group separately (01, 02, 03...)
+v1.16 Fixing bug with Capture Name and enumeration
+v1.15 Export button (both naming modes) now uses theme.SecondaryButton
+      instead of a one-off hardcoded color (ReaImGuiTheme.lua v1.30).
+v1.14 DrawTabAccent now delegates to the shared theme.DrawTabAccent
+      (ReaImGuiTheme.lua v1.29) instead of its own duplicate.
+v1.13 Fixed unresolved merge conflict markers in SchemeStructureEditor.lua that broke script loading
+v1.12 Visual pass to match the other Schapps ReaImGui scripts'
+      shared theme (Common/ReaImGuiTheme.lua), on both naming
+      modes
+v1.11 UI/UX improvements
+v1.10 Adding P4 support to check out the yaml file if it is in a p4 managed directory
+v1.9 Fixing bug for entry display when dropdown lists are super long
+v1.8 Visual Editor: the create/edit field form can now use an existing $wildcard directly for a new dropdown ("Use an existing $wildcard" checkbox), instead of creating a literal field and linking it afterward
+v1.7 Visual Editor: new "Link to $wildcard..." right-click action points a field's own dropdown value at an already-existing shared wildcard (the inverse of "Extract to $wildcard...")
+v1.6 Visual Editor: dropdown options in the create/edit field form can now be reordered with Up/Down buttons
+v1.5 Visual Editor: drag and drop support]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/schapps_The%20Last%20Renamer.lua</source>
+        <source file="Schemes/Example Game.yaml">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Schemes/Example%20Game.yaml</source>
+        <source file="Schemes/Example Minimal.yaml">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Schemes/Example%20Minimal.yaml</source>
+        <source file="Schemes/Example.yaml">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Schemes/Example.yaml</source>
+        <source file="Schemes/UCS.yaml">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Schemes/UCS.yaml</source>
+        <source file="Meta/meta.yaml">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Meta/meta.yaml</source>
+        <source file="Lib/NamePredictor.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/NamePredictor.lua</source>
+        <source file="Lib/P4Integration.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/P4Integration.lua</source>
+        <source file="Lib/QuickNamingGui.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/QuickNamingGui.lua</source>
+        <source file="Lib/SchemeEditor.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/SchemeEditor.lua</source>
+        <source file="Lib/SchemeEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/SchemeEditorGui.lua</source>
+        <source file="Lib/SchemeStructureEditor.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/SchemeStructureEditor.lua</source>
+        <source file="Lib/SchemeStructureEditorGui.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/SchemeStructureEditorGui.lua</source>
+        <source file="Lib/SchemeVisualizer.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/SchemeVisualizer.lua</source>
+        <source file="Lib/yaml.lua">https://github.com/schapps/ReaperScripts/raw/2d84972205a7430cac80a7b6c546ef5be07a4fe2/Renamer/Lib/yaml.lua</source>
       </version>
     </reapack>
   </category>
