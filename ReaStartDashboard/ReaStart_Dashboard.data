@@ -1,8 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 1.1.4
+-- @version 1.1.5
 -- @changelog
---    v1.1.4 - Bringing track templates up to parity with projects
+--    v1.1.5 - Fix for hanging when project dirs are on a server
 -- @provides
 --    [windows extension] reaper_reastart.dll
 --    [darwin extension] reaper_reastart.dylib
