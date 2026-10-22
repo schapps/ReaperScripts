@@ -1,12 +1,16 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.31
+-- @version 1.32
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 - v1.32 Friendlier ReaImGui check: if ReaImGui is missing or
+--                   too old, the script now says which, explains how to
+--                   install/update it, and offers to open ReaPack to it
+--                   (shared check in Schapps ReaImGUI Theme v1.34).
 --   10/20/26 - v1.31 Fixed the table's last row getting clipped (and a
 --                   needless vertical scrollbar inside the table) whenever
 --                   long names made the table wide enough to need its
@@ -143,13 +147,14 @@
 --   04/28/26 - v0.2 Adding color picker, bug fixes
 --   04/27/26 - v0.1 Initial alpha release
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")

@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme Settings
 -- @author Stephen Schappler
--- @version 1.7
+-- @version 1.8
 -- @about
 --   Settings window for Schapps ReaImGUI Theme (ReaImGuiTheme.lua) -- lets
 --   you customize the theme's primary/secondary accent colors and body/
@@ -9,6 +9,10 @@
 --   to REAPER's ExtState, so it persists across sessions and takes effect
 --   immediately in any other theme-using script window already open.
 -- @changelog
+--   10/22/26 v1.8 - Friendlier ReaImGui check: if ReaImGui is missing or
+--                  too old, the script now says which, explains how to
+--                  install/update it, and offers to open ReaPack to it
+--                  (shared check in Schapps ReaImGUI Theme v1.34).
 --   08/29/26 v1.7 - Added Table Row Stripe color (ReaImGuiTheme.lua
 --                  v1.32) with a small striped-table preview.
 --   08/29/26 v1.6 - Secondary now means secondary action buttons, not
@@ -44,18 +48,20 @@
 --                  name + size, and Export/Import.
 --   08/28/26 v1.0 - Initial release
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.ShowMessageBox("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package (which
+-- installs into this same Common folder).
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- flag&1: auto-terminate a previous running instance of this script.
 -- flag&2: relaunch (this new invocation) after doing so, rather than just
 -- terminating and stopping. Requires REAPER >= 7.03.
 reaper.set_action_options(1 | 2)
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")

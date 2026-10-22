@@ -1,6 +1,6 @@
 -- @description Selected Items Counter (compact)
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   One-row version of Selected Items Counter, sized to fit beside a REAPER
 --   toolbar: the whole window is 30pt tall, which ReaImGui scales with the
@@ -12,18 +12,20 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 - v1.1 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   10/02/26 - v1.0 Initial release
 
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
 -- ============================================================
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Theme module

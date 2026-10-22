@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.38
+-- @version 1.39
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -12,6 +12,10 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 v1.39 - Friendlier ReaImGui check: if ReaImGui is missing or
+--                    too old, the script now says which, explains how to
+--                    install/update it, and offers to open ReaPack to it
+--                    (shared check in Schapps ReaImGUI Theme v1.34).
 --   08/29/26 v1.38 - Template tab bar now uses the shared theme.TabBar
 --                    (ReaImGuiTheme.lua v1.29) instead of its own
 --                    duplicated implementation.
@@ -37,13 +41,14 @@ if not reaper.SNM_SetIntConfigVar then
   return
 end
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.ShowMessageBox("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Paths

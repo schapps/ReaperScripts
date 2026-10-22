@@ -1,10 +1,11 @@
 -- @description Duplicate Subproject Items to New Take, Copying RPP to New Version
 -- @author Stephen Schappler
--- @version 2.9
+-- @version 2.10
 -- @about
 --   Duplicate Subproject Items as New Takes with Versioning (Multiple Items) and Open Each New Subproject in a New Tab
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 - v2.10 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   09/06/26 - v2.9 Widened preview table columns and added CellPadding so the "(x2)"-style source suffix stops clipping against the next column; widened WIN_MIN_W to match.
 --   09/06/26 - v2.8 New Version input text is now green while valid, red on a collision (matching the Resulting File column).
 --   09/06/26 - v2.7 Preview table is now always visible (empty when nothing's selected), styled via the shared theme's new theme.TableFlags/TableHeadersRow (bold header, matching every other table in the repo), with monospace body rows.
@@ -22,13 +23,14 @@
 -- ============================================================
 -- ReaImGui dependency check + bootstrap
 -- ============================================================
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Theme module

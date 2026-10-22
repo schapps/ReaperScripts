@@ -14,13 +14,16 @@ local M = {}
 --   on_saved          = function(dir, pattern)  -- optional, called after saving
 -- }
 function M.Show(opts)
-  if not reaper.ImGui_GetBuiltinPath then
-    reaper.ShowMessageBox("ReaImGUI is required for this setup dialog.\nInstall it via ReaPack.", "Missing dependency", 0)
+  -- ReaImGui check, shared via the Schapps ReaImGUI Theme package. This
+  -- file is bundled into the calling package's own Common/ folder, so the
+  -- theme's Common/ is found relative to the calling script instead.
+  local imgui_check = opts.script_dir .. "../Common/ReaImGuiCheck.lua"
+  if not reaper.file_exists(imgui_check) then
+    reaper.MB("This setup dialog requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
     return
   end
-
-  package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-  local ImGui = require 'imgui' '0.10'
+  local ImGui = dofile(imgui_check)("0.10")
+  if not ImGui then return end
 
   local theme_path = opts.script_dir .. "Common/ReaImGuiTheme.lua"
   if not reaper.file_exists(theme_path) then

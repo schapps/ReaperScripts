@@ -1,6 +1,6 @@
 -- @description Text Overlay (GUI)
 -- @author Stephen Schappler
--- @version 1.21
+-- @version 1.22
 -- @link https://www.stephenschappler.com
 -- @about
 --   ReaImGui live-editing front end for a custom Video processor text/
@@ -15,6 +15,10 @@
 --   selected overlay items at once (each item's own text is always left
 --   untouched).
 -- @changelog
+--   10/22/26 v1.22 - Friendlier ReaImGui check: if ReaImGui is missing or
+--                    too old, the script now says which, explains how to
+--                    install/update it, and offers to open ReaPack to it
+--                    (shared check in Schapps ReaImGUI Theme v1.34).
 --   08/30/26 v1.21 - Reordering a track above an already-pinned video
 --                    track leaves that track's items visually invisible
 --                    (still playing, just not drawn). Redraw hints
@@ -56,13 +60,14 @@
 --                   preset and won't be recognized by this version.
 --   08/27/26 v0.1 - Initial release
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.ShowMessageBox("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Paths

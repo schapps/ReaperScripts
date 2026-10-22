@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.18
+-- @version 1.19
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.19 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   v1.18 Now uses the shared theme's Push/Pop, so the accent color and fonts from Theme Settings apply here too
 --   v1.17 Right-clicking a dropdown now offers "Rename Selected..." to rename the selected option (and its short code) in place
 --         Respect Overlaps now numbers each overlapping item group separately (01, 02, 03...)
@@ -36,15 +37,13 @@
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 local script_path = ({ reaper.get_action_context() })[2]:match("(.+[/\\])")
 
-if reaper.ImGui_Key_0 then
-  package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-  require 'imgui' '0.10.0.1'
-else
-  reaper.MB(
-    "This script requires the ReaImGui API, which can be installed from:\n\nExtensions > ReaPack > Browse packages...",
-    "Missing ReaImGui", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = script_path .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
+if not dofile(imgui_check)("0.10.0.1") then return end
 
 -- Shared ReaImGUI theme (Common/ReaImGuiTheme.lua): base style, fonts,
 -- and widgets. Loaded here, before the acendan style helpers below

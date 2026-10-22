@@ -1,6 +1,6 @@
 -- @description Create Folder Track from Selected Tracks (GUI)
 -- @author Stephen Schappler
--- @version 1.0
+-- @version 1.1
 -- @about
 --   Wraps the selected tracks in a new folder track. The folder is inserted
 --   where the first selected track sits and every selected track is moved
@@ -13,15 +13,17 @@
 --   Requires: ReaImGUI, Schapps Script Resources (Common/ReaImGuiTheme.lua).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 v1.1 - Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   09/29/26 v1.0 - Initial release
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. "/?.lua;" .. package.path
-local ImGui = require "imgui" "0.10"
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")

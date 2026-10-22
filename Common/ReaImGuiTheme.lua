@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.33
+-- @version 1.34
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -8,7 +8,13 @@
 --   line-md--play-filled.png > line-md--play-filled.png
 --   Fonts/fa-solid-900.ttf > Fonts/fa-solid-900.ttf
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
+--   ReaImGuiCheck.lua > ReaImGuiCheck.lua
 -- @changelog
+--   10/22/26 - v1.34 Now ships Common/ReaImGuiCheck.lua, the shared
+--                   ReaImGui dependency check used by every Schapps
+--                   ReaImGui script: tells the user whether ReaImGui is
+--                   missing or too old, how to install/update it, and
+--                   offers to open ReaPack to it.
 --   09/06/26 - v1.33 Added theme.TableFlags (the standard RowBg +
 --                   BordersInnerH combo already used by every table in
 --                   this repo) and theme.TableHeadersRow (bold header

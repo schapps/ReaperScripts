@@ -1,6 +1,6 @@
 -- @description Create Subproject from Selected Track(s) (GUI)
 -- @author Stephen Schappler
--- @version 1.13
+-- @version 1.14
 -- @about
 --   ReaImGUI version of the subproject creation script.
 --   Presents a dialog to optionally set a Name, Channels, Tail, and Copy Video Tracks
@@ -8,6 +8,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 - v1.14 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   10/02/26 - v1.13 After rendering, a 2-channel subproject item whose L/R correlation is 0.9 or higher (effectively mono content) has its take channel mode set to Mono (downmix). Fixed the post-render channel count adjustment (and this new check) acting on the last item in the project instead of the subproject item when tracks below the subproject had items.
 --   09/28/26 - v1.12 Auto channels now sets the subproject's master track channel count to the selected track's channel count (the widest, if several are selected) before saving and rendering, so the rendered subproject item always matches its source track.
 --   09/15/26 - v1.11 Tweaking language in tooltips and gui
@@ -16,13 +17,14 @@
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
 -- ============================================================
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Theme module

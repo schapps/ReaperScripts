@@ -1,5 +1,5 @@
 -- @description Send Source Track to Selected Tracks
--- @version 1.2
+-- @version 1.3
 -- @about
 --   Opens a window to capture one or more source tracks and create sends from
 --   them to any selected tracks. Options: Post-Fader or Pre-Fader send mode,
@@ -9,17 +9,19 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 v1.3 - Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   05/21/25 v1.2 - Get Source now captures all selected tracks
 --   05/21/25 v1.1 - Set destination track to 4 channels when sidechain is enabled
 --   05/21/25 v1.0 - Initial release
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. "/?.lua;" .. package.path
-local ImGui = require "imgui" "0.10"
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")

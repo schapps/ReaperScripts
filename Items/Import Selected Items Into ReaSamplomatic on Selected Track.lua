@@ -1,6 +1,6 @@
 -- @description Import Selected Items Into ReaSamplomatic on Selected Tracks
 -- @author Analogmad, MPL, modification by Stephen Schappler
--- @version 1.7
+-- @version 1.8
 -- Initial Script by MPL Modified by Analogmad (Chris Kowalski), and further modified by Stephen Schappler
 -- From Analogmad: MPL Helped me with this via the Reaper Forums. I had an issue of putting all samples into one RS5K. Added Arming for Audio Recording. Added Velocity Randomizer
 -- From Stephen Schappler: I changed the MIDI Velcotiy randomizer this script uses (it now uses one I wrote for this purpose), as well as the actions used to render items to a new takes before and after getting loaded into the sampler
@@ -17,14 +17,16 @@
 --   5/15/25 v1.6 - Max Voices slider (1-64)
 --   8/28/26 v1.7 - Load Items is now a theme.PrimaryButton with an icon,
 --                  matching the shared theme's "main action" button style.
+--   10/22/26 v1.8 - Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. "/?.lua;" .. package.path
-local ImGui = require "imgui" "0.10"
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")

@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items
--- @version 2.5
+-- @version 2.6
 -- @about
 --   A script to easily export selected items of many different channel counts all at once.
 --   SWS extension is required. No render preset setup needed.
@@ -35,6 +35,7 @@
 --   08/12/26 v2.4 - Correlated stereo downmix now uses mono (left) take channel mode
 --                   instead of mono (mixdown), so only the left channel is kept.
 --   09/26/26 v2.5 - "Smart Export Selected Items - Configure" is now bundled with this package
+--   10/22/26 v2.6 - Setup dialog: friendlier ReaImGui check -- if ReaImGui is missing or too old it now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 
 
 -- Clear the console at the start

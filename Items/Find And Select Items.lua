@@ -1,6 +1,6 @@
 -- @description Find And Select Items
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 1.3
 -- @about
 --   ReaImGUI interface for finding and selecting items by any combination of:
 --   name, color, channel count, subproject status, and edit cursor position.
@@ -9,6 +9,7 @@
 --   Requires: Schapps Script Resources (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   10/22/26 - v1.3 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   6/29/26 - v1.2 Added Take FX filter
 --   6/29/26 - v1.1 Added Edit Cursor position, pitch, and rate filters.
 --   6/29/26 - v1.0 Initial release
@@ -16,13 +17,14 @@
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
 -- ============================================================
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 -- ============================================================
 -- Theme module

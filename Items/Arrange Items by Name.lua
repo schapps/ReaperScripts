@@ -1,5 +1,5 @@
 -- @description Arrange Items by Name
--- @version 0.3
+-- @version 0.4
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @about
@@ -9,18 +9,20 @@
 --   Useful for organizing large batches of imported recordings (e.g. Foley
 --   surface/action variants) onto their own tracks by naming convention.
 -- @changelog
+--   2026-10-22 v0.4 - Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   2026-09-24 v0.3 - More features
 
 -- ============================================================
 -- ReaImGUI dependency check + bootstrap
 -- ============================================================
-if not reaper.ImGui_GetBuiltinPath then
-  reaper.MB("ReaImGui is required for this script.", "Missing Dependency", 0)
+-- ReaImGui check, shared via the Schapps ReaImGUI Theme package
+local imgui_check = ({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "../Common/ReaImGuiCheck.lua"
+if not reaper.file_exists(imgui_check) then
+  reaper.MB("This script requires the latest \"Schapps ReaImGUI Theme\" package.\n\nInstall or update it via Extensions > ReaPack > Browse packages.", "Missing Dependency", 0)
   return
 end
-
-package.path = reaper.ImGui_GetBuiltinPath() .. '/?.lua'
-local ImGui = require 'imgui' '0.10'
+local ImGui = dofile(imgui_check)("0.10")
+if not ImGui then return end
 
 local script_path = ({reaper.get_action_context()})[2]
 local script_dir  = script_path:match("^(.*[/\\])")
