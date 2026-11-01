@@ -1,12 +1,15 @@
 -- @description Subproject Manager
 -- @author Stephen Schappler
--- @version 1.32
+-- @version 1.33
 -- @about
 --   Unified subproject management window: preview selected subprojects, open them,
 --   duplicate to new versioned takes, explode to child tracks, and color all subproject items — all in one ReaImGUI panel.
 --   Requires: Schapps ReaImGUI Theme (install from this repository first).
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   11/01/26 - v1.33 Fixed the table still clipping rows behind scrollbars on
+--                   some setups: the table now sizes to its rows and the
+--                   panel scrolls sideways instead of the table.
 --   10/22/26 - v1.32 Friendlier ReaImGui check: if ReaImGui is missing or
 --                   too old, the script now says which, explains how to
 --                   install/update it, and offers to open ReaPack to it
@@ -685,7 +688,8 @@ local function loop()
     local _, avail_h = ImGui.GetContentRegionAvail(ctx)
     local _, sp_y    = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing)
     local child_h    = math.max(400, avail_h - bottom_row_h - sp_y * 2)
-    local child_visible = ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1)
+    local child_visible = ImGui.BeginChild(ctx, "##preview", 0, child_h, rawget(ImGui, "ChildFlags_Border") or 1,
+      ImGui.WindowFlags_HorizontalScrollbar)
     if child_visible then
     if #rows == 0 then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x555555FF)
@@ -733,24 +737,30 @@ local function loop()
       local hdr_dim = (hdr_c & 0xFFFFFF00) | math.floor((hdr_c & 0xFF) * 0.4)
       ImGui.PushStyleColor(ctx, ImGui.Col_Header, hdr_dim)
       ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight, 0x3A3F45FF)
-      -- outer_size_h hint for TableFlags_ScrollX (it requires one) -- but
-      -- this alone does NOT stop the table auto-extending vertically past
-      -- it: TableFlags_NoHostExtendY, the flag that would, is explicitly
-      -- unavailable whenever ScrollX/ScrollY are set (needed here for
-      -- horizontal scrolling on wide rows). So BordersInnerV is dropped
-      -- below and its vertical column dividers are drawn manually after
-      -- EndTable instead, clipped to the real header+row height rather
-      -- than however tall the table auto-extended. Also reserves room for
-      -- the ScrollX horizontal scrollbar, which is drawn inside table_h --
-      -- without it, wide content clips the last row and forces a vertical
-      -- scrollbar inside the table.
-      local scrollbar_sz = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ScrollbarSize)
-      local table_h = row_h * (#display_rows + 1) + scrollbar_sz
-      local col_left_x, header_top_y = {}
+      -- No TableFlags_ScrollX: a scrolling table needs a fixed outer height,
+      -- and any mismatch between that guess and the real row heights (font,
+      -- DPI, ReaImGui version) clipped rows behind table-internal scrollbars.
+      -- Instead the table auto-sizes its height to its rows, and wide
+      -- content is scrolled by the ##preview child (HorizontalScrollbar).
+      -- Without ScrollX, fixed columns wider than the table get squeezed,
+      -- so give it an explicit width when the visible columns need more
+      -- than what's available (each column also costs 2x CellPadding plus
+      -- a 1px BordersInnerV line; the +4 is slack against rounding).
+      local table_w = 0
+      do
+        local col_w = { 18, 24, take_name_col_w, 100, 85, 85, 80, track_col_w, rpp_col_w }
+        local cell_pad_x = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_CellPadding))
+        local needed = 4
+        for col = 0, 8 do
+          if col < 3 or not TableSetColumnEnabled or col_visible[col] then
+            needed = needed + col_w[col + 1] + cell_pad_x * 2 + 1
+          end
+        end
+        if needed > select(1, ImGui.GetContentRegionAvail(ctx)) then table_w = needed end
+      end
       if ImGui.BeginTable(ctx, "##ptable", 9,
-          ImGui.TableFlags_BordersInnerH | ImGui.TableFlags_RowBg
-          | (rawget(ImGui, "TableFlags_Hideable") or 0)
-          | (rawget(ImGui, "TableFlags_ScrollX") or 0), 0, table_h) then
+          ImGui.TableFlags_BordersInnerH | ImGui.TableFlags_BordersInnerV | ImGui.TableFlags_RowBg
+          | (rawget(ImGui, "TableFlags_Hideable") or 0), table_w, 0) then
         ImGui.TableSetupColumn(ctx, "##colswatch", ImGui.TableColumnFlags_WidthFixed, 18)
         ImGui.TableSetupColumn(ctx, "##playcol",   ImGui.TableColumnFlags_WidthFixed, 24)
         ImGui.TableSetupColumn(ctx, "Take Name",    ImGui.TableColumnFlags_WidthFixed, take_name_col_w)
@@ -771,11 +781,9 @@ local function loop()
 
         -- Manual header row: click to sort asc, again for desc, third click clears sort
         ImGui.TableNextRow(ctx, rawget(ImGui, "TableRowFlags_Headers") or 0)
-        header_top_y = select(2, ImGui.GetCursorScreenPos(ctx))
         theme.PushBoldFont(ctx)
         for col = 0, 8 do
           ImGui.TableSetColumnIndex(ctx, col)
-          col_left_x[col] = select(1, ImGui.GetCursorScreenPos(ctx))
           local name = HDR_NAMES[col + 1]
           if name then
             local arrow = sort_col == col and (sort_asc and " ▲" or " ▼") or ""
@@ -1001,24 +1009,6 @@ local function loop()
           end
         end
         ImGui.EndTable(ctx)
-
-        -- Manual inner-V column dividers, clipped to the real header+row
-        -- height (see the BeginTable comment above for why these aren't
-        -- just TableFlags_BordersInnerV). Skips a boundary where the
-        -- captured x didn't move -- a column hidden via TableSetColumnEnabled
-        -- collapses to zero width, so its left edge coincides with its
-        -- visible neighbor's.
-        local content_bottom_y = row_rects[#display_rows] + row_h
-        local border_color = ImGui.GetStyleColor(ctx, ImGui.Col_TableBorderLight)
-        local cell_pad_x = select(1, ImGui.GetStyleVar(ctx, ImGui.StyleVar_CellPadding))
-        local draw_list = ImGui.GetWindowDrawList(ctx)
-        for col = 1, 8 do
-          local x, prev_x = col_left_x[col], col_left_x[col - 1]
-          if x and prev_x and x > prev_x + 2 then
-            local line_x = x - cell_pad_x
-            ImGui.DrawList_AddLine(draw_list, line_x, header_top_y, line_x, content_bottom_y, border_color, 1)
-          end
-        end
       end
       ImGui.PopStyleColor(ctx, 2)
 
