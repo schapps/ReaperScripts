@@ -1,7 +1,8 @@
 ﻿-- @description ReaStart Dashboard
 -- @author Stephen Schappler
--- @version 1.2
+-- @version 1.2.1
 -- @changelog
+--    v1.2.1 - macOS build now includes the v1.2 features (1.2 shipped an older mac binary)
 --    v1.2 - adding features to auto open on new project tab and to open projects in any blank project tab
 -- @provides
 --    [windows extension] reaper_reastart.dll
