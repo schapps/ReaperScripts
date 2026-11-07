@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="bfde2af12cf1de040ea5c49e42ef4a6384bd0a15">
+<index version="1" name="SPS Scripts" commit="125a196dec3f3d89c0d0a20ae39165916f25b409">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -11672,6 +11672,33 @@ v1.5 Visual Editor: drag and drop support]]></changelog>
 08/23/26 v1.0 - Initial release]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
         <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Common/VideoRenderFormat.lua</source>
+      </version>
+      <version name="1.5" author="Stephen Schappler" time="2026-11-07T03:41:28Z">
+        <changelog><![CDATA[11/06/26 v1.5 - Fixed renders not matching the selected container/codec
+                (e.g. FFmpeg "H.264" MP4 came out as MJPEG or failed).
+                Codec ids now match REAPER 7, including the new FFmpeg
+                MPEG-4 and MOV containers, and H.264 uses a bitrate.
+                Only options this platform can render are shown:
+                AVFoundation on macOS, Windows Media Encoder on
+                Windows, and on macOS only the codecs REAPER's bundled
+                FFmpeg includes. New presets default to H.264/AAC MP4.
+                The project's render settings are now restored after
+                exporting, and the export always renders the master mix.
+                AVFoundation AAC is capped at 256 kbps on mono renders
+                (higher failed with "Error appending audio data").
+10/22/26 v1.4 - Friendlier ReaImGui check: if ReaImGui is missing or
+                too old, the script now says which, explains how to
+                install/update it, and offers to open ReaPack to it
+                (shared check in Schapps ReaImGUI Theme v1.34).
+08/29/26 v1.3 - Preset tab bar now uses the shared theme.TabBar
+                (ReaImGuiTheme.lua v1.29) instead of its own
+                duplicated implementation.
+08/27/26 v1.2 - Added Windows Media Encoder (WMF) as a video format
+                choice on Windows
+08/23/26 v1.1 - Removed ReaImGuiTheme.lua from @provides
+08/23/26 v1.0 - Initial release]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/125a196dec3f3d89c0d0a20ae39165916f25b409/Video/Export%20Time%20Selection%20as%20Video%20(GUI).lua</source>
+        <source file="Common/VideoRenderFormat.lua">https://github.com/schapps/ReaperScripts/raw/125a196dec3f3d89c0d0a20ae39165916f25b409/Common/VideoRenderFormat.lua</source>
       </version>
     </reapack>
     <reapack name="Text Overlay (GUI).lua" type="script" desc="Text Overlay (GUI)">
