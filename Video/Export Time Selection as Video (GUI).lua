@@ -1,5 +1,5 @@
 -- @description Export Time Selection as Video (GUI)
--- @version 1.4
+-- @version 1.5
 -- @about
 --   ReaImGui dialog that renders the current time selection to a video file
 --   using REAPER's native video render formats (AVFoundation, FFmpeg/libav,
@@ -13,6 +13,18 @@
 -- @provides
 --   [nomain] ../Common/VideoRenderFormat.lua > Common/VideoRenderFormat.lua
 -- @changelog
+--   11/06/26 v1.5 - Fixed renders not matching the selected container/codec
+--                   (e.g. FFmpeg "H.264" MP4 came out as MJPEG or failed).
+--                   Codec ids now match REAPER 7, including the new FFmpeg
+--                   MPEG-4 and MOV containers, and H.264 uses a bitrate.
+--                   Only options this platform can render are shown:
+--                   AVFoundation on macOS, Windows Media Encoder on
+--                   Windows, and on macOS only the codecs REAPER's bundled
+--                   FFmpeg includes. New presets default to H.264/AAC MP4.
+--                   The project's render settings are now restored after
+--                   exporting, and the export always renders the master mix.
+--                   AVFoundation AAC is capped at 256 kbps on mono renders
+--                   (higher failed with "Error appending audio data").
 --   10/22/26 v1.4 - Friendlier ReaImGui check: if ReaImGui is missing or
 --                   too old, the script now says which, explains how to
 --                   install/update it, and offers to open ReaPack to it
@@ -70,16 +82,15 @@ local DEFAULTS = {
   tab_color               = 0,
   render_output_dir       = "",
   render_output_pattern   = "$project $date $hour12_$minute",
-  -- Defaults to FFmpeg/libav, H.264 in a QT/MOV/MP4 container, 24-bit PCM
-  -- audio -- the one combination that renders identically on both Mac and
-  -- Windows (AVFoundation is Mac-only; most other FFmpeg codec choices are
-  -- flagged Windows-only in the format's own docs).
-  format_id               = "ffmpeg", -- "avf" | "ffmpeg" | "wmf" | "gif" | "lcf"
-  container               = 3,        -- ffmpeg: QT/MOV/MP4
-  video_codec             = 0,        -- ffmpeg/QT-MOV-MP4: H.264
+  -- H.264 MP4 with AAC audio, through whichever encoder this platform has
+  -- built in (AVFoundation on macOS, Media Foundation on Windows). See
+  -- VF.DEFAULT_FORMAT.
+  format_id               = VF.DEFAULT_FORMAT.format_id, -- "avf" | "ffmpeg" | "wmf" | "gif" | "lcf"
+  container               = VF.DEFAULT_FORMAT.container,
+  video_codec             = VF.DEFAULT_FORMAT.video_codec,
   video_bitrate_kbps      = 6000,
   video_quality           = 95,
-  audio_codec             = 3,        -- ffmpeg/QT-MOV-MP4: 24-bit PCM
+  audio_codec             = VF.DEFAULT_FORMAT.audio_codec,
   audio_bitrate_kbps      = 320,
   width                   = 1920,
   height                  = 1080,
@@ -150,6 +161,8 @@ local function load_template_file(path)
   for k, v in pairs(DEFAULTS) do
     if t[k] == nil then t[k] = v end
   end
+  -- Snap older or other-platform templates onto options this REAPER offers.
+  VF.migrate_template(t)
   return t
 end
 
@@ -197,73 +210,10 @@ end
 -- ============================================================
 -- Format/codec option helpers (data-driven from VideoRenderFormat.lua)
 -- ============================================================
-local function containers_for(format_id)
-  if format_id == "avf" then return VF.AVF_CONTAINERS end
-  if format_id == "ffmpeg" then return VF.FFMPEG_CONTAINERS end
-  if format_id == "wmf" then return VF.WMF_CONTAINERS end
-  return nil
-end
-
-local function video_codecs_for(format_id, container)
-  if format_id == "avf" then return VF.AVF_VIDEO_CODECS[container] or VF.AVF_VIDEO_CODECS.DEFAULT end
-  if format_id == "ffmpeg" then return VF.FFMPEG_VIDEO_CODECS[container] end
-  if format_id == "wmf" then return VF.WMF_VIDEO_CODECS.DEFAULT end
-  return nil
-end
-
-local function audio_codecs_for(format_id, container)
-  if format_id == "avf" then return VF.AVF_AUDIO_CODECS[container] or VF.AVF_AUDIO_CODECS.DEFAULT end
-  if format_id == "ffmpeg" then return VF.FFMPEG_AUDIO_CODECS[container] end
-  if format_id == "wmf" then return VF.WMF_AUDIO_CODECS.DEFAULT end
-  return nil
-end
-
-local function find_by_id(list, id)
-  if not list then return nil end
-  for _, opt in ipairs(list) do
-    if opt.id == id then return opt end
-  end
-  return nil
-end
-
--- Clamps container/video_codec/audio_codec to valid entries for t.format_id,
--- called whenever format_id or container changes. Mirrors the bit_depth
--- clamp-on-format-change pattern in Smart Export Selected Items (GUI).lua.
-local function clamp_video_options(t)
-  local containers = containers_for(t.format_id)
-  if containers and not find_by_id(containers, t.container) then
-    t.container = containers[1].id
-  end
-  local vcodecs = video_codecs_for(t.format_id, t.container)
-  if vcodecs and not find_by_id(vcodecs, t.video_codec) then
-    t.video_codec = vcodecs[1].id
-  end
-  local acodecs = audio_codecs_for(t.format_id, t.container)
-  if acodecs and not find_by_id(acodecs, t.audio_codec) then
-    t.audio_codec = acodecs[1].id
-  end
-end
-
--- Best-guess file extension for the preview/status area -- REAPER's actual
--- output extension depends on its own per-format remembered defaults.
-local function file_ext_for(t)
-  if t.format_id == "gif" then return ".gif" end
-  if t.format_id == "lcf" then return ".lcf" end
-  if t.format_id == "avf" then
-    if t.container == 2 then return ".mov" end
-    if t.container == 3 then return ".m4a" end
-    return ".mp4"
-  end
-  if t.format_id == "ffmpeg" then
-    local ext_by_container = { [0] = ".avi", [1] = ".mpg", [2] = ".mpg", [3] = ".mp4", [4] = ".mkv", [5] = ".flv", [6] = ".webm" }
-    return ext_by_container[t.container] or ".mp4"
-  end
-  if t.format_id == "wmf" then
-    local ext_by_container = { [0] = ".mp4", [1] = ".m4a", [2] = ".wmv", [3] = ".wma" }
-    return ext_by_container[t.container] or ".mp4"
-  end
-  return ""
-end
+local containers_for    = VF.containers_for
+local video_codecs_for  = VF.video_codecs_for
+local audio_codecs_for  = VF.audio_codecs_for
+local find_by_id        = VF.find_by_id
 
 -- ============================================================
 -- Render
@@ -286,10 +236,25 @@ local function run_export(t)
 
   reaper.Undo_BeginBlock()
 
-  local _, original_cfg = reaper.GetSetProjectInfo_String(0, 'RENDER_CFG', '', false)
+  -- Saved so the project's own render settings come back after the export.
+  local _, original_format  = reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT', '', false)
+  local _, original_format2 = reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '', false)
+  local original_settings   = reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS', 0, false)
   local original_boundsflag = reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 0, false)
 
-  local blob = build_render_format_blob(t)
+  -- AVFoundation's AAC encoder rejects more than 256 kbps on a mono render
+  -- ("Error appending audio data", empty file), so cap it for the blob only;
+  -- the preset keeps its own value for stereo projects.
+  local blob_t = t
+  local MONO_AAC_MAX_KBPS = 256
+  if t.format_id == "avf" and t.audio_codec == 0
+    and reaper.GetSetProjectInfo(0, 'RENDER_CHANNELS', 0, false) == 1
+    and (t.audio_bitrate_kbps or 0) > MONO_AAC_MAX_KBPS then
+    blob_t = {}
+    for k, v in pairs(t) do blob_t[k] = v end
+    blob_t.audio_bitrate_kbps = MONO_AAC_MAX_KBPS
+  end
+  local blob = build_render_format_blob(blob_t)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT', blob, true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', '', true)
 
@@ -310,15 +275,12 @@ local function run_export(t)
   reaper.GetSetProjectInfo(0, 'RENDER_PADSTART', 0, true)
   reaper.GetSetProjectInfo(0, 'RENDER_PADEND', 0, true)
 
-  -- Source: leave whatever it currently is, minus Smart Export's "selected
-  -- media items (via master)" bits, which would otherwise silently restrict
-  -- this time-selection render to an item selection left over from a
-  -- previous Smart Export run in this project session.
-  local SOURCE_SELECTED_ITEMS            = 0x20
-  local SOURCE_SELECTED_ITEMS_VIA_MASTER = 0x40
-  local cur_settings = reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS', 0, false)
-  reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',
-    cur_settings & ~(SOURCE_SELECTED_ITEMS | SOURCE_SELECTED_ITEMS_VIA_MASTER), true)
+  -- Source: master mix. Clear every other source choice (stems, render
+  -- matrix, selected items, selected tracks via master). Any of them would
+  -- render something other than the time selection's mix, or nothing at
+  -- all (an empty region render matrix writes no file).
+  local SOURCE_BITS = 0x1 | 0x2 | 0x8 | 0x20 | 0x40 | 0x80
+  reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS', original_settings & ~SOURCE_BITS, true)
 
   reaper.GetSetProjectInfo_String(0, 'RENDER_FILE',    t.render_output_dir,     true)
   reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', t.render_output_pattern, true)
@@ -329,7 +291,9 @@ local function run_export(t)
 
   reaper.Main_OnCommand(41824, 0) -- Render project, using the most recent render settings, auto-close
 
-  reaper.GetSetProjectInfo_String(0, 'RENDER_CFG', original_cfg, true)
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT', original_format, true)
+  reaper.GetSetProjectInfo_String(0, 'RENDER_FORMAT2', original_format2, true)
+  reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS', original_settings, true)
   reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', original_boundsflag, true)
 
   reaper.UpdateArrange()
@@ -463,13 +427,9 @@ local WILDCARD_CATEGORIES = {
   },
 }
 
-local FORMAT_OPTIONS = {
-  { id = "avf",    label = "AVFoundation (MPEG-4, MOV)" },
-  { id = "ffmpeg", label = "FFmpeg/libav (video, compressed audio)" },
-  { id = "wmf",    label = "Windows Media Encoder (MPEG-4, WMV)" },
-  { id = "gif",    label = "GIF (video only)" },
-  { id = "lcf",    label = "LCF (video only)" },
-}
+-- Only the formats this platform has (AVFoundation is macOS-only, Windows
+-- Media Encoder is Windows-only).
+local FORMAT_OPTIONS = VF.FORMATS
 
 -- ============================================================
 -- ImGui context
@@ -699,30 +659,30 @@ local function loop()
 
     if begin_field_table("##format_fields") then
       combo_row("Format", format_id, FORMAT_OPTIONS, function(id)
-        format_id = id
-        local tmp = { format_id = format_id, container = container, video_codec = video_codec, audio_codec = audio_codec }
-        clamp_video_options(tmp)
-        container, video_codec, audio_codec = tmp.container, tmp.video_codec, tmp.audio_codec
+        if id == format_id then return end
+        -- Container/codec ids mean different things in each format, so start
+        -- the new format from its first container's defaults.
+        local tmp = { format_id = id, container = -1, video_codec = -1, audio_codec = -1 }
+        VF.clamp(tmp)
+        format_id, container, video_codec, audio_codec = tmp.format_id, tmp.container, tmp.video_codec, tmp.audio_codec
       end)
 
       local containers = containers_for(format_id)
       if containers then
         combo_row("Container", container, containers, function(id)
-          container = id
-          local tmp = { format_id = format_id, container = container, video_codec = video_codec, audio_codec = audio_codec }
-          clamp_video_options(tmp)
-          video_codec, audio_codec = tmp.video_codec, tmp.audio_codec
+          local prev = container
+          local tmp = { format_id = format_id, container = id, video_codec = video_codec, audio_codec = audio_codec }
+          VF.clamp(tmp, prev)
+          container, video_codec, audio_codec = tmp.container, tmp.video_codec, tmp.audio_codec
         end)
       end
 
       ImGui.EndTable(ctx)
     end
 
-    -- Container 3 ("MPEG-4 Audio") on AVFoundation, and containers 1/3
-    -- ("MPEG-4 Audio"/"WMA Audio") on WMF, produce no video at all -- hide
-    -- every video-specific control in those cases.
-    local is_audio_only = (format_id == "avf" and container == 3)
-      or (format_id == "wmf" and (container == 1 or container == 3))
+    -- Audio-only containers (AVF "MPEG-4 Audio", WMF "MPEG-4 Audio"/"WMA
+    -- Audio") produce no video at all, so hide every video control.
+    local is_audio_only = VF.is_audio_only({ format_id = format_id, container = container })
 
     if not is_audio_only then
       ImGui.Spacing(ctx)
@@ -735,7 +695,13 @@ local function loop()
         local vcodec_opt = vcodecs and find_by_id(vcodecs, video_codec)
 
         if vcodecs then
-          combo_row("Codec", video_codec, vcodecs, function(id) video_codec = id end, "video_codec")
+          combo_row("Codec", video_codec, vcodecs, function(id)
+            video_codec = id
+            -- Picking video None removes audio None from the audio list.
+            local tmp = { format_id = format_id, container = container, video_codec = video_codec, audio_codec = audio_codec }
+            VF.clamp(tmp)
+            audio_codec = tmp.audio_codec
+          end, "video_codec")
         end
 
         if vcodec_opt and vcodec_opt.rate_mode == "bitrate" then
@@ -758,7 +724,7 @@ local function loop()
     -- AUDIO section -- audio_codecs_for only returns a list for avf/ffmpeg/
     -- wmf, nil for gif/lcf ("(video only)" formats with no audio track at
     -- all).
-    local acodecs = audio_codecs_for(format_id, container)
+    local acodecs = audio_codecs_for(format_id, container, video_codec)
     if acodecs then
       ImGui.Spacing(ctx)
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, 0x7A7A7AFF)
@@ -768,8 +734,7 @@ local function loop()
       if begin_field_table("##audio_fields") then
         local acodec_opt = find_by_id(acodecs, audio_codec)
         combo_row("Codec", audio_codec, acodecs, function(id) audio_codec = id end, "audio_codec")
-        local is_pcm_or_none = acodec_opt and (acodec_opt.label:find("PCM") or acodec_opt.label == "None")
-        if not is_pcm_or_none then
+        if acodec_opt and acodec_opt.bitrate then
           audio_bitrate_buf = text_row("Bitrate (kbps)", audio_bitrate_buf, nil, "audio_bitrate")
         end
         ImGui.EndTable(ctx)
@@ -937,7 +902,7 @@ local function loop()
     ImGui.Text(ctx, "RESOLVED PATH")
     ImGui.PopStyleColor(ctx)
 
-    local preview_file_ext = file_ext_for({ format_id = format_id, container = container })
+    local preview_file_ext = VF.file_ext({ format_id = format_id, container = container })
     local full_path = build_preview_path(dir_buf, pattern_buf, preview_file_ext)
     local dir_part, file_part = split_preview_path(full_path)
 

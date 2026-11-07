@@ -8,13 +8,12 @@
 -- no documented ReaScript API for setting "H.264 2048kbps" directly -- this
 -- module hand-encodes that blob.
 --
--- Byte layout below is per Ultraschall's RENDER_How_RenderCFG-Base64-
--- strings_are_encoded.txt (misc_docs in ultraschall-lua-api-for-reaper),
--- cross-checked against a real saved preset in this machine's own
--- reaper-render.ini ("Video - H264": AVFoundation/h264, 1920x1080, 59.94fps,
--- 6000kbps video / 320kbps audio, aspect-locked) -- every field matched
--- byte-for-byte, so the AVF/PMFF layout here is high-confidence, not a
--- guess. GIF/LCF follow the same doc but have no local ground-truth sample.
+-- Byte layout is per Ultraschall's RENDER_How_RenderCFG-Base64-strings_are_
+-- encoded.txt (misc_docs in ultraschall-lua-api-for-reaper). The AVF, PMFF,
+-- GIF and LCF layouts were checked byte-for-byte against blobs saved by
+-- REAPER 7.80's own Render to File dialog. Ultraschall's codec id lists
+-- predate REAPER 7 and were wrong, so the ids in the tables below come from
+-- REAPER itself (see that section's header).
 
 local VideoRenderFormat = {}
 
@@ -64,169 +63,187 @@ function VideoRenderFormat.base64_encode(data)
 end
 
 -- ============================================================
--- Format/codec option tables. Each entry is {id, label, [rate_mode]}.
--- rate_mode (video codecs only): "bitrate" | "quality" | nil (neither --
--- e.g. lossless/ProRes codecs with no user-adjustable rate control).
+-- Format/codec option tables.
+--
+-- Container entries: {id, label, ext}. Video codec entries: {id, label,
+-- rate_mode}, where rate_mode is "bitrate" (kbps field), "quality" (% field)
+-- or nil (no rate control). Audio codec entries: {id, label, bitrate}, where
+-- bitrate = true means the codec has a kbps field.
+--
+-- Every id below is the value REAPER itself writes into the blob. They were
+-- checked against REAPER 7.80: the FFmpeg tables were read from
+-- reaper_video.dylib's own container/codec arrays, and the AVF, FFmpeg, GIF
+-- and LCF ids were confirmed by choosing each option in the Render to File
+-- dialog and decoding the RENDER_FORMAT it saved. Ids are stable per codec,
+-- not list positions (e.g. MJPEG is 3 in AVI but 4 in MKV), and REAPER hides
+-- codecs whose encoder the loaded FFmpeg build lacks.
 -- ============================================================
 
+local IS_WIN = reaper.GetOS():find("Win") ~= nil
+VideoRenderFormat.IS_WIN = IS_WIN
+VideoRenderFormat.IS_MAC = reaper.GetOS():find("OSX") ~= nil or reaper.GetOS():find("macOS") ~= nil
+
+-- ---------- AVFoundation (macOS only) ----------
 VideoRenderFormat.AVF_CONTAINERS = {
-  { id = 0, label = "MPEG-4 Video (streaming optimized)" },
-  { id = 1, label = "MPEG-4 Video" },
-  { id = 2, label = "Quicktime MOV" },
-  { id = 3, label = "MPEG-4 Audio (no video)" },
+  { id = 0, label = "MPEG-4 Video (streaming optimized)", ext = ".mp4" },
+  { id = 1, label = "MPEG-4 Video",                       ext = ".mp4" },
+  { id = 2, label = "Quicktime MOV",                      ext = ".mov" },
+  { id = 3, label = "MPEG-4 Audio (no video)",            ext = ".m4a", audio_only = true },
 }
 
--- Video codec options per AVF container id. Only container 2 (Quicktime
--- MOV) offers a choice -- all others are fixed to h264 (or no video at all
--- for MPEG-4 Audio, handled by the caller hiding video fields entirely).
 VideoRenderFormat.AVF_VIDEO_CODECS = {
   [2] = {
-    { id = 0, label = "H.264",               rate_mode = "bitrate" },
-    { id = 1, label = "Apple ProRes 4444",    rate_mode = nil },
-    { id = 2, label = "Apple ProRes 422",     rate_mode = nil },
-    { id = 3, label = "MJPEG",                rate_mode = "quality" },
+    { id = 0, label = "H.264",            rate_mode = "bitrate" },
+    { id = 1, label = "Apple ProRes 4444" },
+    { id = 2, label = "Apple ProRes 422" },
+    { id = 3, label = "MJPEG",            rate_mode = "quality" },
   },
   DEFAULT = {
     { id = 0, label = "H.264", rate_mode = "bitrate" },
   },
 }
 
--- Audio codec options per AVF container id. Only Quicktime MOV offers PCM.
 VideoRenderFormat.AVF_AUDIO_CODECS = {
   [2] = {
-    { id = 0, label = "AAC" },
+    { id = 0, label = "AAC", bitrate = true },
     { id = 1, label = "16-bit PCM" },
     { id = 2, label = "24-bit PCM" },
     { id = 3, label = "32-bit FP PCM" },
+    { id = 4, label = "None", is_none = true },
+  },
+  [3] = {
+    { id = 0, label = "AAC", bitrate = true },
   },
   DEFAULT = {
-    { id = 0, label = "AAC" },
+    { id = 0, label = "AAC", bitrate = true },
+    { id = 1, label = "None", is_none = true },
   },
 }
 
+-- ---------- FFmpeg/libav ----------
+-- Container 3 ("QT/MOV/MP4 (deprecated)") is left out: REAPER 7 replaced it
+-- with MPEG-4 (7) and MOV (8) and only shows it for old settings.
+-- migrate_template maps old templates onto container 7.
+-- mac_bundled marks the containers REAPER's own macOS FFmpeg build can write
+-- (it lacks the MP4, MPEG-TS, FLV and WebM muxers).
 VideoRenderFormat.FFMPEG_CONTAINERS = {
-  { id = 0, label = "AVI" },
-  { id = 1, label = "MPEG1" },
-  { id = 2, label = "MPEG2" },
-  { id = 3, label = "QT/MOV/MP4" },
-  { id = 4, label = "MKV" },
-  { id = 5, label = "FLV" },
-  { id = 6, label = "WEBM" },
+  { id = 7, label = "MPEG-4", ext = ".mp4" },
+  { id = 8, label = "MOV",    ext = ".mov", mac_bundled = true },
+  { id = 4, label = "MKV",    ext = ".mkv", mac_bundled = true },
+  { id = 0, label = "AVI",    ext = ".avi", mac_bundled = true },
+  { id = 6, label = "WEBM",   ext = ".webm" },
+  { id = 5, label = "FLV",    ext = ".flv" },
+  { id = 1, label = "MPEG-1", ext = ".mpg", mac_bundled = true },
+  { id = 2, label = "MPEG-2", ext = ".mpg" },
 }
+
+local V_H264  = { label = "H.264",             rate_mode = "bitrate" }
+local V_H265  = { label = "H.265",             rate_mode = "bitrate" }
+local V_AV1   = { label = "AV1",               rate_mode = "bitrate" }
+local V_MPEG1 = { label = "MPEG-1",            rate_mode = "bitrate", mac_bundled = true }
+local V_MPEG2 = { label = "MPEG-2",            rate_mode = "bitrate" }
+local V_XVID  = { label = "XviD",              rate_mode = "bitrate" }
+local V_FLV1  = { label = "FLV1",              rate_mode = "bitrate" }
+local V_VP8   = { label = "VP8",               rate_mode = "bitrate" }
+local V_VP9   = { label = "VP9",               rate_mode = "bitrate" }
+local V_MJPEG = { label = "MJPEG",             rate_mode = "quality", mac_bundled = true }
+local V_DV    = { label = "DV",                mac_bundled = true }
+local V_FFV1  = { label = "FFV1 (lossless)",   mac_bundled = true }
+local V_HUFF  = { label = "Huffyuv (lossless)", mac_bundled = true }
+local V_NONE  = { label = "None",              mac_bundled = true, is_none = true }
+
+local A_AAC   = { label = "AAC",        bitrate = true }
+local A_MP3   = { label = "MP3",        bitrate = true }
+local A_MP2   = { label = "MP2",        bitrate = true }
+local A_AC3   = { label = "AC3",        bitrate = true }
+local A_VORB  = { label = "Vorbis",     bitrate = true }
+local A_OPUS  = { label = "Opus",       bitrate = true }
+local A_DV    = { label = "DV Audio" }
+local A_PCM16 = { label = "16-bit PCM", mac_bundled = true }
+local A_PCM24 = { label = "24-bit PCM", mac_bundled = true }
+local A_FP32  = { label = "32-bit FP",  mac_bundled = true }
+local A_NONE  = { label = "None",       mac_bundled = true, is_none = true }
+
+-- Builds an id-tagged list from positional codec templates: the position
+-- (0-based) is REAPER's id for that codec within this container.
+local function ids(list)
+  local out = {}
+  for i, c in ipairs(list) do
+    local e = { id = i - 1 }
+    for k, v in pairs(c) do e[k] = v end
+    out[#out + 1] = e
+  end
+  return out
+end
 
 VideoRenderFormat.FFMPEG_VIDEO_CODECS = {
-  [0] = { -- AVI
-    { id = 0, label = "XviD",              rate_mode = "bitrate" },
-    { id = 1, label = "H.264",             rate_mode = "quality" },
-    { id = 2, label = "DV",                rate_mode = nil },
-    { id = 3, label = "MJPEG",              rate_mode = "quality" },
-    { id = 4, label = "FFV1 (lossless)",    rate_mode = nil },
-    { id = 5, label = "Hufyuv (lossless)",  rate_mode = nil },
-    { id = 6, label = "None" },
-  },
-  [1] = { -- MPEG1
-    { id = 0, label = "MPEG-1", rate_mode = "bitrate" },
-    { id = 1, label = "None" },
-  },
-  [2] = { -- MPEG2
-    { id = 0, label = "MPEG-2", rate_mode = "bitrate" },
-    { id = 1, label = "None" },
-  },
-  [3] = { -- QT/MOV/MP4
-    { id = 0, label = "H.264",  rate_mode = "quality" },
-    { id = 1, label = "MPEG-2", rate_mode = "bitrate" },
-    { id = 2, label = "MJPEG",  rate_mode = "quality" },
-    { id = 3, label = "None" },
-  },
-  [4] = { -- MKV
-    { id = 0, label = "H.264",             rate_mode = "quality" },
-    { id = 1, label = "XviD",               rate_mode = "bitrate" },
-    { id = 2, label = "FFV1 (lossless)",    rate_mode = nil },
-    { id = 3, label = "Hufyuv (lossless)",  rate_mode = nil },
-    { id = 4, label = "MJPEG",               rate_mode = "quality" },
-    { id = 5, label = "MPEG-2",              rate_mode = "bitrate" },
-    { id = 6, label = "None" },
-  },
-  [5] = { -- FLV
-    { id = 0, label = "H.264", rate_mode = "quality" },
-    { id = 1, label = "FLV1",  rate_mode = "bitrate" },
-    { id = 2, label = "None" },
-  },
-  [6] = { -- WEBM
-    { id = 0, label = "VP8", rate_mode = "bitrate" },
-    { id = 1, label = "VP9", rate_mode = "bitrate" },
-    { id = 2, label = "None" },
-  },
+  [0] = ids{ V_XVID, V_H264, V_DV, V_MJPEG, V_FFV1, V_HUFF, V_MPEG2, V_NONE },   -- AVI
+  [1] = ids{ V_MPEG1, V_NONE },                                                 -- MPEG-1
+  [2] = ids{ V_MPEG2, V_NONE },                                                 -- MPEG-2
+  [3] = ids{ V_H264, V_MPEG2, V_MJPEG, V_NONE },                                -- QT/MOV/MP4 (deprecated)
+  [4] = ids{ V_H264, V_XVID, V_FFV1, V_HUFF, V_MJPEG, V_MPEG2, V_NONE, V_H265, V_AV1 }, -- MKV
+  [5] = ids{ V_H264, V_FLV1, V_NONE },                                          -- FLV
+  [6] = ids{ V_VP8, V_VP9, V_AV1, V_NONE },                                     -- WEBM
+  [7] = ids{ V_H264, V_H265, V_AV1, V_MPEG2, V_MJPEG, V_NONE },                 -- MPEG-4
+  [8] = ids{ V_H264, V_H265, V_AV1, V_MPEG2, V_MJPEG, V_NONE },                 -- MOV
 }
 
 VideoRenderFormat.FFMPEG_AUDIO_CODECS = {
-  [0] = { -- AVI
-    { id = 0, label = "MP3" },
-    { id = 1, label = "AAC" },
-    { id = 2, label = "AC3" },
-    { id = 3, label = "16-bit PCM" },
-    { id = 4, label = "24-bit PCM" },
-    { id = 5, label = "32-bit FP" },
-    { id = 7, label = "None" }, -- sic: source doc enumerates 0-5 then 7 (no 6)
-  },
-  [1] = { -- MPEG1
-    { id = 0, label = "MP3" },
-    { id = 1, label = "MP2" },
-    { id = 2, label = "None" },
-  },
-  [2] = { -- MPEG2
-    { id = 0, label = "AAC" },
-    { id = 1, label = "MP3" },
-    { id = 2, label = "MP2" },
-    { id = 3, label = "None" },
-  },
-  [3] = { -- QT/MOV/MP4
-    { id = 0, label = "AAC" },
-    { id = 1, label = "MP3" },
-    { id = 2, label = "16-bit PCM" },
-    { id = 3, label = "24-bit PCM" },
-    { id = 4, label = "32-bit FP" },
-    { id = 5, label = "None" },
-  },
-  [4] = { -- MKV
-    { id = 0, label = "MP3" },
-    { id = 1, label = "AAC" },
-    { id = 2, label = "16-bit PCM" },
-    { id = 3, label = "24-bit PCM" },
-    { id = 4, label = "32-bit FP" },
-    { id = 5, label = "None" },
-  },
-  [5] = { -- FLV
-    { id = 0, label = "MP3" },
-    { id = 1, label = "AAC" },
-    { id = 2, label = "None" },
-  },
-  [6] = { -- WEBM
-    { id = 0, label = "VORBIS" },
-    { id = 1, label = "OPUS" },
-    { id = 2, label = "None" },
-  },
+  [0] = ids{ A_MP3, A_AAC, A_AC3, A_PCM16, A_PCM24, A_FP32, A_DV, A_NONE },     -- AVI
+  [1] = ids{ A_MP3, A_MP2, A_NONE },                                            -- MPEG-1
+  [2] = ids{ A_AAC, A_MP3, A_MP2, A_NONE },                                     -- MPEG-2
+  [3] = ids{ A_AAC, A_MP3, A_PCM16, A_PCM24, A_FP32, A_NONE },                  -- QT/MOV/MP4 (deprecated)
+  [4] = ids{ A_MP3, A_AAC, A_PCM16, A_PCM24, A_FP32, A_NONE },                  -- MKV
+  [5] = ids{ A_MP3, A_AAC, A_NONE },                                            -- FLV
+  [6] = ids{ A_VORB, A_OPUS, A_NONE },                                          -- WEBM
+  [7] = ids{ A_AAC, A_MP3, A_PCM16, A_PCM24, A_FP32, A_NONE },                  -- MPEG-4
+  [8] = ids{ A_AAC, A_MP3, A_PCM16, A_PCM24, A_FP32, A_NONE },                  -- MOV
 }
 
--- WMF ("Windows Media encoder") renders through Windows' own built-in Media
--- Foundation H.264 encoder rather than REAPER's optional/separately-
--- installed FFmpeg libs, so it's the one FFmpeg-format alternative that
--- produces real H.264 out of the box on a stock Windows install with no
--- extra DLLs. Windows-only; container id doubles as the format's own
--- video/audio-track toggle (id 1 and 3 are audio-only, no video codec at
--- all -- same pattern as AVF's "MPEG-4 Audio" container).
+-- On macOS REAPER ships its own minimal FFmpeg build (Plugins/FFmpeg.dylib).
+-- It has no H.264/H.265/AV1/VP8/VP9/XviD/MPEG-2 encoders and no AAC/MP3/
+-- MP2/AC3/Vorbis/Opus (nor MP4/MPEG-TS/FLV/WebM muxers), so REAPER's
+-- dialog hides those, and a blob asking
+-- for one fails with "Error initializing video encoder". H.264 MP4/MOV on
+-- macOS comes from AVFoundation instead. On Windows REAPER has no bundled
+-- FFmpeg; it uses whatever full FFmpeg build the user installed, so the
+-- full lists apply.
+local function available(entry)
+  return IS_WIN or entry.mac_bundled
+end
+
+local function filter(list)
+  if not list then return nil end
+  local out = {}
+  for _, e in ipairs(list) do
+    if available(e) then out[#out + 1] = e end
+  end
+  return out
+end
+
+function VideoRenderFormat.ffmpeg_containers()
+  return filter(VideoRenderFormat.FFMPEG_CONTAINERS)
+end
+
+function VideoRenderFormat.ffmpeg_video_codecs(container)
+  return filter(VideoRenderFormat.FFMPEG_VIDEO_CODECS[container])
+end
+
+function VideoRenderFormat.ffmpeg_audio_codecs(container)
+  return filter(VideoRenderFormat.FFMPEG_AUDIO_CODECS[container])
+end
+
+-- ---------- Windows Media Foundation (Windows only) ----------
+-- WMF renders through Windows' own built-in Media Foundation H.264 encoder,
+-- so it gives real H.264 on a stock Windows install with no FFmpeg DLLs.
+-- Containers 1 and 3 are audio-only.
 VideoRenderFormat.WMF_CONTAINERS = {
-  { id = 0, label = "MPEG-4 Video" },
-  { id = 1, label = "MPEG-4 Audio (no video)" },
-  { id = 2, label = "WMV Video" },
-  { id = 3, label = "WMA Audio (no video)" },
+  { id = 0, label = "MPEG-4 Video",            ext = ".mp4" },
+  { id = 1, label = "MPEG-4 Audio (no video)", ext = ".m4a", audio_only = true },
+  { id = 2, label = "WMV Video",               ext = ".wmv" },
+  { id = 3, label = "WMA Audio (no video)",    ext = ".wma", audio_only = true },
 }
 
--- H.264 is the only real encoder choice for either video-capable container
--- -- the audio-only containers hide video fields entirely (caller's
--- is_audio_only check), so there's nothing container-specific to key this
--- by. No quality field exists in WMF's byte layout (unlike PMFF/H.264),
--- only bitrate.
 VideoRenderFormat.WMF_VIDEO_CODECS = {
   DEFAULT = {
     { id = 0, label = "H.264", rate_mode = "bitrate" },
@@ -235,10 +252,182 @@ VideoRenderFormat.WMF_VIDEO_CODECS = {
 
 VideoRenderFormat.WMF_AUDIO_CODECS = {
   DEFAULT = {
-    { id = 0, label = "AAC" },
-    { id = 2, label = "None" },
+    { id = 0, label = "AAC", bitrate = true },
+    { id = 2, label = "None", is_none = true },
   },
 }
+
+-- ---------- Top-level formats, per platform ----------
+local ALL_FORMATS = {
+  { id = "avf",    label = "AVFoundation (MPEG-4, MOV)",            mac_only = true },
+  { id = "wmf",    label = "Windows Media Encoder (MPEG-4, WMV)",   win_only = true },
+  { id = "ffmpeg", label = "FFmpeg/libav (video, compressed audio)" },
+  { id = "gif",    label = "GIF (video only)" },
+  { id = "lcf",    label = "LCF (video only)" },
+}
+
+VideoRenderFormat.FORMATS = {}
+for _, f in ipairs(ALL_FORMATS) do
+  if not (f.mac_only and IS_WIN) and not (f.win_only and not IS_WIN) then
+    VideoRenderFormat.FORMATS[#VideoRenderFormat.FORMATS + 1] = f
+  end
+end
+
+-- Platform default: H.264 MP4 with AAC audio, using the encoder that works
+-- out of the box (AVFoundation on macOS, Media Foundation on Windows).
+if IS_WIN then
+  VideoRenderFormat.DEFAULT_FORMAT = { format_id = "wmf", container = 0, video_codec = 0, audio_codec = 0 }
+else
+  VideoRenderFormat.DEFAULT_FORMAT = { format_id = "avf", container = 1, video_codec = 0, audio_codec = 0 }
+end
+
+-- ---------- Lookups used by the GUI ----------
+function VideoRenderFormat.containers_for(format_id)
+  if format_id == "avf"    then return VideoRenderFormat.AVF_CONTAINERS end
+  if format_id == "ffmpeg" then return VideoRenderFormat.ffmpeg_containers() end
+  if format_id == "wmf"    then return VideoRenderFormat.WMF_CONTAINERS end
+  return nil
+end
+
+local function raw_video_codecs(format_id, container)
+  local VF = VideoRenderFormat
+  if format_id == "avf"    then return VF.AVF_VIDEO_CODECS[container] or VF.AVF_VIDEO_CODECS.DEFAULT end
+  if format_id == "ffmpeg" then return VF.ffmpeg_video_codecs(container) end
+  if format_id == "wmf"    then return VF.WMF_VIDEO_CODECS.DEFAULT end
+  return nil
+end
+
+local function raw_audio_codecs(format_id, container)
+  local VF = VideoRenderFormat
+  if format_id == "avf"    then return VF.AVF_AUDIO_CODECS[container] or VF.AVF_AUDIO_CODECS.DEFAULT end
+  if format_id == "ffmpeg" then return VF.ffmpeg_audio_codecs(container) end
+  if format_id == "wmf"    then return VF.WMF_AUDIO_CODECS.DEFAULT end
+  return nil
+end
+
+local function without_none(list)
+  if not list then return nil end
+  local out = {}
+  for _, e in ipairs(list) do
+    if not e.is_none then out[#out + 1] = e end
+  end
+  return out
+end
+
+-- REAPER refuses to render with both video and audio set to None ("Audio
+-- and video are both disabled"), so these lists never allow that pair:
+-- video None is dropped when the container has no real audio codec (e.g.
+-- FFmpeg MPEG-1 on macOS), and audio None is dropped while video is None.
+function VideoRenderFormat.video_codecs_for(format_id, container)
+  local list = raw_video_codecs(format_id, container)
+  local audio = raw_audio_codecs(format_id, container)
+  if list and #(without_none(audio) or {}) == 0 then return without_none(list) end
+  return list
+end
+
+function VideoRenderFormat.audio_codecs_for(format_id, container, video_codec)
+  local list = raw_audio_codecs(format_id, container)
+  local video = raw_video_codecs(format_id, container)
+  local v
+  for _, e in ipairs(video or {}) do
+    if e.id == video_codec then v = e break end
+  end
+  local c
+  for _, e in ipairs(VideoRenderFormat.containers_for(format_id) or {}) do
+    if e.id == container then c = e break end
+  end
+  if list and ((v and v.is_none) or (c and c.audio_only)) then return without_none(list) end
+  return list
+end
+
+local function find_by_id(list, id)
+  for _, opt in ipairs(list or {}) do
+    if opt.id == id then return opt end
+  end
+  return nil
+end
+VideoRenderFormat.find_by_id = find_by_id
+
+local function find_by_label(list, label)
+  for _, opt in ipairs(list or {}) do
+    if opt.label == label then return opt end
+  end
+  return nil
+end
+
+-- Snaps format_id/container/video_codec/audio_codec onto options that exist
+-- on this platform. When the container changes, codecs are matched by name
+-- (so H.264 stays H.264 even though its id differs per container), falling
+-- back to the first entry in the list.
+function VideoRenderFormat.clamp(t, prev_container)
+  local VF = VideoRenderFormat
+  local format_ok = false
+  for _, f in ipairs(VF.FORMATS) do
+    if f.id == t.format_id then format_ok = true break end
+  end
+  if not format_ok then
+    for k, v in pairs(VF.DEFAULT_FORMAT) do t[k] = v end
+  end
+
+  -- Look the old codecs up in the unfiltered tables, so a codec this
+  -- platform hides still maps across by name.
+  local old_v, old_a
+  if prev_container then
+    local is_ff = t.format_id == "ffmpeg"
+    old_v = find_by_id(is_ff and VF.FFMPEG_VIDEO_CODECS[prev_container]
+      or VF.video_codecs_for(t.format_id, prev_container), t.video_codec)
+    old_a = find_by_id(is_ff and VF.FFMPEG_AUDIO_CODECS[prev_container]
+      or VF.audio_codecs_for(t.format_id, prev_container), t.audio_codec)
+  end
+
+  local containers = VF.containers_for(t.format_id)
+  if containers and not find_by_id(containers, t.container) then
+    t.container = containers[1].id
+  end
+
+  local function snap(list, field, old)
+    if not list or #list == 0 then return end
+    if old then
+      local same = find_by_label(list, old.label)
+      if same then t[field] = same.id return end
+    end
+    if not find_by_id(list, t[field]) then t[field] = list[1].id end
+  end
+  snap(VF.video_codecs_for(t.format_id, t.container), "video_codec", old_v)
+  snap(VF.audio_codecs_for(t.format_id, t.container, t.video_codec), "audio_codec", old_a)
+end
+
+-- Upgrades a template saved by v1.4 or earlier: those used FFmpeg's
+-- deprecated container 3 (now replaced by MPEG-4, id 7), and on macOS
+-- defaulted to FFmpeg H.264, which REAPER's bundled FFmpeg can't encode.
+function VideoRenderFormat.migrate_template(t)
+  local VF = VideoRenderFormat
+  if t.format_id == "ffmpeg" and t.container == 3 then
+    local old_v = find_by_id(VF.FFMPEG_VIDEO_CODECS[3], t.video_codec)
+    if not IS_WIN and old_v and not old_v.mac_bundled then
+      -- The template asked for H.264/MPEG-2 in an MP4, which only
+      -- AVFoundation can produce on this Mac.
+      for k, v in pairs(VF.DEFAULT_FORMAT) do t[k] = v end
+    else
+      VF.clamp(t, 3)
+      return
+    end
+  end
+  VF.clamp(t)
+end
+
+function VideoRenderFormat.file_ext(t)
+  if t.format_id == "gif" then return ".gif" end
+  if t.format_id == "lcf" then return ".lcf" end
+  local c = find_by_id(VideoRenderFormat.containers_for(t.format_id), t.container)
+  return c and c.ext or ""
+end
+
+function VideoRenderFormat.is_audio_only(t)
+  local c = find_by_id(VideoRenderFormat.containers_for(t.format_id), t.container)
+  return c and c.audio_only or false
+end
+
 
 -- ============================================================
 -- Encoders. `t` is a template-like table; see Video/Export Time Selection
@@ -283,14 +472,10 @@ function VideoRenderFormat.encode_avf(t)
 end
 
 function VideoRenderFormat.encode_ffmpeg(t)
-  -- Unlike AVF, a real PMFF preset saved from REAPER's own render dialog
-  -- ("DCF2 Faceware Video Export" in this machine's reaper-render.ini --
-  -- container 3/QT-MOV-MP4, H.264, quality 100) decodes to exactly the
-  -- documented 44 bytes with no trailing padding. Per
-  -- RENDER_How_RenderCFG-Base64-strings_are_encoded.txt, PMFF only grows
-  -- past byte 44 for non-empty command-line-option strings, which this
-  -- script never sets, so no trailing bytes are appended here.
-  return VideoRenderFormat.base64_encode("PMFF" .. encode_avf_or_ffmpeg_body(t))
+  -- REAPER 7.80's dialog saves PMFF as the 44-byte body plus two empty
+  -- strings (the video/audio "options" fields), so this appends the same
+  -- two terminators.
+  return VideoRenderFormat.base64_encode("PMFF" .. encode_avf_or_ffmpeg_body(t) .. "\0\0")
 end
 
 -- WMF's video-codec field is an unusual 4-byte sentinel rather than a small
