@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items
--- @version 2.6
+-- @version 2.7
 -- @about
 --   A script to easily export selected items of many different channel counts all at once.
 --   SWS extension is required. No render preset setup needed.
@@ -36,6 +36,9 @@
 --                   instead of mono (mixdown), so only the left channel is kept.
 --   09/26/26 v2.5 - "Smart Export Selected Items - Configure" is now bundled with this package
 --   10/22/26 v2.6 - Setup dialog: friendlier ReaImGui check -- if ReaImGui is missing or too old it now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
+--   11/18/26 v2.7 - Exporting overlapping same-name (looping) items no longer undoes the
+--                   action before the export (e.g. a rename). The glue is now reverted by
+--                   restoring the original items instead of calling Undo.
 
 
 -- Clear the console at the start
@@ -256,6 +259,49 @@ end
 -- Export logic
 -- ============================================================
 
+-- Glue a group of overlapping same-name items so they render as one file, then put
+-- the original items back exactly as they were. This used to use Undo_DoUndo2 to
+-- revert the glue, but that runs inside our open undo block where the glue is not
+-- its own undo point yet, so it undid the user's previous action instead (e.g. a
+-- rename made right before exporting). We now snapshot each item's state chunk
+-- (name, GUIDs, chanmode, ...) and rebuild the items ourselves; the undo history is
+-- never touched.
+local function render_glued_group(group, render_fn)
+  local snapshots = {}
+  for _, info in ipairs(group) do
+    local track = reaper.GetMediaItem_Track(info.item)
+    local ok, chunk = reaper.GetItemStateChunk(info.item, "", false)
+    if not (track and ok) then return end -- can't guarantee a restore, so don't glue
+    table.insert(snapshots, { track = track, chunk = chunk, name = info.name })
+  end
+
+  reaper.Main_OnCommand(40289, 0) -- Unselect all items
+  for _, info in ipairs(group) do reaper.SetMediaItemSelected(info.item, true) end
+  reaper.Main_OnCommand(41588, 0) -- Glue items
+
+  local glued_items = {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    table.insert(glued_items, reaper.GetSelectedMediaItem(0, i))
+  end
+
+  local glued_take = glued_items[1] and reaper.GetActiveTake(glued_items[1])
+  if glued_take then
+    reaper.GetSetMediaItemTakeInfo_String(glued_take, "P_NAME", group[1].name, true)
+    render_fn()
+  end
+
+  -- Remove the glued item(s) and rebuild the originals from their snapshots
+  for _, item in ipairs(glued_items) do
+    reaper.DeleteTrackMediaItem(reaper.GetMediaItem_Track(item), item)
+  end
+  for _, snap in ipairs(snapshots) do
+    local item = reaper.AddMediaItemToTrack(snap.track)
+    reaper.SetItemStateChunk(item, snap.chunk, false)
+    local take = reaper.GetActiveTake(item)
+    if take then reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", snap.name, true) end
+  end
+end
+
 local function run_export()
   local _, original_cfg = reaper.GetSetProjectInfo_String(0, 'RENDER_CFG', '', false)
 
@@ -379,22 +425,12 @@ local function run_export()
 
   -- Process overlapping groups
   for _, group in ipairs(overlapping_groups) do
-    reaper.Main_OnCommand(40289, 0) -- Unselect all items
-    for _, info in ipairs(group) do
-      reaper.SetMediaItemSelected(info.item, true)
-    end
-    reaper.Main_OnCommand(41588, 0) -- Glue items
-    local glued_item = reaper.GetSelectedMediaItem(0, 0)
-    if glued_item then
-      local glued_take = reaper.GetActiveTake(glued_item)
-      local group_name = group[1].name
-      reaper.GetSetMediaItemTakeInfo_String(glued_take, "P_NAME", group_name, true)
+    render_glued_group(group, function()
       if ApplyHardcodedRenderSettings(nil) then
         reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG', 2, true)
         reaper.Main_OnCommand(41824, 0) -- Render
       end
-      reaper.Undo_DoUndo2(0) -- Undo glue
-    end
+    end)
   end
 
   -- Process non-overlapping items
