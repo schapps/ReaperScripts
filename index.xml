@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="125a196dec3f3d89c0d0a20ae39165916f25b409">
+<index version="1" name="SPS Scripts" commit="0292a8afce52b17c62c9391447dc98c4764f7b90">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -1618,6 +1618,31 @@
                  look. Render button here now just calls it.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
+      <version name="1.40" author="Stephen Schappler" time="2026-11-18T20:16:32Z">
+        <changelog><![CDATA[11/18/26 v1.40 - Exporting overlapping same-name (looping) items no
+                 longer undoes the action before the export (e.g. a
+                 rename). The glue is now reverted by restoring the
+                 original items instead of calling Undo.
+10/22/26 v1.39 - Friendlier ReaImGui check: if ReaImGui is missing or
+                 too old, the script now says which, explains how to
+                 install/update it, and offers to open ReaPack to it
+                 (shared check in Schapps ReaImGUI Theme v1.34).
+08/29/26 v1.38 - Template tab bar now uses the shared theme.TabBar
+                 (ReaImGuiTheme.lua v1.29) instead of its own
+                 duplicated implementation.
+08/23/26 v1.37 - Browse and Wildcards are now icon buttons
+                 (folder-open / dollar-sign) instead of text buttons,
+                 sized via the shared theme's theme.IconButtonSize.
+                 Render button now shows a file-waveform icon before
+                 its label (theme.PrimaryButton's new optional icon
+                 argument, ReaImGuiTheme.lua v1.18).
+08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0292a8afce52b17c62c9391447dc98c4764f7b90/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
     </reapack>
     <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
       <metadata>
@@ -1761,6 +1786,37 @@
         <source main="main">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Items/Smart%20Export%20Selected%20Items.lua</source>
         <source main="main" file="Smart Export Selected Items - Configure.lua">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Items/Smart%20Export%20Selected%20Items%20-%20Configure.lua</source>
         <source file="Common/SmartExportSetupDialog.lua">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Common/SmartExportSetupDialog.lua</source>
+      </version>
+      <version name="2.7" author="Stephen Schappler" time="2026-11-18T20:16:32Z">
+        <changelog><![CDATA[11/21/24 v1.0 - Creating the script
+11/21/24 v1.3 - Added handling of overlapping items with the same name
+11/21/24 v1.4 - Fixed error with restoring item selection after glue and undo
+11/21/24 v1.5 - Changing how Config Area works
+12/20/24 v1.6 - Fixed bug when exporting multiple overlapping looping items at once
+02/07/25 v1.7 - Switch to Smart Export Simplified preset and add multichannel track mismatch warning
+05/21/25 v1.8 - Hardcode render settings directly; remove cfillion/ReaPack dependency
+05/26/25 v1.9 - Splitting up export directory path
+05/26/25 v2.0 - Move user settings to a separate config file safe from ReaPack updates
+05/26/25 v2.1 - First-run ReaImGUI setup dialog with folder browse
+08/11/26 v2.2 - Auto-downmix highly-correlated stereo items to mono before export
+08/11/26 v2.3 - Stop silently inheriting output dir/pattern from the GUI script's
+                last-used template via ExtState; this script now only ever uses
+                its own sidecar config file / hardcoded defaults. Restored the
+                first-run setup dialog (removed by mistake when the GUI script was
+                added) via a new shared Common/SmartExportSetupDialog.lua, and
+                added a "Smart Export Selected Items - Configure" action to reopen
+                it any time without hand-editing the config file. @provides bundles
+                Common/SmartExportSetupDialog.lua so ReaPack installs it automatically.
+08/12/26 v2.4 - Correlated stereo downmix now uses mono (left) take channel mode
+                instead of mono (mixdown), so only the left channel is kept.
+09/26/26 v2.5 - "Smart Export Selected Items - Configure" is now bundled with this package
+10/22/26 v2.6 - Setup dialog: friendlier ReaImGui check -- if ReaImGui is missing or too old it now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
+11/18/26 v2.7 - Exporting overlapping same-name (looping) items no longer undoes the
+                action before the export (e.g. a rename). The glue is now reverted by
+                restoring the original items instead of calling Undo.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/0292a8afce52b17c62c9391447dc98c4764f7b90/Items/Smart%20Export%20Selected%20Items.lua</source>
+        <source main="main" file="Smart Export Selected Items - Configure.lua">https://github.com/schapps/ReaperScripts/raw/0292a8afce52b17c62c9391447dc98c4764f7b90/Items/Smart%20Export%20Selected%20Items%20-%20Configure.lua</source>
+        <source file="Common/SmartExportSetupDialog.lua">https://github.com/schapps/ReaperScripts/raw/0292a8afce52b17c62c9391447dc98c4764f7b90/Common/SmartExportSetupDialog.lua</source>
       </version>
     </reapack>
     <reapack name="Solo Play Selected Item(s).lua" type="script" desc="Solo Selected Media Items, Set Time Selection, and Play, Unsolo on Stop">
