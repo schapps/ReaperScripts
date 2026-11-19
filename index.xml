@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="0292a8afce52b17c62c9391447dc98c4764f7b90">
+<index version="1" name="SPS Scripts" commit="3196a89cebc3c90ccc73545d8c13a91695e4fd82">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -1399,11 +1399,11 @@
     </reapack>
     <reapack name="Show Sequence Delay Times for Selected Items.lua" type="script" desc="Show Sequence Delay Times for Selected Items">
       <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Show sequence delay times needed in seconds and ticks (for Scream) for selected items.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Show sequence delay times needed in seconds and ticks (for Scream) for selected items. Opens a ReaImGUI window with one row per selected item (sorted by position), showing the delay from the previous item and the offset from the first item, in seconds and ticks. Click any value to copy it. Updates live as the selection changes. Requires: Schapps Script Resources (install from this repository first).\par}
 }
 ]]></description>
         <link rel="website">https://www.stephenschappler.com</link>
@@ -1411,6 +1411,11 @@
       <version name="1.0" author="Stephen Schappler" time="2024-07-30T18:24:59Z">
         <changelog><![CDATA[7/30/24 Creating the script]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/3b33dc54d14e1ac3796c90bfeebda8fca99221e4/Items/Show%20Sequence%20Delay%20Times%20for%20Selected%20Items.lua</source>
+      </version>
+      <version name="2.0" author="Stephen Schappler" time="2026-11-19T21:29:52Z">
+        <changelog><![CDATA[11/19/26 - v2.0 Now a ReaImGUI window using the Schapps theme instead of a plain message box. Delays are shown in a table (one row per item, with delay from the previous item and offset from the first, in seconds and ticks, with seconds and ticks in different colors; click any value to copy it), update live as the selection changes, and can be copied to the clipboard.
+7/30/24 Creating the script]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/3196a89cebc3c90ccc73545d8c13a91695e4fd82/Items/Show%20Sequence%20Delay%20Times%20for%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items (GUI).lua" type="script" desc="Smart Export Selected Items (GUI)">
