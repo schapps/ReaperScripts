@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SPS Scripts" commit="3196a89cebc3c90ccc73545d8c13a91695e4fd82">
+<index version="1" name="SPS Scripts" commit="ddc53abd5d1e53506c77a5259b99bea24fcc2e94">
   <category name="Common">
     <reapack name="ReaImGuiTheme.lua" type="script" desc="Schapps ReaImGUI Theme">
       <metadata>
@@ -795,6 +795,162 @@
         <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Common/Fonts/fa-solid-900.ttf</source>
         <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Common/Fonts/LICENSE.txt</source>
         <source file="ReaImGuiCheck.lua">https://github.com/schapps/ReaperScripts/raw/62c90338e66eb5852d57ffb3267354b867115653/Common/ReaImGuiCheck.lua</source>
+      </version>
+      <version name="1.35" author="Stephen Schappler" time="2026-11-20T18:45:18Z">
+        <changelog><![CDATA[11/20/26 - v1.35 theme.TabBar: the active_idx passed on the first
+                call is now actually selected (ImGui used to pick the
+                first tab, so a remembered tab never showed). Tabs
+                keep their ImGui ID across renames. New optional
+                opts.outline_accent (thin outline in each tab's
+                color) and opts.reorderable/on_reorder (drag to
+                reorder), and opts.dim_unselected (desaturate the
+                colors and dim the labels of unselected tabs).
+10/22/26 - v1.34 Now ships Common/ReaImGuiCheck.lua, the shared
+                ReaImGui dependency check used by every Schapps
+                ReaImGui script: tells the user whether ReaImGui is
+                missing or too old, how to install/update it, and
+                offers to open ReaPack to it.
+09/06/26 - v1.33 Added theme.TableFlags (the standard RowBg +
+                BordersInnerH combo already used by every table in
+                this repo) and theme.TableHeadersRow (bold header
+                row), so new tables can match the existing style by
+                calling these instead of re-copying the flags.
+08/29/26 - v1.32 theme.Push now pushes Col_TableRowBg/TableRowBgAlt,
+                standardizing the striped-table look already used in
+                Renamer's Quick Naming preview -- any TableFlags_RowBg
+                table gets it automatically. Added
+                theme.Get/Set/ResetTableRowAltColor.
+08/29/26 - v1.31 Added theme.PushBoldFont/PopBoldFont, exposing the
+                bold font PrimaryButton already used internally.
+08/29/26 - v1.30 Secondary accent's purpose changed from "active tab"
+                to "secondary action buttons" -- added
+                theme.SecondaryButton (same shape as PrimaryButton,
+                Secondary-accent fill). Tabs (theme.Push and
+                theme.TabBar's overline) now use the Primary accent
+                instead. Default Secondary color changed to match
+                Renamer's Export button blue.
+08/29/26 - v1.29 Added theme.DrawTabAccent and theme.TabBar, the
+                closable/colorable/addable tab bar previously
+                duplicated in Smart Export, Export Video, and Text
+                Overlay. Tab overline now uses the Secondary accent
+                color instead of a hardcoded purple.
+08/29/26 - v1.28 Default Body Font Size changed from 15 to 13.
+08/29/26 - v1.27 theme.Push now also pushes the configured Body Font
+                as the window's default font (theme.Pop pops it), so
+                it applies to all text, not just PrimaryButton.
+08/29/26 - v1.26 Fixed theme.IconButton drawing its glyph off-center
+                (relying on Button()'s own label centering). Now
+                draws a blank button and overlays the glyph manually.
+08/28/26 - v1.25 Added a second customizable color (theme.Get/Set/
+                ResetSecondaryAccentColor, the teal used on the
+                active/selected tab) and customizable body/mono font
+                name + size (theme.Get/Set/ResetBodyFontName/Size and
+                the Mono equivalents), plus theme.PushBodyFont/
+                PushMonoFont to actually use them -- consolidating
+                what Export Video and Text Overlay each did with
+                their own local CreateFont calls. The bold font used
+                by PrimaryButton now tracks the configured body font
+                name too, instead of being hardcoded to "sans-serif".
+                Also added theme.ExportSettings/ImportSettings,
+                reading/writing all of the above as one ".spstheme"
+                Lua-table file, for the new Settings script's
+                Export/Import buttons.
+08/28/26 - v1.24 Added theme.GetAccentColor/SetAccentColor/
+                ResetAccentColor, backed by ExtState so the choice
+                persists across sessions and is shared live by every
+                script that pushes this theme (each reads ExtState
+                fresh, not a load-time cache, so a change made in the
+                new "Schapps ReaImGUI Theme Settings" script takes
+                effect in any other theme-using window already open,
+                next frame). Col_CheckMark/SliderGrab/SliderGrabActive
+                and PrimaryButton's default fill now read this instead
+                of the old hardcoded 0xA08FE2FF, and PrimaryButton's
+                default-color branch was folded into the custom-color
+                one (both now derive hover/active via scale_rgb), so
+                the default accent behaves exactly like any other
+                PrimaryButton color.
+08/28/26 - v1.23 Added theme.PrimaryButtonHeight, so callers can
+                pre-measure a PrimaryButton row's height (bold,
+                1.3x font + frame padding) to size layout space above
+                it -- e.g. Subproject Manager's table/child region,
+                which was sized assuming the plain-Button-height bottom
+                row it had before switching to PrimaryButton, leaving
+                the window permanently a scrollbar's worth too short.
+08/23/26 - v1.22 Fixed theme.PrimaryButton's icon path: passing the
+                standard `-1` (fill available width) for `width` was
+                silently treated as "auto-size to content" instead,
+                since the check was `width > 0` -- any icon
+                PrimaryButton passing -1 (Create, Reposition) came
+                out narrower than intended. Now matches native
+                ImGui.Button's width semantics: nil/0 = auto, < 0 =
+                fill available width, > 0 = fixed width.
+08/23/26 - v1.21 Added theme.Icons.LEFT_RIGHT (fa-left-right).
+08/23/26 - v1.20 Added theme.Icons.SQUARE_PLUS (fa-square-plus).
+08/23/26 - v1.19 Added theme.Icons.FILE_WAVEFORM (fa-file-waveform).
+08/23/26 - v1.18 theme.PrimaryButton takes an optional 6th `icon`
+                arg (one of theme.Icons.*), drawn before the label.
+                Since there's no font-merge, this draws a blank-label
+                Button() for native hover/press + click behavior and
+                overlays the icon glyph + bold label text on top via
+                the draw list. Also added theme.Icons.PENCIL.
+08/23/26 - v1.17 Added theme.Icons.DOLLAR_SIGN (fa-dollar-sign).
+08/22/26 - v1.16 theme.PrimaryButton now takes an optional 5th `color`
+                arg to reuse the exact same bold/1.3x/dark-text style
+                in a different hue (hover/active shades auto-derived
+                via the new scale_rgb helper) -- e.g. Renamer's
+                Export button, which needed the same look as Rename
+                but a distinct color.
+08/22/26 - v1.15 Col_PopupBg (dropdown/combo popup background) was
+                0x202225FF -- same blue-tint pattern as the other
+                fixes here. Flattened to neutral 0x202020FF.
+08/22/26 - v1.14 Added theme.Icons.FILE_LINES (fa-file-lines) and
+                theme.Icons.CLOCK (fa-clock).
+08/22/26 - v1.13 Col_ScrollbarBg/Grab/Hovered/Active had the same
+                blue-tint pattern as the other fixes here (confirmed
+                by pixel-sampling a screenshot: the grab handle
+                rendered as (58,64,70), exactly the old
+                Col_ScrollbarGrab value). Flattened all four to
+                neutral greys, same relative brightness as before.
+08/22/26 - v1.12 Col_Border (the line ImGui draws under a tab bar,
+                among other places) was 0x3A3F45FF -- same blue-tint
+                pattern as the other fixes here. Flattened to neutral
+                0x3F3F3FFF.
+08/22/26 - v1.11 Col_Tab (base/inactive tab) was 0x23282DFF -- reads
+                as clearly blue in practice despite looking like a
+                plausible dark grey in hex (only a 10/255 R-to-B
+                spread, but very visible at this low a brightness).
+                Flattened to neutral 0x232323FF, matching the
+                Col_TabDimmed*/Col_FrameBg* fixes below.
+08/22/26 - v1.10 Col_TabDimmed/Unfocused and Col_TabDimmedSelected/
+                UnfocusedActive (tabs shown when the script's window
+                itself isn't focused) had the same blue-tint issue as
+                Col_FrameBg* below -- flattened to neutral greys.
+08/22/26 - v1.9 Col_FrameBgHovered/Active were slightly blue-tinted
+                (unequal R/G/B) -- changed to neutral greys, lighter
+                than Col_FrameBg, with no color cast.
+08/22/26 - v1.8 Added Font Awesome icon support: theme.Icons (a curated
+                table of glyph constants), theme.PushIconFont/PopIconFont,
+                theme.IconText, and theme.IconButton. The icon font
+                ships as Fonts/fa-solid-900.ttf alongside this file and
+                is lazily created/cached per-ctx like the bold font
+                below, since ReaImGui has no font-merge mode -- icon
+                glyphs always come from a separate font pushed around
+                the draw call, not blended into the body-text font.
+                theme.IconButton/theme.IconButtonSize size the button
+                square to the requested icon size (default: current
+                font size) plus frame padding, so a larger icon grows
+                its button instead of clipping, and callers can still
+                align one (e.g. right-justify) without pre-measuring.
+08/22/26 - v1.7 Added theme.PrimaryButton(ctx, label, width, height): the
+                purple/bold/1.3x-size "main action" button style (e.g. a
+                Render or Rename button), lazily creating and caching one
+                bold font per ctx since fonts must be created once, not
+                per-frame]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Common/ReaImGuiTheme.lua</source>
+        <source file="line-md--play-filled.png">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Common/line-md--play-filled.png</source>
+        <source file="Fonts/fa-solid-900.ttf">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Common/Fonts/fa-solid-900.ttf</source>
+        <source file="Fonts/LICENSE.txt">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Common/Fonts/LICENSE.txt</source>
+        <source file="ReaImGuiCheck.lua">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Common/ReaImGuiCheck.lua</source>
       </version>
     </reapack>
     <reapack name="Schapps ReaImGUI Theme Settings.lua" type="script" desc="Schapps ReaImGUI Theme Settings">
@@ -1647,6 +1803,39 @@
                  other scripts can reuse the same "main action" button
                  look. Render button here now just calls it.]]></changelog>
         <source main="main">https://github.com/schapps/ReaperScripts/raw/0292a8afce52b17c62c9391447dc98c4764f7b90/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
+      </version>
+      <version name="1.41" author="Stephen Schappler" time="2026-11-20T18:45:18Z">
+        <changelog><![CDATA[11/20/26 v1.41 - The last selected template tab is remembered and
+                 reselected when the window opens (it was only saved
+                 on Render, and the first tab always won anyway).
+                 Colored tabs now also get a thin outline in their
+                 color, and unselected tabs show their color
+                 desaturated with a dimmed label. Tabs can be dragged to reorder them; the order
+                 is saved in each template file (tab_order).
+                 Requires Schapps ReaImGUI Theme v1.35.
+11/18/26 v1.40 - Exporting overlapping same-name (looping) items no
+                 longer undoes the action before the export (e.g. a
+                 rename). The glue is now reverted by restoring the
+                 original items instead of calling Undo.
+10/22/26 v1.39 - Friendlier ReaImGui check: if ReaImGui is missing or
+                 too old, the script now says which, explains how to
+                 install/update it, and offers to open ReaPack to it
+                 (shared check in Schapps ReaImGUI Theme v1.34).
+08/29/26 v1.38 - Template tab bar now uses the shared theme.TabBar
+                 (ReaImGuiTheme.lua v1.29) instead of its own
+                 duplicated implementation.
+08/23/26 v1.37 - Browse and Wildcards are now icon buttons
+                 (folder-open / dollar-sign) instead of text buttons,
+                 sized via the shared theme's theme.IconButtonSize.
+                 Render button now shows a file-waveform icon before
+                 its label (theme.PrimaryButton's new optional icon
+                 argument, ReaImGuiTheme.lua v1.18).
+08/22/26 v1.36 - Moved the Render button's purple/bold/oversized style
+                 into the shared theme as theme.PrimaryButton(ctx,
+                 label, width, height) (ReaImGuiTheme.lua v1.7), so
+                 other scripts can reuse the same "main action" button
+                 look. Render button here now just calls it.]]></changelog>
+        <source main="main">https://github.com/schapps/ReaperScripts/raw/ddc53abd5d1e53506c77a5259b99bea24fcc2e94/Items/Smart%20Export%20Selected%20Items%20(GUI).lua</source>
       </version>
     </reapack>
     <reapack name="Smart Export Selected Items.lua" type="script" desc="Smart Export Selected Items">
