@@ -1,5 +1,5 @@
 -- @description Smart Export Selected Items (GUI)
--- @version 1.40
+-- @version 1.41
 -- @about
 --   ReaImGUI render-template dialog for Smart Export Selected Items.
 --   Supports multiple named render templates (tabs), normalization controls,
@@ -12,6 +12,14 @@
 -- @author Stephen Schappler
 -- @link https://www.stephenschappler.com
 -- @changelog
+--   11/20/26 v1.41 - The last selected template tab is remembered and
+--                    reselected when the window opens (it was only saved
+--                    on Render, and the first tab always won anyway).
+--                    Colored tabs now also get a thin outline in their
+--                    color, and unselected tabs show their color
+--                    desaturated with a dimmed label. Tabs can be dragged to reorder them; the order
+--                    is saved in each template file (tab_order).
+--                    Requires Schapps ReaImGUI Theme v1.35.
 --   11/18/26 v1.40 - Exporting overlapping same-name (looping) items no
 --                    longer undoes the action before the export (e.g. a
 --                    rename). The glue is now reverted by restoring the
@@ -129,6 +137,9 @@ local function save_template(t)
   f:write("second_pass_render     = " .. tostring(t.second_pass_render)               .. "\n")
   f:write("close_after_render     = " .. tostring(t.close_after_render)               .. "\n")
   f:write("tab_color              = " .. tostring(t.tab_color)                        .. "\n")
+  if t.tab_order then
+    f:write("tab_order              = " .. tostring(t.tab_order)                      .. "\n")
+  end
   f:close()
 end
 
@@ -173,7 +184,12 @@ local function list_templates()
     end
     i = i + 1
   end
-  table.sort(list, function(a, b) return a.name < b.name end)
+  -- Saved tab order first (tab_order), then name for anything without one.
+  table.sort(list, function(a, b)
+    local oa, ob = a.tab_order or math.huge, b.tab_order or math.huge
+    if oa ~= ob then return oa < ob end
+    return a.name < b.name
+  end)
   return list
 end
 
@@ -1008,6 +1024,15 @@ local function init_templates()
     table.insert(templates, bootstrap_default_template())
   end
 
+  -- Give every template a tab_order (older templates have none), so new
+  -- and reordered tabs sort consistently on the next launch.
+  for i, t in ipairs(templates) do
+    if t.tab_order ~= i then
+      t.tab_order = i
+      save_template(t)
+    end
+  end
+
   local saved_name = reaper.GetExtState("SmartExport", "active_template")
   active_idx = 1
   if saved_name ~= "" then
@@ -1025,7 +1050,14 @@ init_templates()
 -- Tab bar (theme.TabBar -- shared closable/colorable/addable tab bar,
 -- also used by Export Video and Text Overlay's own preset/style lists)
 -- ============================================================
+local function remember_active(t)
+  reaper.SetExtState("SmartExport", "active_template", t.name, true)
+end
+
 local TAB_BAR_OPTS = {
+  outline_accent  = true,
+  dim_unselected  = true,
+  reorderable     = true,
   item_noun     = "Template",
   app_name      = "Smart Export",
   new_name_base = "New Template",
@@ -1036,20 +1068,35 @@ local TAB_BAR_OPTS = {
     flush_buffers_to(active_tab)
     local new_t = {}
     for k, v in pairs(active_tab) do new_t[k] = v end
+    local max_order = 0
+    for _, t in ipairs(templates) do max_order = math.max(max_order, t.tab_order or 0) end
+    new_t.tab_order = max_order + 1
     return new_t
   end,
 
   on_click_select = function(new_tab, new_idx, old_tab, old_idx)
     if old_tab then flush_buffers_to(old_tab) end
     sync_buffers_from(new_tab)
+    remember_active(new_tab)
   end,
 
   on_after_create = function(new_tab, new_idx)
     sync_buffers_from(new_tab)
+    remember_active(new_tab)
   end,
 
   on_after_delete = function(new_active_tab, new_idx)
     sync_buffers_from(new_active_tab)
+    remember_active(new_active_tab)
+  end,
+
+  on_reorder = function(tabs)
+    for i, t in ipairs(tabs) do
+      if t.tab_order ~= i then
+        t.tab_order = i
+        save_template(t)
+      end
+    end
   end,
 
   on_delete = function(tab) delete_template(tab.name) end,

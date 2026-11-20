@@ -1,6 +1,6 @@
 -- @description Schapps ReaImGUI Theme
 -- @author Stephen Schappler
--- @version 1.34
+-- @version 1.35
 -- @about
 --   ReaImGUI Theme file for my scripts
 -- @link https://www.stephenschappler.com
@@ -10,6 +10,14 @@
 --   Fonts/LICENSE.txt > Fonts/LICENSE.txt
 --   ReaImGuiCheck.lua > ReaImGuiCheck.lua
 -- @changelog
+--   11/20/26 - v1.35 theme.TabBar: the active_idx passed on the first
+--                   call is now actually selected (ImGui used to pick the
+--                   first tab, so a remembered tab never showed). Tabs
+--                   keep their ImGui ID across renames. New optional
+--                   opts.outline_accent (thin outline in each tab's
+--                   color) and opts.reorderable/on_reorder (drag to
+--                   reorder), and opts.dim_unselected (desaturate the
+--                   colors and dim the labels of unselected tabs).
 --   10/22/26 - v1.34 Now ships Common/ReaImGuiCheck.lua, the shared
 --                   ReaImGui dependency check used by every Schapps
 --                   ReaImGui script: tells the user whether ReaImGui is
@@ -819,8 +827,36 @@ end
 --   save(tab)         -- persist a tab record as-is (called after a
 --                     color-picker change, and after on_create/rename
 --                     set .name).
+--
+-- Optional opts:
+--   outline_accent    bool -- besides the left-edge bar, draw a thin
+--                     outline around each colored tab in its .tab_color.
+--   dim_unselected    bool -- show unselected tabs' colors desaturated and
+--                     their labels dimmed, so the selected tab stands out.
+--   reorderable       bool -- let the user drag tabs to reorder them.
+--                     theme.TabBar reorders `tabs` in place (and adjusts
+--                     the returned active_idx) to match.
+--   on_reorder(tabs)  -- called once the drag is released, with `tabs` in
+--                     its new order, so the caller can persist the order.
+--
+-- On the first call (and after a delete) the tab at active_idx is forced
+-- selected, so an active_idx restored from ExtState actually shows.
 -- ============================================================
 local tabbar_state = {}
+
+-- Stable per-record ImGui IDs ("name###tabN"), so a renamed tab keeps its
+-- ID, and so its position in a reorderable bar.
+local tab_uids = setmetatable({}, { __mode = "k" })
+local next_tab_uid = 0
+local function tab_uid(t)
+  local uid = tab_uids[t]
+  if not uid then
+    next_tab_uid = next_tab_uid + 1
+    uid = next_tab_uid
+    tab_uids[t] = uid
+  end
+  return uid
+end
 
 local function get_tabbar_state(str_id)
   local st = tabbar_state[str_id]
@@ -829,10 +865,39 @@ local function get_tabbar_state(str_id)
       rename_pending = false, rename_focus_next = false,
       rename_idx = 1, rename_buf = "", rename_dup_err = false,
       delete_pending = false, delete_idx = 1,
+      select_pending = true, order_dirty = false,
     }
     tabbar_state[str_id] = st
   end
   return st
+end
+
+-- Unselected-tab look for opts.dim_unselected.
+local TAB_DESATURATE = 0.35  -- fraction of the original saturation kept
+local TAB_DARKEN     = 0.75
+local TAB_TEXT_ALPHA = 0.55
+
+local function desaturate(color)
+  if not color or color == 0 then return color end
+  local r, g, b = (color >> 24) & 0xFF, (color >> 16) & 0xFF, (color >> 8) & 0xFF
+  local l = 0.3 * r + 0.59 * g + 0.11 * b
+  local function ch(c)
+    return math.floor(math.max(0, math.min(255, (l + (c - l) * TAB_DESATURATE) * TAB_DARKEN)) + 0.5)
+  end
+  return (ch(r) << 24) | (ch(g) << 16) | (ch(b) << 8) | (color & 0xFF)
+end
+
+-- A 1px outline in the tab's own color, following ImGui's tab shape
+-- (rounded top, bottom at the bar's border line). Call right after
+-- BeginTabItem.
+local function draw_tab_outline(ctx, color)
+  if not color or color == 0 then return end
+  local x0, y0 = ImGui.GetItemRectMin(ctx)
+  local x1, y1 = ImGui.GetItemRectMax(ctx)
+  local border = ImGui.GetStyleVar(ctx, ImGui.StyleVar_TabBarBorderSize) or 1
+  local rounding = math.max(0, math.min(ImGui.GetStyleVar(ctx, ImGui.StyleVar_TabRounding), (x1 - x0) * 0.5 - 1))
+  local draw_list = ImGui.GetWindowDrawList(ctx)
+  ImGui.DrawList_AddRect(draw_list, x0, y0, x1, y1 - border, color, rounding, ImGui.DrawFlags_RoundCornersTop, 1)
 end
 
 function theme.TabBar(ctx, str_id, tabs, active_idx, opts)
@@ -850,19 +915,45 @@ function theme.TabBar(ctx, str_id, tabs, active_idx, opts)
     color_n = color_n + 1
   end
 
-  if ImGui.BeginTabBar(ctx, str_id, ImGui.TabBarFlags_AutoSelectNewTabs) then
-    for i, t in ipairs(tabs) do
-      local tab_visible, new_open = ImGui.BeginTabItem(ctx, t.name, true, 0)
+  local bar_flags = ImGui.TabBarFlags_AutoSelectNewTabs
+  if opts.reorderable then
+    bar_flags = bar_flags | ImGui.TabBarFlags_Reorderable
+  end
 
-      theme.DrawTabAccent(ctx, t.tab_color)
-      if tab_visible and not col_tab_overline then
+  if ImGui.BeginTabBar(ctx, str_id, bar_flags) then
+    local tab_xs = {}
+    local select_handled = false
+    for i, t in ipairs(tabs) do
+      local item_flags = 0
+      if st.select_pending and i == active_idx then
+        item_flags = ImGui.TabItemFlags_SetSelected
+      end
+
+      -- (i == active_idx rather than BeginTabItem's result, which isn't
+      -- known until after the label is drawn)
+      local dim = opts.dim_unselected and i ~= active_idx
+      if dim then
+        local text = ImGui.GetStyleColor(ctx, ImGui.Col_Text)
+        local alpha = math.floor((text & 0xFF) * TAB_TEXT_ALPHA)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text, (text & 0xFFFFFF00) | alpha)
+      end
+      local tab_visible, new_open = ImGui.BeginTabItem(ctx, t.name .. "###tab" .. tab_uid(t), true, item_flags)
+      if dim then ImGui.PopStyleColor(ctx) end
+
+      tab_xs[i] = select(1, ImGui.GetItemRectMin(ctx))
+      local accent = dim and desaturate(t.tab_color) or t.tab_color
+      if opts.outline_accent then
+        draw_tab_outline(ctx, accent)
+      end
+      theme.DrawTabAccent(ctx, accent)
+      if tab_visible and not col_tab_overline and not opts.dim_unselected then
         local x0, y0 = ImGui.GetItemRectMin(ctx)
         local x1 = select(1, ImGui.GetItemRectMax(ctx))
         local draw_list = ImGui.GetWindowDrawList(ctx)
         ImGui.DrawList_AddRectFilled(draw_list, x0, y0, x1, y0 + 2, theme.GetAccentColor())
       end
 
-      if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. i) then
+      if ImGui.BeginPopupContextItem(ctx, "##ctx_" .. tab_uid(t)) then
         if ImGui.MenuItem(ctx, "Rename\u{2026}") then
           st.rename_pending = true
           st.rename_idx     = i
@@ -901,13 +992,52 @@ function theme.TabBar(ctx, str_id, tabs, active_idx, opts)
       end
 
       if tab_visible then
-        if i ~= active_idx then
+        if i == active_idx then
+          select_handled = true
+        elseif not st.select_pending then
+          -- (while a forced selection is pending, a different visible tab
+          -- is ImGui's own default pick, not a user click)
           local old_idx, old_tab = active_idx, tabs[active_idx]
           active_idx = i
           opts.on_click_select(t, i, old_tab, old_idx)
         end
         ImGui.EndTabItem(ctx)
       end
+    end
+    if select_handled then st.select_pending = false end
+
+    -- Reorder: ImGui keeps its own (dragged) tab order, so mirror it into
+    -- `tabs` by sorting on this frame's tab x positions. Only while/just
+    -- after dragging -- reordering is always a mouse drag.
+    if opts.reorderable and #tabs > 1
+       and (ImGui.IsMouseDown(ctx, ImGui.MouseButton_Left) or ImGui.IsMouseReleased(ctx, ImGui.MouseButton_Left)) then
+      local distinct = true
+      for i = 2, #tabs do
+        if tab_xs[i] == tab_xs[i - 1] then distinct = false; break end
+      end
+      if distinct then
+        local order = {}
+        for i = 1, #tabs do order[i] = i end
+        table.sort(order, function(a, b) return tab_xs[a] < tab_xs[b] end)
+        local changed = false
+        for i, v in ipairs(order) do
+          if v ~= i then changed = true; break end
+        end
+        if changed then
+          local active_tab = tabs[active_idx]
+          local reordered = {}
+          for i, v in ipairs(order) do reordered[i] = tabs[v] end
+          for i, t in ipairs(reordered) do
+            tabs[i] = t
+            if t == active_tab then active_idx = i end
+          end
+          st.order_dirty = true
+        end
+      end
+    end
+    if st.order_dirty and not ImGui.IsMouseDown(ctx, ImGui.MouseButton_Left) then
+      st.order_dirty = false
+      if opts.on_reorder then opts.on_reorder(tabs) end
     end
 
     if ImGui.TabItemButton(ctx, "+", ImGui.TabItemFlags_Trailing) then
@@ -1009,6 +1139,7 @@ function theme.TabBar(ctx, str_id, tabs, active_idx, opts)
         active_idx = active_idx - 1
       end
       active_idx = math.max(1, math.min(active_idx, #tabs))
+      st.select_pending = true
       opts.on_after_delete(tabs[active_idx], active_idx)
     end
   end
