@@ -1,6 +1,6 @@
 -- @description Schapps Renamer - a fork of The Last Renamer
 -- @author Aaron Cendan, modified by Stephen Schappler
--- @version 1.19
+-- @version 1.20
 -- @about
 --   # The Last Renamer (schapps fork)
 --   Based on acendan_The Last Renamer v2.32 by Aaron Cendan
@@ -11,6 +11,7 @@
 --   Meta/*.{yaml}
 --   Lib/*.{lua}
 -- @changelog
+--   v1.20 Fixed the script (including the Visual Editor) quitting when the main window was briefly hidden or minimized, e.g. on alt-tab
 --   v1.19 Friendlier ReaImGui check: if ReaImGui is missing or too old, the script now says which, explains how to install/update it, and offers to open ReaPack to it (shared check in Schapps ReaImGUI Theme v1.34).
 --   v1.18 Now uses the shared theme's Push/Pop, so the accent color and fonts from Theme Settings apply here too
 --   v1.17 Right-clicking a dropdown now offers "Rename Selected..." to rename the selected option (and its short code) in place
@@ -1487,6 +1488,15 @@ function TabSettings()
   end
 end
 
+-- Windows drawn alongside (not inside) the main window each frame.
+function DrawSecondaryWindows()
+  if wgt.show_visual_editor then
+    local editor_open, editor_reload = SchemeVisualizer.DrawWindow(ctx, wgt.data)
+    if not editor_open then wgt.show_visual_editor = false end
+    if editor_reload then wgt.__pending_reload = editor_reload end
+  end
+end
+
 function Main()
   -- Apply a pending add/move write-back: reload the scheme/meta fresh from
   -- disk (so the edited option list and its source-location scan take
@@ -1542,7 +1552,18 @@ function Main()
   -- both are what give the native title bar the right height/alignment,
   -- matching every other Schapps ReaImGui script's title bar.
   local rv, open = reaper.ImGui_Begin(ctx, "THE LAST RENAMER - SCHAPPS EDITION", true, WINDOW_FLAGS)
-  if not rv then acendan.ImGui_PopStyles(); return open end
+  -- rv is false whenever ImGui decides the main window isn't visible this
+  -- frame (e.g. its OS viewport is minimized/hidden, or it's docked in an
+  -- inactive docker tab) - which can happen transiently on alt-tab. That
+  -- must NOT end the defer loop, or the whole script (Visual Editor
+  -- included) silently quits. Skip drawing the main window's contents but
+  -- keep the secondary window and the defer loop running.
+  if not rv then
+    acendan.ImGui_PopStyles()
+    DrawSecondaryWindows()
+    if open then reaper.defer(Main) end
+    return
+  end
 
   -- Tracks whatever size the user has manually resized the window to (no
   -- per-mode auto-sizing - the window is plainly resizable, same size
@@ -1624,11 +1645,7 @@ function Main()
   reaper.ImGui_End(ctx)
   acendan.ImGui_PopStyles()
 
-  if wgt.show_visual_editor then
-    local editor_open, editor_reload = SchemeVisualizer.DrawWindow(ctx, wgt.data)
-    if not editor_open then wgt.show_visual_editor = false end
-    if editor_reload then wgt.__pending_reload = editor_reload end
-  end
+  DrawSecondaryWindows()
 
   if open then reaper.defer(Main) else return end
 end
